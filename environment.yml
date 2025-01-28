@@ -9,3 +9,5 @@ dependencies:
   - matplotlib
   - seaborn
   - scikit-learn
+  - flake8
+  - black
