@@ -9,6 +9,7 @@ black .
 echo "🔍 Running Flake8 linter..."
 flake8 .
 
+
 # Success check
 if [ $? -eq 0 ]; then
   echo "✅ Pre-commit checks passed. Proceeding with commit."
