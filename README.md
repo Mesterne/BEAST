@@ -16,8 +16,8 @@ Clone the repository and create the Conda environment:
 ```bash
 git clone https://github.com/Mesterne/BEAST.git
 cd BEAST
-conda env create -f BEAST_ENV.yml
-conda activate my_environment
+conda env create -f environment.yml
+conda activate BEAST_ENV
 ```
 
 ---
