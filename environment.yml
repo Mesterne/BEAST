@@ -2,6 +2,7 @@ name: BEAST_ENV
 channels:
   - defaults
   - conda-forge
+  - pytorch
 dependencies:
   - python=3.12
   - numpy
@@ -11,3 +12,8 @@ dependencies:
   - scikit-learn
   - flake8
   - black
+  - pytorch
+  - torchvision
+  - torchaudio
+  - tqdm
+  - matplotlib-inline
