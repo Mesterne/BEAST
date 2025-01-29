@@ -17,3 +17,5 @@ dependencies:
   - torchaudio
   - tqdm
   - matplotlib-inline
+  - statsmodels
+  - mplcursors
