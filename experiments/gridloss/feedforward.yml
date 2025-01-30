@@ -1,0 +1,22 @@
+dataset_args:
+  directory: data/gridloss
+  training_data: train.csv
+  test_data: test.csv
+  window_size: 24
+  timeseries_to_use:
+  - grid1-loss
+  - grid1-load
+  - grid1-temp
+  - demand
+model_args:
+  window_size: 24
+  network_size:
+    - 100
+    - 100
+  horizon_length: 24
+  model_name: feedforward
+  model_params_storage_dir: models/feedforward
+training_args:
+  batch_size: 16
+  epochs: 1000
+  learning_rate: 0.001
