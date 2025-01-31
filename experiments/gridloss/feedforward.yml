@@ -4,10 +4,10 @@ dataset_args:
   test_data: test.csv
   window_size: 24
   timeseries_to_use:
-  - grid1-loss
   - grid1-load
   - grid1-temp
-model_args:
+  - grid1-loss
+forecasting_model_args:
   window_size: 24
   network_size:
     - 100
@@ -17,5 +17,5 @@ model_args:
   model_params_storage_dir: models/feedforward
 training_args:
   batch_size: 16
-  epochs: 1000
+  epochs: 100
   learning_rate: 0.001
