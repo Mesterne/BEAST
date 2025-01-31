@@ -20,9 +20,16 @@ def generate_windows_dataset(
 
     return dataset
 
-def create_training_windows(df: pd.DataFrame, input_cols: list, target_col: str, window_size: int, forecast_horizon: int):
+
+def create_training_windows(
+    df: pd.DataFrame,
+    input_cols: list,
+    target_col: str,
+    window_size: int,
+    forecast_horizon: int,
+):
     df = df.dropna().reset_index(drop=True)
-    
+
     num_samples = len(df) - window_size - forecast_horizon + 1
     if num_samples <= 0:
         raise ValueError("Not enough data to create windows.")
@@ -30,10 +37,12 @@ def create_training_windows(df: pd.DataFrame, input_cols: list, target_col: str,
     X, y = [], []
 
     for i in range(num_samples):
-        input_window = df.loc[i:i + window_size - 1, input_cols].values.flatten()
-        
-        target_window = df.loc[i + window_size:i + window_size + forecast_horizon - 1, target_col].values.flatten()
-        
+        input_window = df.loc[i : i + window_size - 1, input_cols].values.flatten()
+
+        target_window = df.loc[
+            i + window_size : i + window_size + forecast_horizon - 1, target_col
+        ].values.flatten()
+
         X.append(input_window)
         y.append(target_window)
 
