@@ -8,7 +8,6 @@ def train_model(model, X, y, batch_size, num_epochs, learning_rate):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-
     model.loss = torch.nn.L1Loss()
     model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 

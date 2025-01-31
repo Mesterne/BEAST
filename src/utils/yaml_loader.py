@@ -16,6 +16,7 @@ def read_yaml(filename):
             get_project_root(), output["dataset_args"]["directory"]
         )
         output["forecasting_model_args"]["model_params_storage_dir"] = os.path.join(
-            get_project_root(), output["forecasting_model_args"]["model_params_storage_dir"]
+            get_project_root(),
+            output["forecasting_model_args"]["model_params_storage_dir"],
         )
     return output
