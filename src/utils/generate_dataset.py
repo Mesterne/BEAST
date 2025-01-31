@@ -14,7 +14,7 @@ def generate_windows_dataset(
     if include_columns is not None:
         data = data[include_columns]
 
-    for i in tqdm(range(0, len(data) - window_size + 1, step_size), total=len(data)):
+    for i in tqdm(range(0, len(data) - window_size + 1, step_size)):
         dataset.append(data.iloc[i : i + window_size])
 
     return dataset
