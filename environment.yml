@@ -19,4 +19,5 @@ dependencies:
   - pyyaml
   - matplotlib-inline
   - statsmodels
-  - mplcursors
+  - plotly
+  - nbformat
