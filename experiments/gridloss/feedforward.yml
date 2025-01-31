@@ -2,13 +2,14 @@ dataset_args:
   directory: data/gridloss
   training_data: train.csv
   test_data: test.csv
-  window_size: 24
+  window_size: 168
+  step_size: 24
   timeseries_to_use:
   - grid1-load
   - grid1-temp
   - grid1-loss
 forecasting_model_args:
-  window_size: 24
+  window_size: 168
   network_size:
     - 100
     - 100
