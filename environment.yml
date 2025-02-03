@@ -16,6 +16,7 @@ dependencies:
   - torchvision
   - torchaudio
   - tqdm
+  - pyyaml
   - matplotlib-inline
   - statsmodels
   - plotly

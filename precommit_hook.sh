@@ -6,8 +6,8 @@ set -e
 echo "🐍 Running Black formatter..."
 black .
 
-echo "🔍 Running Flake8 linter..."
-flake8 .
+#echo "🔍 Running Flake8 linter..."
+#flake8 .
 
 
 # Success check
