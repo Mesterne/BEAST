@@ -6,7 +6,7 @@ def pca_plot_train_test_pairing(mts_pca_df, dataset_row):
     """
     Plots PCA components for train-test pairings in the dataset.
 
-    This function visualizes two highlighted points in the PCA plot: 
+    This function visualizes two highlighted points in the PCA plot:
     the original index and the target index, connected by a dotted green arrow.
 
     Parameters:
