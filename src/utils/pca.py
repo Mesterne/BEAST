@@ -2,6 +2,7 @@ from sklearn.decomposition import PCA
 import numpy as np
 import pandas as pd
 
+
 class PCAWrapper:
     """
     A wrapper class for Principal Component Analysis (PCA).
@@ -32,9 +33,8 @@ class PCAWrapper:
         mts_pca_2d = self.pca.fit_transform(mts_features)
         self.is_fitted = True
 
-
         mts_pca_df = pd.DataFrame(data=mts_pca_2d, columns=["pca1", "pca2"])
-        mts_pca_df['index'] = mts_pca_df.index
+        mts_pca_df["index"] = mts_pca_df.index
 
         return mts_pca_df
 
@@ -52,10 +52,12 @@ class PCAWrapper:
             RuntimeError: If the PCA model has not been fitted yet.
         """
         if not self.is_fitted:
-            raise RuntimeError("The PCA model must be fitted using fit_transform() before calling transform().")
+            raise RuntimeError(
+                "The PCA model must be fitted using fit_transform() before calling transform()."
+            )
         resulting_df = mts_features.copy()
-        pca_components =  self.pca.transform(resulting_df)
-        resulting_df['pca1'] = pca_components[:, 0]
-        resulting_df['pca2'] = pca_components[:, 1]
+        pca_components = self.pca.transform(resulting_df)
+        resulting_df["pca1"] = pca_components[:, 0]
+        resulting_df["pca2"] = pca_components[:, 1]
 
         return resulting_df
