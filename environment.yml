@@ -21,3 +21,4 @@ dependencies:
   - statsmodels
   - plotly
   - nbformat
+  - pygad
