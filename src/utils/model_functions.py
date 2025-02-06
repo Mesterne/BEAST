@@ -1,10 +1,31 @@
+from typing import List, Union
 import torch
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
 
-def train_model(model, X, y, batch_size, num_epochs, learning_rate):
-    # Convert data to PyTorch tensors
+def train_model(
+    model: torch.nn.Module,
+    X: Union[List[float], torch.Tensor],
+    y: Union[List[float], torch.Tensor],
+    batch_size: int,
+    num_epochs: int,
+    learning_rate: float
+) -> List[float]:
+    """
+    Trains a PyTorch model using L1 loss and the Adam optimizer.
+
+    Args:
+        model (torch.nn.Module): The PyTorch model to be trained.
+        X (Union[List[float], torch.Tensor]): Input features for training.
+        y (Union[List[float], torch.Tensor]): Target values for training.
+        batch_size (int): Number of samples per training batch.
+        num_epochs (int): Number of training epochs.
+        learning_rate (float): Learning rate for the optimizer.
+
+    Returns:
+        List[float]: A list containing the loss history for each epoch.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -39,19 +60,28 @@ def train_model(model, X, y, batch_size, num_epochs, learning_rate):
     return loss_history
 
 
-def run_model_inference(model, X_test):
+def run_model_inference(
+    model: torch.nn.Module,
+    X_test: Union[List[float], torch.Tensor]
+) -> List[float]:
+    """
+    Runs inference on a trained PyTorch model.
+
+    Args:
+        model (torch.nn.Module): The trained PyTorch model.
+        X_test (Union[List[float], torch.Tensor]): Input features for inference.
+
+    Returns:
+        List[float]: Predicted values as a list.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Set model to evaluation mode
     model.eval()
 
-    # Convert test data to PyTorch tensors
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to(device)
 
-    # Disable gradient computation for evaluation
     with torch.no_grad():
-        # Get predictions
         outputs = model(X_test_tensor)
         predicted = outputs.cpu().numpy()
 
-    return predicted
+    return predicted.tolist()

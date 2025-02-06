@@ -14,8 +14,19 @@ forecasting_model_args:
     - 100
     - 100
   horizon_length: 24
-  model_name: feedforward
+  model_name: feedforward_forecaster
   model_params_storage_dir: models/feedforward
+feature_model_args:
+  hidden_network_size:
+    - 256
+    - 256
+    - 256
+    - 256
+  code_for_training:
+  model_name: feedforward_feature_space
+  model_params_storage_dir: .
+  epochs: 500
+  batch_size: 128
 training_args:
   batch_size: 16
   epochs: 100
