@@ -9,14 +9,21 @@ from tqdm import tqdm
 
 
 class FeedForwardFeatureModel(nn.Module):
-    def __init__(self, input_size, output_size, hidden_network_sizes, save_dir, name='feedforward_feature'):
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        hidden_network_sizes,
+        save_dir,
+        name="feedforward_feature",
+    ):
         super(FeedForwardFeatureModel, self).__init__()
         self.generate_network(
-            input_size=input_size, 
-            output_size=output_size, 
-            hidden_network_sizes=hidden_network_sizes
-        ) 
-        self.save_dir = save_dir + f'/{name}.pth'
+            input_size=input_size,
+            output_size=output_size,
+            hidden_network_sizes=hidden_network_sizes,
+        )
+        self.save_dir = save_dir + f"/{name}.pth"
         loaded_model = self.load_model()
         if loaded_model is not None:
             self = loaded_model
@@ -25,9 +32,10 @@ class FeedForwardFeatureModel(nn.Module):
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_size, hidden_network_sizes[0]))
         for i in range(1, len(hidden_network_sizes)):
-            self.layers.append(nn.Linear(hidden_network_sizes[i - 1], hidden_network_sizes[i]))
+            self.layers.append(
+                nn.Linear(hidden_network_sizes[i - 1], hidden_network_sizes[i])
+            )
         self.layers.append(nn.Linear(hidden_network_sizes[-1], output_size))
-
 
     def forward(self, x):
         for i in range(0, len(self.layers) - 1):
