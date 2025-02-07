@@ -29,4 +29,4 @@ def plot_distribution_of_feature_wise_error(differences_df):
         showlegend=False,
     )
 
-    fig.show()
+    return fig

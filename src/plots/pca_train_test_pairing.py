@@ -70,7 +70,7 @@ def pca_plot_train_test_pairing(mts_pca_df, dataset_row):
         )
     )
 
-    fig.show()
+    return fig
 
 
 def pca_plot_train_test_pairing_with_predictions(
@@ -161,4 +161,4 @@ def pca_plot_train_test_pairing_with_predictions(
         )
     )
 
-    fig.show()
+    return fig
