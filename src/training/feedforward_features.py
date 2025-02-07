@@ -15,6 +15,8 @@ if project_root not in sys.path:
 
 logging.basicConfig(level=logging.DEBUG)
 
+logging.info(f'Running from directory: {project_root}')
+
 from src.models.feedforward import FeedForwardFeatureModel
 from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 from src.utils.evaluation.feature_space_evaluation import (
