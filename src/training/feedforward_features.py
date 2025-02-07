@@ -9,13 +9,13 @@ import sys
 import os
 
 # Add project root to the system path
-project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
+project_root = os.path.abspath(os.path.join(os.getcwd()))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
 logging.basicConfig(level=logging.DEBUG)
 
-logging.info(f'Running from directory: {project_root}')
+logging.info(f"Running from directory: {project_root}")
 
 from src.models.feedforward import FeedForwardFeatureModel
 from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
