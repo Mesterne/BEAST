@@ -1,1 +1,1 @@
-print('Starting training of feedforward model...')
+print("Starting training of feedforward model...")
