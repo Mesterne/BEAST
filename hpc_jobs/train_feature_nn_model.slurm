@@ -13,7 +13,7 @@
 #SBATCH --mail-user=vegasj@stud.ntnu.no
 #SBATCH --mail-type=ALL
 
-WORKDIR=${SLURM_SUBMIT_DIR}../
+WORKDIR=${SLURM_SUBMIT_DIR}/../
 cd ${WORKDIR}
 echo "Running from this directory: $SLURM_SUBMIT_DIR"
 echo "Name of job: $SLURM_JOB_NAME"
@@ -23,7 +23,7 @@ echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
 module purge
 
 # Running your python file
-module load Anaconda/2024.02-1
+module load Anaconda3/2024.02-1
 conda env create -f environment.yml
 conda activate BEAST_ENV
 python src/training/test.py
