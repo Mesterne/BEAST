@@ -2,6 +2,7 @@ from typing import List, Union
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
+import logging
 
 
 def train_model(
@@ -27,6 +28,7 @@ def train_model(
         List[float]: A list containing the loss history for each epoch.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logging.info(f'Training model with device: {device}')
     model.to(device)
 
     model.loss = torch.nn.L1Loss()
@@ -74,6 +76,7 @@ def run_model_inference(
         List[float]: Predicted values as a list.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logging.info(f'Running model inference with device: {device}')
 
     model.eval()
 
