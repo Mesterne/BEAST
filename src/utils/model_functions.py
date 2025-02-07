@@ -10,7 +10,7 @@ def train_model(
     y: Union[List[float], torch.Tensor],
     batch_size: int,
     num_epochs: int,
-    learning_rate: float
+    learning_rate: float,
 ) -> List[float]:
     """
     Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -61,8 +61,7 @@ def train_model(
 
 
 def run_model_inference(
-    model: torch.nn.Module,
-    X_test: Union[List[float], torch.Tensor]
+    model: torch.nn.Module, X_test: Union[List[float], torch.Tensor]
 ) -> List[float]:
     """
     Runs inference on a trained PyTorch model.
