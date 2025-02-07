@@ -7,13 +7,13 @@
 #SBATCH --gres=gpu:1             # Setting the number of GPUs to 1
 #SBATCH --mem=16G                 # Asking for 16GB RAM
 #SBATCH --nodes=1
-#SBATCH --output=output.txt      # Specifying 'stdout'
-#SBATCH --error=output.err        # Specifying 'stderr'
+#SBATCH --output=run_logs/output.txt      # Specifying 'stdout'
+#SBATCH --error=run_logs/output.err        # Specifying 'stderr'
 
 #SBATCH --mail-user=vegasj@stud.ntnu.no
 #SBATCH --mail-type=ALL
 
-WORKDIR=../${SLURM_SUBMIT_DIR}
+WORKDIR=${SLURM_SUBMIT_DIR}../
 cd ${WORKDIR}
 echo "Running from this directory: $SLURM_SUBMIT_DIR"
 echo "Name of job: $SLURM_JOB_NAME"
