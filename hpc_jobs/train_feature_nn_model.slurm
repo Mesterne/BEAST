@@ -25,4 +25,4 @@ echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
 # Running your python file
 module load Anaconda3/2024.02-1
 conda activate BEAST_ENV
-python src/training/test.py
+python src/training/feedforward_features.py
