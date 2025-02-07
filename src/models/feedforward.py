@@ -30,7 +30,9 @@ class FeedForwardFeatureModel(nn.Module):
             self = loaded_model
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
-        logging.info(f'Building feedforward forecaster with hidden sizes: {hidden_network_sizes}')
+        logging.info(
+            f"Building feedforward forecaster with hidden sizes: {hidden_network_sizes}"
+        )
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_size, hidden_network_sizes[0]))
         for i in range(1, len(hidden_network_sizes)):
