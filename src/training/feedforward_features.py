@@ -42,7 +42,7 @@ SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
 
-settings = read_yaml("experiments/gridloss/feedforward.yml")
+settings = read_yaml("../../experiments/gridloss/feedforward.yml")
 
 features_to_use = settings["dataset_args"]["timeseries_to_use"]
 data_dir = os.path.join(settings["dataset_args"]["directory"], "train.csv")
