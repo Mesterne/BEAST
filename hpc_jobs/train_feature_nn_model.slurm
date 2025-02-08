@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=ie-idi       # E.g. "ie-idi" if you belong to IDI
 #SBATCH --job-name=train_feed_forward_feature_model
-#SBATCH --time=0-08:00:00         # format: D-HH:MM:SS
+#SBATCH --time=0-23:00:00         # format: D-HH:MM:SS
 
 #SBATCH --partition=GPUQ          # Asking for a GPU
 #SBATCH --gres=gpu:1             # Setting the number of GPUs to 1
