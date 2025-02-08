@@ -15,9 +15,9 @@
 
 WORKDIR=${SLURM_SUBMIT_DIR}
 cd ${WORKDIR}
-$current_run_id = $(date +%Y%m%d_%H%M%S)
-mkdir ${current_run_id}
-cd ${current_run_id}
+current_run_id=$(date +%Y%m%d_%H%M%S)
+mkdir "${current_run_id}"
+cd "${current_run_id}"
 echo "Running from this directory: $SLURM_SUBMIT_DIR"
 echo "Name of job: $SLURM_JOB_NAME"
 echo "ID of job: $SLURM_JOB_ID"
