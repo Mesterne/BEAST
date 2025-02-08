@@ -24,11 +24,9 @@ echo "ID of job: $SLURM_JOB_ID"
 echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
 
 
-module purge
-
 # Running your python file
 module load Anaconda3/2024.02-1
-# conda activate IDUN_BEAST
-conda install -c conda-forge python=3.12 numpy pandas matplotlib seaborn scikit-learn flake8 black pytorch tqdm pyyaml matplotlib-inline statsmodels plotly nbformat pygad 
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+conda activate IBUN_BEAST
+# conda install -c conda-forge python=3.12 numpy pandas matplotlib seaborn scikit-learn flake8 black pytorch tqdm pyyaml matplotlib-inline statsmodels plotly nbformat pygad 
+# conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 python ../../src/training/feedforward_features.py
