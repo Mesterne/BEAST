@@ -28,7 +28,7 @@ module purge
 
 # Running your python file
 module load Anaconda3/2024.02-1
-conda activate base
-conda install -c defaults -c conda-forge python=3.12 numpy pandas matplotlib seaborn scikit-learn flake8 black pytorch tqdm pyyvaml matplotlib-inline statsmodels plotly nbformat pygad kaleido
-conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+conda activate IDUN_BEAST
+# conda install -c conda-forge python=3.12 numpy pandas matplotlib seaborn scikit-learn flake8 black pytorch tqdm pyyvaml matplotlib-inline statsmodels plotly nbformat pygad kaleido
+# conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 python ../../src/training/feedforward_features.py
