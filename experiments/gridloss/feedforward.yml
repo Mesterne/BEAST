@@ -22,11 +22,13 @@ feature_model_args:
     - 256
     - 256
     - 256
+    - 256
+    - 256
   code_for_training:
   model_name: feedforward_feature_space
   model_params_storage_dir: .
   epochs: 500
-  batch_size: 256
+  batch_size: 64
   learning_rate: 0.0005
 training_args:
   batch_size: 16
