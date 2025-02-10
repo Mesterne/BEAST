@@ -3,15 +3,19 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 import logging
+import copy
 
 
 def train_model(
     model: torch.nn.Module,
-    X: Union[List[float], torch.Tensor],
-    y: Union[List[float], torch.Tensor],
+    X_train: Union[List[float], torch.Tensor],
+    y_train: Union[List[float], torch.Tensor],
+    X_validation: Union[List[float], torch.Tensor],
+    y_validation: Union[List[float], torch.Tensor],
     batch_size: int,
     num_epochs: int,
     learning_rate: float,
+    early_stopping_patience: float
 ) -> List[float]:
     """
     Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -31,35 +35,73 @@ def train_model(
     logging.info(f"Training model with device: {device}")
     model.to(device)
 
-    model.loss = torch.nn.L1Loss()
-    model.optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    X_tensor = torch.tensor(X, dtype=torch.float32).to(device)
-    y_tensor = torch.tensor(y, dtype=torch.float32).to(device)
+    loss_function = torch.nn.L1Loss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    dataset = TensorDataset(X_tensor, y_tensor)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
+    y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
+    X_validation_tensor = torch.tensor(X_validation, dtype=torch.float32).to(device)
+    y_validation_tensor = torch.tensor(y_validation, dtype=torch.float32).to(device)
 
-    loss_history = []
+    train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    validation_dataset = TensorDataset(X_validation_tensor, y_validation_tensor)
+    validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-    for _ in tqdm(range(num_epochs)):
+    train_loss_history = []
+    validation_loss_history = []
+
+    best_validation_loss = float('inf')
+    best_model_weigths = copy.deepcopy(model.state_dict())
+
+    for epoch in tqdm(range(num_epochs)):
         model.train()
         running_loss = 0.0
 
-        for inputs, targets in dataloader:
-            model.optimizer.zero_grad()
+        for inputs, targets in train_dataloader:
+            optimizer.zero_grad()
             outputs = model(inputs)
-            loss = model.loss(outputs, targets)
+            loss = loss_function(outputs, targets)
             loss.backward()
-            model.optimizer.step()
+            optimizer.step()
             running_loss += loss.item() * inputs.size(0)
 
-        epoch_loss = running_loss / len(dataloader.dataset)
-        loss_history.append(epoch_loss)
+        epoch_loss = running_loss / len(train_dataloader.dataset)
+        train_loss_history.append(epoch_loss)
 
+        model.eval()
+        val_loss = 0.0
+        running_val_loss = 0.0
+        with torch.no_grad():
+            for inputs, targets in validation_dataloader:
+                outputs = model(inputs)
+                loss = loss_function(outputs, targets)
+                running_val_loss += loss.item() * inputs.size(0)
+
+        val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
+        validation_loss_history.append(val_epoch_loss)
+        logging.info(f"Epoch {epoch + 1}/{num_epochs}, "
+         f"Training Loss: {epoch_loss:.4f}, Validation Loss: {val_epoch_loss:.4f}")
+        
+        # Early stopping logic
+        # The model has improved
+        if val_epoch_loss < best_validation_loss:
+            best_validation_loss = val_loss
+            best_model_weigths = copy.deepcopy(model.state_dict())
+            patience_counter = 0
+        # The model is not improving
+        else:
+            patience_counter += 1
+            logging.info(f"Early stopping patience counter: {patience_counter}/{early_stopping_patience}")
+            if patience_counter >= early_stopping_patience:
+                logging.info(f'Early stopping triggered for epoch {epoch}.')
+                break
+
+    model.load_state_dict(best_model_weigths)
     model.save_model()
 
-    return loss_history
+    return train_loss_history, validation_loss_history
 
 
 def run_model_inference(
