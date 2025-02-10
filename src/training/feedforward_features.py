@@ -73,7 +73,9 @@ from src.utils.generate_dataset import (
     generate_feature_dataframe,
     generate_windows_dataset,
 )
-from src.data_transformations.generation_of_supervised_pairs import create_train_val_test_split
+from src.data_transformations.generation_of_supervised_pairs import (
+    create_train_val_test_split,
+)
 from src.plots.pca_train_test_pairing import (
     pca_plot_train_test_pairing_with_predictions,
 )
@@ -158,7 +160,7 @@ mts_pca_df = pca_transformer.fit_transform(feature_df)
     feature_df=feature_df,
     FEATURES_NAMES=FEATURES_NAMES,
     TARGET_NAMES=TARGET_NAMES,
-    SEED=SEED
+    SEED=SEED,
 )
 
 feature_model_input_size = X_train.shape[1]
@@ -192,7 +194,9 @@ logging.info("Saving training history to html...")
 logging.info("Running model inference...")
 predictions = run_model_inference(model=feature_model, X_test=X_test)
 # FIXME: This is so ugly
-predictions = use_model_predictions_to_create_dataframe(predictions, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset)
+predictions = use_model_predictions_to_create_dataframe(
+    predictions, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset
+)
 logging.info("Successfully ran inference...")
 
 logging.info("Plotting predictions...")
