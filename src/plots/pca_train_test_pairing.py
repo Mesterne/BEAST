@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 
+
 def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFrame):
     """
     Plots PCA components for train-test pairings in the dataset.
@@ -33,10 +34,15 @@ def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFr
 
     # Assign labels and colors based on conditions
     mts_pca_df["category"] = mts_pca_df.apply(
-        lambda row: "Train" if row["isTrain"]
-        else "Validation" if row["isValidation"]
-        else "Test" if row["isTest"]
-        else "Other",
+        lambda row: (
+            "Train"
+            if row["isTrain"]
+            else (
+                "Validation"
+                if row["isValidation"]
+                else "Test" if row["isTest"] else "Other"
+            )
+        ),
         axis=1,
     )
 
@@ -50,7 +56,7 @@ def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFr
         hover_data=["index"],
         color="category",  # Assume column 'dataset_type' categorizes points
         color_discrete_map=color_map,
-        title="PCA Plot with Train-Test Pairing"
+        title="PCA Plot with Train-Test Pairing",
     )
 
     # Highlight original point
@@ -102,10 +108,15 @@ def pca_plot_train_test_pairing_with_predictions(
 
     # Assign labels and colors based on conditions
     mts_pca_df["category"] = mts_pca_df.apply(
-        lambda row: "Train" if row["isTrain"]
-        else "Validation" if row["isValidation"]
-        else "Test" if row["isTest"]
-        else "Other",
+        lambda row: (
+            "Train"
+            if row["isTrain"]
+            else (
+                "Validation"
+                if row["isValidation"]
+                else "Test" if row["isTest"] else "Other"
+            )
+        ),
         axis=1,
     )
 
