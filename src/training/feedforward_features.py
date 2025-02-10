@@ -8,6 +8,51 @@ import pandas as pd
 import sys
 import os
 
+from src.utils.data_formatting import use_model_predictions_to_create_dataframe
+
+FEATURES_NAMES = [
+    "original_index",
+    "original_grid-load_trend-strength",
+    "original_grid-load_trend-slope",
+    "original_grid-load_trend-linearity",
+    "original_grid-load_seasonal-strength",
+    "original_grid-loss_trend-strength",
+    "original_grid-loss_trend-slope",
+    "original_grid-loss_trend-linearity",
+    "original_grid-loss_seasonal-strength",
+    "original_grid-temp_trend-strength",
+    "original_grid-temp_trend-slope",
+    "original_grid-temp_trend-linearity",
+    "original_grid-temp_seasonal-strength",
+    "delta_grid-load_trend-strength",
+    "delta_grid-load_trend-slope",
+    "delta_grid-load_trend-linearity",
+    "delta_grid-load_seasonal-strength",
+    "delta_grid-loss_trend-strength",
+    "delta_grid-loss_trend-slope",
+    "delta_grid-loss_trend-linearity",
+    "delta_grid-loss_seasonal-strength",
+    "delta_grid-temp_trend-strength",
+    "delta_grid-temp_trend-slope",
+    "delta_grid-temp_trend-linearity",
+    "delta_grid-temp_seasonal-strength",
+]
+
+TARGET_NAMES = [
+    "target_grid-load_trend-strength",
+    "target_grid-load_trend-slope",
+    "target_grid-load_trend-linearity",
+    "target_grid-load_seasonal-strength",
+    "target_grid-loss_trend-strength",
+    "target_grid-loss_trend-slope",
+    "target_grid-loss_trend-linearity",
+    "target_grid-loss_seasonal-strength",
+    "target_grid-temp_trend-strength",
+    "target_grid-temp_trend-slope",
+    "target_grid-temp_trend-linearity",
+    "target_grid-temp_seasonal-strength",
+]
+
 # Add project root to the system path
 project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
 if project_root not in sys.path:
@@ -30,6 +75,7 @@ from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.utils.features import decomp_and_features
 from src.utils.generate_dataset import generate_windows_dataset
 from src.data_transformations.generation_of_supervised_pairs import (
+    create_train_val_test_split,
     generate_supervised_dataset_from_original_and_target_dist,
 )
 from src.plots.pca_train_test_pairing import (
@@ -41,6 +87,7 @@ from src.plots.pca_train_test_pairing import (
 SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
+
 
 settings = read_yaml("../../experiments/gridloss/feedforward.yml")
 
@@ -58,8 +105,6 @@ feature_model_hidden_network_sizes = settings["feature_model_args"][
     "hidden_network_size"
 ]
 
-# TODO: feature_model_input_size = 2*len(features_to_use)
-# TODO: feature_model_output_size = len(features_to_use)
 feature_model_save_dir = settings["feature_model_args"]["model_params_storage_dir"]
 feature_model_epochs = settings["feature_model_args"]["epochs"]
 feature_model_batch_size = settings["feature_model_args"]["batch_size"]
@@ -141,99 +186,18 @@ logging.info("Successfully generated feature dataframe")
 pca_transformer = PCAWrapper()
 mts_pca_df = pca_transformer.fit_transform(feature_df)
 
-fig = px.scatter(mts_pca_df, x="pca1", y="pca2", hover_data=["index"])
-fig.write_html("pca_scatter.html")
-logging.info("Generated PCA plot of features")
 
-test_indices = mts_pca_df[(mts_pca_df["pca1"] > 0.6) & (mts_pca_df["pca2"] > 0)][
-    "index"
-].values
-train_indices = mts_pca_df["index"][~mts_pca_df["index"].isin(test_indices)].values
-mts_pca_df["isTrain"] = mts_pca_df["index"].isin(train_indices)
-
-train_pca_df = mts_pca_df[mts_pca_df["isTrain"] == True]
-test_pca_df = mts_pca_df[mts_pca_df["isTrain"] == False]
-
-train_features = feature_df[~feature_df.index.isin(test_indices)]
-test_features = feature_df.iloc[test_indices]
-
-
-# To generate a training set, we create a matching between all MTSs in the
-# defined training feature space
-train_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
-    train_features, train_features
-)
-test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
-    train_features, test_features
-)
-
-dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
-    drop=True
-)
-fig = pca_plot_train_test_pairing(mts_pca_df, dataset_row)
-fig.show()
-logging.info("Generated PCA plot with target/test pairing")
-
-
-def generate_X_y_pairs_from_df(df):
-    # Assuming your DataFrame is called df
-    features_X = [
-        "original_index",
-        "original_grid-load_trend-strength",
-        "original_grid-load_trend-slope",
-        "original_grid-load_trend-linearity",
-        "original_grid-load_seasonal-strength",
-        "original_grid-loss_trend-strength",
-        "original_grid-loss_trend-slope",
-        "original_grid-loss_trend-linearity",
-        "original_grid-loss_seasonal-strength",
-        "original_grid-temp_trend-strength",
-        "original_grid-temp_trend-slope",
-        "original_grid-temp_trend-linearity",
-        "original_grid-temp_seasonal-strength",
-        "delta_grid-load_trend-strength",
-        "delta_grid-load_trend-slope",
-        "delta_grid-load_trend-linearity",
-        "delta_grid-load_seasonal-strength",
-        "delta_grid-loss_trend-strength",
-        "delta_grid-loss_trend-slope",
-        "delta_grid-loss_trend-linearity",
-        "delta_grid-loss_seasonal-strength",
-        "delta_grid-temp_trend-strength",
-        "delta_grid-temp_trend-slope",
-        "delta_grid-temp_trend-linearity",
-        "delta_grid-temp_seasonal-strength",
-    ]
-
-    target_y = [
-        "target_grid-load_trend-strength",
-        "target_grid-load_trend-slope",
-        "target_grid-load_trend-linearity",
-        "target_grid-load_seasonal-strength",
-        "target_grid-loss_trend-strength",
-        "target_grid-loss_trend-slope",
-        "target_grid-loss_trend-linearity",
-        "target_grid-loss_seasonal-strength",
-        "target_grid-temp_trend-strength",
-        "target_grid-temp_trend-slope",
-        "target_grid-temp_trend-linearity",
-        "target_grid-temp_seasonal-strength",
-    ]
-
-    # Extract X and y as NumPy arrays (if needed by the model)
-    X = df.loc[:, features_X].values
-    y = df.loc[:, target_y].values
-
-    # Optionally check the shapes
-    print("X shape:", X.shape)
-    print("y shape:", y.shape)
-
-    return X, y
-
-
-X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
-X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
-logging.info("Generated X, y pairs for training")
+(
+    X_train,
+    y_train,
+    X_validation,
+    y_validation,
+    X_test,
+    y_test,
+    train_supervised_dataset,
+    validation_supervised_dataset,
+    test_supervised_dataset,
+) = create_train_val_test_split(feature_df=mts_pca_df)
 
 feature_model_input_size = X_train.shape[1]
 feature_model_output_size = y_train.shape[1]
@@ -278,24 +242,7 @@ logging.info("Saving training history to html...")
 
 logging.info("Running model inference...")
 predictions = run_model_inference(model=feature_model, X_test=X_test)
-target_y = [
-    "target_grid-load_trend-strength",
-    "target_grid-load_trend-slope",
-    "target_grid-load_trend-linearity",
-    "target_grid-load_seasonal-strength",
-    "target_grid-loss_trend-strength",
-    "target_grid-loss_trend-slope",
-    "target_grid-loss_trend-linearity",
-    "target_grid-loss_seasonal-strength",
-    "target_grid-temp_trend-strength",
-    "target_grid-temp_trend-slope",
-    "target_grid-temp_trend-linearity",
-    "target_grid-temp_seasonal-strength",
-]
-column_names = [col.replace("target_", "") for col in target_y]
-predictions_df = pd.DataFrame(predictions, columns=column_names)
-predictions_df["prediction_index"] = range(len(predictions))
-predictions = predictions_df
+predictions = use_model_predictions_to_create_dataframe(predictions)
 logging.info("Successfully ran inference...")
 
 logging.info("Plotting predictions...")
