@@ -204,44 +204,56 @@ loss_fig.write_html("training_loss_history.html")
 
 logging.info("Saving training history to html...")
 
-logging.info("Running model inference...")
-predictions = run_model_inference(model=feature_model, X_test=X_test)
+logging.info("Running model inference on validation set...")
+predictions_validation = run_model_inference(model=feature_model, X_test=X_validation)
 # FIXME: The fact that we send the test supervised dataset as an argument is not pretty
-predictions = use_model_predictions_to_create_dataframe(
-    predictions, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset
+predictions_validation = use_model_predictions_to_create_dataframe(
+    predictions_validation, TARGET_NAMES=TARGET_NAMES, target_dataframe=validation_supervised_dataset
 )
-logging.info("Successfully ran inference...")
+logging.info("Successfully ran inference on validation set...")
 
-logging.info("Plotting predictions...")
-predictions_without_index = predictions.drop(columns=["prediction_index"])
+logging.info("Running model inference on test set...")
+predictions_test = run_model_inference(model=feature_model, X_test=X_test)
+# FIXME: The fact that we send the test supervised dataset as an argument is not pretty
+predictions_test = use_model_predictions_to_create_dataframe(
+    predictions_test, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset
+)
+logging.info("Successfully ran inference on test set...")
+
+logging.info("Plotting predictions for validation set...")
+predictions_without_index = predictions_validation.drop(columns=["prediction_index"])
 predictions_pca = pca_transformer.transform(predictions_without_index)
-predictions["pca1"] = predictions_pca["pca1"]
-predictions["pca2"] = predictions_pca["pca2"]
-
-prediction = predictions.sample(n=1, random_state=SEED).reset_index(drop=True)
+predictions_validation["pca1"] = predictions_pca["pca1"]
+predictions_validation["pca2"] = predictions_pca["pca2"]
+prediction = predictions_validation.sample(n=1, random_state=SEED).reset_index(drop=True)
 index = prediction["prediction_index"][0]
-
-# Assuming test_dataset and mts_pca_df are already available
-dataset_row = test_supervised_dataset.loc[index]
+dataset_row = validation_supervised_dataset.loc[index]
 dataset_row
 fig = pca_plot_train_test_pairing_with_predictions(
-    mts_pca_df, dataset_row, predictions, prediction
+    mts_pca_df, dataset_row, predictions_validation, prediction
 )
-fig.write_html("train_test_predictions_results.html")
+fig.write_html("train_validation_predictions_results.html")
 
 
 logging.info("Calculating errors for each prediction")
-differences_df = find_error_of_each_feature_for_each_sample(
-    predictions=predictions, labelled_test_dataset=test_supervised_dataset
+differences_df_validation = find_error_of_each_feature_for_each_sample(
+    predictions=predictions_validation, labelled_test_dataset=validation_supervised_dataset
+)
+differences_df_test = find_error_of_each_feature_for_each_sample(
+    predictions=predictions_test, labelled_test_dataset=test_supervised_dataset
 )
 
-fig = plot_distribution_of_feature_wise_error(differences_df)
+logging.info("Plotting errors for each prediction on validation set...")
+fig = plot_distribution_of_feature_wise_error(differences_df_validation)
 fig.write_html("dist_error_features.html")
 
 
-overall_mse, mse_values_for_each_feature = get_mse_for_features_and_overall(
-    differences_df
+overall_mse_validation, mse_values_for_each_feature_validation = get_mse_for_features_and_overall(
+    differences_df_validation
+)
+overall_mse_test, mse_values_for_each_feature_test = get_mse_for_features_and_overall(
+    differences_df_test
 )
 
-logging.info(f"Overall MSE for model: {overall_mse}")
+logging.info(f"Overall MSE for model\nValidation: {overall_mse_validation}\nTest: {overall_mse_test}")
 logging.info(f"Program finished...")
