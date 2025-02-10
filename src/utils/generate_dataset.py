@@ -2,6 +2,54 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
+from src.utils.features import decomp_and_features
+
+
+def generate_feature_dataframe(data, series_periodicity, dataset_size):
+    decomps, features = decomp_and_features(
+        data, series_periodicity=series_periodicity, dataset_size=dataset_size
+    )
+
+    ts_indices_to_names = {0: "grid-load", 1: "grid-loss", 2: "grid-temp"}
+
+    data = []
+    for idx in range(features.shape[0]):
+        for ts_idx in range(features.shape[1]):
+            row = {
+                "index": idx,
+                "ts_name": ts_indices_to_names[ts_idx],
+                "trend-strength": features[idx, ts_idx, 0],
+                "trend-slope": features[idx, ts_idx, 1],
+                "trend-linearity": features[idx, ts_idx, 2],
+                "seasonal-strength": features[idx, ts_idx, 3],
+            }
+            data.append(row)
+
+    df = pd.DataFrame(data)
+
+    feature_df = df.pivot_table(
+        index="index",
+        columns="ts_name",
+        values=[
+            "trend-strength",
+            "trend-slope",
+            "trend-linearity",
+            "seasonal-strength",
+        ],
+    )
+
+    feature_df.columns = [f"{ts}_{feature}" for feature, ts in feature_df.columns]
+
+    # Extract time series names and their features
+    ts_names = df["ts_name"].unique()
+    features = ["trend-strength", "trend-slope", "trend-linearity", "seasonal-strength"]
+
+    # Create the ordered column list
+    ordered_columns = [f"{ts}_{feature}" for ts in ts_names for feature in features]
+
+    # Reorder columns based on the ordered list
+    feature_df = feature_df[ordered_columns]
+    return feature_df
 
 
 def generate_windows_dataset(

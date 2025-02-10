@@ -2,10 +2,8 @@ import logging
 import pandas as pd
 import numpy as np
 from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
-from src.training.feedforward_features import SEED, FEATURES_NAMES, TARGET_NAMES
 
-
-def create_train_val_test_split(feature_df):
+def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED):
     """
     Generate X and y list for train, validation and testing supervised datasets.
     It does this by selecting certain regions in the PCA space which is looked at as
@@ -21,77 +19,83 @@ def create_train_val_test_split(feature_df):
         y_test
         These are the numpy arrays of feature/target pairs for train, validation and test
     """
+    logging.info(f'Generating X,y pairs of feature space for train, validation and test sets...')
 
-    validation_indices = feature_df[
-        (feature_df["pca1"] > 0.0)
-        & (feature_df["pca1"] < 0.2)
-        & (feature_df["pca2"] > 0.4)
+    validation_indices = pca_df[
+        (pca_df["pca1"] > 0.0)
+        & (pca_df["pca1"] < 0.2)
+        & (pca_df["pca2"] > 0.4)
     ]["index"].values
-    test_indices = feature_df[(feature_df["pca1"] > 0.8) & (feature_df["pca2"] > 0)][
+    test_indices = pca_df[(pca_df["pca1"] > 0.8) & (pca_df["pca2"] > 0)][
         "index"
     ].values
-    train_indices = feature_df["index"][
+    train_indices = pca_df["index"][
         ~(
-            feature_df["index"].isin(test_indices)
-            & feature_df["index"].isin(validation_indices)
+            pca_df["index"].isin(test_indices)
+            & pca_df["index"].isin(validation_indices)
         )
     ].values
 
-    feature_df["isTrain"] = feature_df["index"].isin(train_indices)
-    feature_df["isValidation"] = feature_df["index"][
-        feature_df["index"].isin(validation_indices)
+    pca_df["isTrain"] = pca_df["index"].isin(train_indices)
+    pca_df["isValidation"] = pca_df["index"][
+        pca_df["index"].isin(validation_indices)
     ]
-    feature_df["isTest"] = feature_df["index"][feature_df["index"].isin(test_indices)]
+    pca_df["isTest"] = pca_df["index"][pca_df["index"].isin(test_indices)]
 
-    train_features = feature_df[feature_df["isTrain"] == True]
-    validation_features = feature_df[feature_df["isValidation"] == True]
-    test_features = feature_df[feature_df["isTest"] == True]
+    train_features = feature_df[feature_df.index.isin(train_indices)]
+    validation_features = feature_df[feature_df.index.isin(validation_indices)]
+    test_features = feature_df[feature_df.index.isin(test_indices)]
+
 
     # To generate a training set, we create a matching between all MTSs in the
     # defined training feature space
+    logging.info(f'Generating supervised training dataset...')
     train_supervised_dataset = (
         generate_supervised_dataset_from_original_and_target_dist(
             train_features, train_features
         )
     )
+    logging.info(f'Generating supervised validation dataset...')
     validation_supervised_dataset = (
         generate_supervised_dataset_from_original_and_target_dist(
             train_features, validation_features
         )
     )
+    logging.info(f'Generating supervised test dataset...')
     test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
         train_features, test_features
     )
 
-    # TODO:
     dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
         drop=True
     )
-    fig = pca_plot_train_test_pairing(feature_df, dataset_row)
-    fig.show()
+    fig = pca_plot_train_test_pairing(pca_df, dataset_row)
+    fig.write_html('pca_train_test_pairing.html')
     logging.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
         # Extract X and y as NumPy arrays (if needed by the model)
         X = df.loc[:, FEATURES_NAMES].values
         y = df.loc[:, TARGET_NAMES].values
-
+ 
         return X, y
 
+    logging.info(f'Generating X,y pairs for training dataset...')
     X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
+    logging.info(f'Generating X,y pairs for validation dataset...')
     X_validation, y_validation = generate_X_y_pairs_from_df(
         validation_supervised_dataset
     )
+    logging.info(f'Generating X,y pairs for test dataset...')
     X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
     logging.info(
-        f"""
-        Generated X, y pairs for training, test and validation. With shapes:
-            \nX_training: {X_train.shape}         
-            \ny_training: {y_train.shape}         
+        f""" Generated X, y pairs for training, test and validation. With shapes:
+            X_training: {X_train.shape}         
+            y_training: {y_train.shape}         
             \nX_validation: {X_validation.shape}         
-            \ny_validation: {y_validation.shape}         
+            y_validation: {y_validation.shape}         
             \nX_test: {X_test.shape}         
-            \ny_test: {y_test.shape}         
+            y_test: {y_test.shape}         
     """
     )
     return (
@@ -148,7 +152,6 @@ def generate_supervised_dataset_from_original_and_target_dist(
     # cross join.
     dataset = pd.merge(orig_copy, target_copy, how="cross")
 
-    # To avoid the target and original MTS being the same, we filter on this
     dataset = dataset[dataset["original_index"] != dataset["target_index"]]
 
     for col in orig_copy.columns:
