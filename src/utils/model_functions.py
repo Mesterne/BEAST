@@ -17,6 +17,7 @@ def train_model(
     num_epochs: int,
     learning_rate: float,
     early_stopping_patience: float,
+    log_wandb: bool
 ) -> List[float]:
     """
     Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -95,13 +96,14 @@ def train_model(
             if patience_counter >= early_stopping_patience:
                 logging.info(f"Early stopping triggered for epoch {epoch}.")
                 break
-        wandb.log(
-            {
-                "Training loss": epoch_loss,
-                "Validation loss": val_epoch_loss,
-                "patience_counter": patience_counter,
-            }
-        )
+        if log_wandb:
+            wandb.log(
+                {
+                    "Training loss": epoch_loss,
+                    "Validation loss": val_epoch_loss,
+                    "patience_counter": patience_counter,
+                }
+            )
 
     model.load_state_dict(best_model_weigths)
     model.save_model()
