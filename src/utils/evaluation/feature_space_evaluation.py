@@ -4,10 +4,6 @@ from tqdm import tqdm
 
 
 def find_error_of_each_feature_for_each_sample(predictions, labelled_test_dataset):
-    logging.debug(f"Predictions shape: {predictions.shape}")
-    logging.debug(f"Test set shape: {labelled_test_dataset.shape}")
-    logging.debug(f"Predictions set columns: {predictions.columns}")
-    logging.debug(f"Test set columns: {labelled_test_dataset.columns}")
     # Initialize an empty list to store differences
     all_differences = []
 

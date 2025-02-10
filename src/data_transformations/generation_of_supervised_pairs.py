@@ -29,12 +29,12 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
     ]["index"].values
     test_indices = pca_df[(pca_df["pca1"] > 0.8) & (pca_df["pca2"] > 0)]["index"].values
     train_indices = pca_df["index"][
-        ~(pca_df["index"].isin(test_indices) & pca_df["index"].isin(validation_indices))
+        ~(pca_df["index"].isin(test_indices) | pca_df["index"].isin(validation_indices))
     ].values
 
     pca_df["isTrain"] = pca_df["index"].isin(train_indices)
-    pca_df["isValidation"] = pca_df["index"][pca_df["index"].isin(validation_indices)]
-    pca_df["isTest"] = pca_df["index"][pca_df["index"].isin(test_indices)]
+    pca_df["isValidation"] = pca_df["index"].isin(validation_indices)
+    pca_df["isTest"] = pca_df["index"].isin(test_indices)
 
     train_features = feature_df[feature_df.index.isin(train_indices)]
     validation_features = feature_df[feature_df.index.isin(validation_indices)]
