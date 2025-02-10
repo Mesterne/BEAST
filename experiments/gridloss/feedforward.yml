@@ -16,6 +16,7 @@ forecasting_model_args:
   horizon_length: 24
   model_name: feedforward_forecaster
   model_params_storage_dir: models/feedforward
+  learning_rate: 0.001
 feature_model_args:
   hidden_network_size:
     - 256
@@ -23,15 +24,12 @@ feature_model_args:
     - 256
     - 256
     - 256
-  code_for_training:
   model_name: feedforward_feature_space
+  model_params_storage_dir: models/feedforward
   model_params_storage_dir: .
   epochs: 500
   batch_size: 256
   learning_rate: 0.05
   early_stopping_patience: 15
 training_args:
-  batch_size: 16
-  epochs: 100
-  learning_rate: 0.001
   log_to_wandb: True

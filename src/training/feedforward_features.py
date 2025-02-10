@@ -104,7 +104,6 @@ features_to_use = settings["dataset_args"]["timeseries_to_use"]
 data_dir = os.path.join(settings["dataset_args"]["directory"], "train.csv")
 step_size = settings["dataset_args"]["step_size"]
 
-learning_rate = settings["training_args"]["learning_rate"]
 log_training_to_wandb = settings["training_args"]["log_to_wandb"]
 
 window_size = settings["forecasting_model_args"]["window_size"]
