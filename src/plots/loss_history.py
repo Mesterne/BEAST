@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 
 def plot_loss_history(train_loss_history, validation_loss_history, epochs):
     fig = go.Figure()
-    
+
     # Plot Training Loss
     fig.add_trace(
         go.Scatter(
@@ -13,7 +13,7 @@ def plot_loss_history(train_loss_history, validation_loss_history, epochs):
             name="Training Loss",
         )
     )
-    
+
     # Plot Validation Loss
     fig.add_trace(
         go.Scatter(
@@ -23,7 +23,7 @@ def plot_loss_history(train_loss_history, validation_loss_history, epochs):
             name="Validation Loss",
         )
     )
-    
+
     fig.update_layout(
         title="Training and Validation Loss History",
         xaxis_title="Epoch",

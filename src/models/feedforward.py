@@ -17,7 +17,7 @@ class FeedForwardFeatureModel(nn.Module):
         hidden_network_sizes,
         save_dir,
         name="feedforward_feature",
-        load_model=False
+        load_model=False,
     ):
         super(FeedForwardFeatureModel, self).__init__()
         self.generate_network(
