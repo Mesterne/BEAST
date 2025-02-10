@@ -19,13 +19,17 @@ forecasting_model_args:
 feature_model_args:
   hidden_network_size:
     - 256
+    - 256
+    - 256
+    - 256
+    - 256
   code_for_training:
   model_name: feedforward_feature_space
   model_params_storage_dir: .
-  epochs: 5
-  batch_size: 512
-  learning_rate: 0.2
-  early_stopping_patience: 10
+  epochs: 500
+  batch_size: 32
+  learning_rate: 0.005
+  early_stopping_patience: 15
 training_args:
   batch_size: 16
   epochs: 100
