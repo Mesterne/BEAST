@@ -2,10 +2,13 @@ import logging
 import numpy as np
 import random
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 import sys
 import os
 import torch
 
+plt.style.use("ggplot")
 
 FEATURES_NAMES = [
     "original_index",
@@ -55,7 +58,7 @@ project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 logging.info(f"Running from directory: {project_root}")
 
@@ -200,7 +203,7 @@ loss_fig = plot_loss_history(
     validation_loss_history=validation_loss_history,
     epochs=feature_model_epochs,
 )
-loss_fig.write_html("training_loss_history.html")
+loss_fig.savefig("training_loss_history.png")
 
 logging.info("Saving training history to html...")
 
@@ -238,7 +241,7 @@ dataset_row
 fig = pca_plot_train_test_pairing_with_predictions(
     mts_pca_df, dataset_row, predictions_validation, prediction
 )
-fig.write_html("train_validation_predictions_results.html")
+fig.savefig("train_validation_predictions_results.png")
 
 
 logging.info("Calculating errors for each prediction")
@@ -252,7 +255,7 @@ differences_df_test = find_error_of_each_feature_for_each_sample(
 
 logging.info("Plotting errors for each prediction on validation set...")
 fig = plot_distribution_of_feature_wise_error(differences_df_validation)
-fig.write_html("dist_error_features.html")
+fig.savefig("dist_error_features.png")
 
 
 overall_mse_validation, mse_values_for_each_feature_validation = (

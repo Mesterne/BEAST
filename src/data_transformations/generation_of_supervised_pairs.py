@@ -63,7 +63,7 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
         drop=True
     )
     fig = pca_plot_train_test_pairing(pca_df, dataset_row)
-    fig.write_html("pca_train_test_pairing.html")
+    fig.savefig("pca_train_test_pairing.png")
     logging.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
@@ -85,9 +85,9 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
         f""" Generated X, y pairs for training, test and validation. With shapes:
             X_training: {X_train.shape}         
             y_training: {y_train.shape}         
-            \nX_validation: {X_validation.shape}         
+            X_validation: {X_validation.shape}         
             y_validation: {y_validation.shape}         
-            \nX_test: {X_test.shape}         
+            X_test: {X_test.shape}         
             y_test: {y_test.shape}         
     """
     )

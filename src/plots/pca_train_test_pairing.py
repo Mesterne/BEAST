@@ -1,9 +1,5 @@
-import plotly.express as px
-import plotly.graph_objects as go
-
-
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 
 
@@ -19,7 +15,7 @@ def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFr
     dataset_row (pd.DataFrame): A DataFrame with 'original_index' and 'target_index' for pair visualization.
 
     Returns:
-    fig (go.Figure): Interactive plot showing the PCA points and highlighted transitions.
+    fig (matplotlib.figure.Figure): Matplotlib figure showing the PCA points and highlighted transitions.
     """
     # Ensure column names are compatible
     dataset_row.columns = [col.replace(" ", "_") for col in dataset_row.columns]
@@ -46,51 +42,58 @@ def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFr
         axis=1,
     )
 
-    color_map = {"Train": "blue", "Validation": "grey", "Test": "red"}
+    # Plot scatter points using seaborn
+    fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Create base scatter plot
-    fig = px.scatter(
-        mts_pca_df,
+    sns.scatterplot(
+        data=mts_pca_df,
         x="pca1",
         y="pca2",
-        hover_data=["index"],
-        color="category",  # Assume column 'dataset_type' categorizes points
-        color_discrete_map=color_map,
-        title="PCA Plot with Train-Test Pairing",
+        hue="category",
+        palette={
+            "Train": "blue",
+            "Validation": "grey",
+            "Test": "red",
+            "Other": "black",
+        },
+        legend="full",
+        s=50,
+        ax=ax,
     )
 
     # Highlight original point
-    fig.add_trace(
-        go.Scatter(
-            x=[original_point["pca1"]],
-            y=[original_point["pca2"]],
-            mode="markers",
-            marker=dict(color="orange", size=15),
-            name="Original Index",
-        )
+    ax.scatter(
+        original_point["pca1"],
+        original_point["pca2"],
+        color="orange",
+        s=150,
+        label="Original Index",
+        edgecolor="black",
     )
 
     # Highlight target point
-    fig.add_trace(
-        go.Scatter(
-            x=[target_point["pca1"]],
-            y=[target_point["pca2"]],
-            mode="markers",
-            marker=dict(color="purple", size=15),
-            name="Target Index",
-        )
+    ax.scatter(
+        target_point["pca1"],
+        target_point["pca2"],
+        color="purple",
+        s=150,
+        label="Target Index",
+        edgecolor="black",
     )
 
     # Add dotted arrow between points
-    fig.add_trace(
-        go.Scatter(
-            x=[original_point["pca1"], target_point["pca1"]],
-            y=[original_point["pca2"], target_point["pca2"]],
-            mode="lines",
-            line=dict(color="orange", dash="dot"),
-            name="Target Transition",
-        )
+    ax.plot(
+        [original_point["pca1"], target_point["pca1"]],
+        [original_point["pca2"], target_point["pca2"]],
+        linestyle="dotted",
+        color="orange",
+        label="Target Transition",
     )
+
+    ax.set_title("PCA Plot with Train-Test Pairing")
+    ax.set_xlabel("PCA1")
+    ax.set_ylabel("PCA2")
+    ax.legend()
 
     return fig
 
@@ -120,83 +123,87 @@ def pca_plot_train_test_pairing_with_predictions(
         axis=1,
     )
 
-    color_map = {"Train": "blue", "Validation": "grey", "Test": "red"}
+    # Plot scatter points using seaborn
+    fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Create the base scatter plot
-    fig = px.scatter(
-        mts_pca_df,
+    # Base scatter plot for categories
+    sns.scatterplot(
+        data=mts_pca_df,
         x="pca1",
         y="pca2",
-        hover_data=["index"],
-        color="category",
-        color_discrete_map=color_map,
+        hue="category",
+        palette={
+            "Train": "blue",
+            "Validation": "grey",
+            "Test": "red",
+            "Other": "black",
+        },
+        legend="full",
+        s=50,
+        ax=ax,
     )
 
-    # Add yellow dot for the original point
-    fig.add_trace(
-        go.Scatter(
-            x=[original_point["pca1"]],
-            y=[original_point["pca2"]],
-            mode="markers",
-            marker=dict(color="yellow", size=15),
-            name="Original Index",
-        )
+    # Plot key points
+    ax.scatter(
+        original_point["pca1"],
+        original_point["pca2"],
+        color="yellow",
+        s=150,
+        label="Original Index",
+        edgecolor="black",
     )
 
-    # Add red dot for the target point
-    fig.add_trace(
-        go.Scatter(
-            x=[target_point["pca1"]],
-            y=[target_point["pca2"]],
-            mode="markers",
-            marker=dict(color="red", size=15),
-            name="Target Index",
-        )
+    ax.scatter(
+        target_point["pca1"],
+        target_point["pca2"],
+        color="red",
+        s=150,
+        label="Target Index",
+        edgecolor="black",
     )
 
-    # Add a dotted arrow between original and target points
-    fig.add_trace(
-        go.Scatter(
-            x=[original_point["pca1"], target_point["pca1"]],
-            y=[original_point["pca2"], target_point["pca2"]],
-            mode="lines",
-            line=dict(color="red", dash="dot"),
-            name="Target Transition",
-        )
+    # Add dotted arrow between original and target points
+    ax.plot(
+        [original_point["pca1"], target_point["pca1"]],
+        [original_point["pca2"], target_point["pca2"]],
+        linestyle="dotted",
+        color="red",
+        label="Target Transition",
     )
 
     # Get the predicted point from the PCA DataFrame
     prediction_point = prediction_sample
 
-    fig.add_trace(
-        go.Scatter(
-            x=predictions["pca1"],
-            y=predictions["pca2"],
-            mode="markers",
-            marker=dict(color="orange", size=10),
-            name="Other predicted points",
-        )
+    ax.scatter(
+        predictions["pca1"],
+        predictions["pca2"],
+        color="orange",
+        s=100,
+        label="Other Predicted Points",
+        edgecolor="black",
     )
 
-    fig.add_trace(
-        go.Scatter(
-            x=[prediction_point["pca1"][0]],
-            y=[prediction_point["pca2"][0]],
-            mode="markers",
-            marker=dict(color="teal", size=15),
-            name="Prediction",
-        )
+    ax.scatter(
+        prediction_point["pca1"][0],
+        prediction_point["pca2"][0],
+        color="teal",
+        s=150,
+        label="Prediction",
+        edgecolor="black",
     )
 
-    # Add a line from the original point to the prediction point (green)
-    fig.add_trace(
-        go.Scatter(
-            x=[original_point["pca1"], prediction_point["pca1"][0]],
-            y=[original_point["pca2"], prediction_point["pca2"][0]],
-            mode="lines",
-            line=dict(color="green", dash="dot"),
-            name="Original to Prediction",
-        )
+    # Add line from original point to the prediction point (green)
+    ax.plot(
+        [original_point["pca1"], prediction_point["pca1"][0]],
+        [original_point["pca2"], prediction_point["pca2"][0]],
+        linestyle="dotted",
+        color="green",
+        label="Original to Prediction",
     )
+
+    ax.set_title("PCA Plot with Train/Test Pairing and Predictions")
+    ax.set_xlabel("PCA1")
+    ax.set_ylabel("PCA2")
+    ax.legend()
 
     return fig
