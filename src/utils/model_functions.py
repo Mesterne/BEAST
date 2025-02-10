@@ -17,7 +17,7 @@ def train_model(
     num_epochs: int,
     learning_rate: float,
     early_stopping_patience: float,
-    log_wandb: bool
+    log_wandb: bool,
 ) -> List[float]:
     """
     Trains a PyTorch model using L1 loss and the Adam optimizer.

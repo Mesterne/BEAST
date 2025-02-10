@@ -105,7 +105,7 @@ data_dir = os.path.join(settings["dataset_args"]["directory"], "train.csv")
 step_size = settings["dataset_args"]["step_size"]
 
 learning_rate = settings["training_args"]["learning_rate"]
-log_training_to_wandb = settings['training_args']['log_to_wandb']
+log_training_to_wandb = settings["training_args"]["log_to_wandb"]
 
 window_size = settings["forecasting_model_args"]["window_size"]
 horizon_length = settings["forecasting_model_args"]["horizon_length"]
@@ -204,7 +204,7 @@ train_loss_history, validation_loss_history = train_model(
     num_epochs=feature_model_epochs,
     learning_rate=feature_model_learning_rate,
     early_stopping_patience=feature_model_early_stopping_patience,
-    log_wandb=log_training_to_wandb
+    log_wandb=log_training_to_wandb,
 )
 loss_fig = plot_loss_history(
     train_loss_history=train_loss_history,
