@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 class FeedForwardForecaster(nn.Module):
     def __init__(
-        self, input_size, output_size, save_dir, name="feedforward_forecaster"
+        self, input_size, output_size, save_dir, name="feedforward_forecaster", load_model=False
     ):
         super(FeedForwardForecaster, self).__init__()
         self.fc1 = nn.Linear(input_size, 100)
@@ -18,9 +18,10 @@ class FeedForwardForecaster(nn.Module):
         self.fc3 = nn.Linear(100, output_size)
 
         self.save_dir = save_dir + f"/{name}.pth"
-        loaded_model = self.load_model()
-        if loaded_model is not None:
-            self = loaded_model
+        if load_model:
+            loaded_model = self.load_model()
+            if loaded_model is not None:
+                self = loaded_model
 
     def forward(self, x):
         x = F.relu(self.fc1(x))

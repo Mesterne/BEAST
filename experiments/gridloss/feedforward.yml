@@ -25,6 +25,7 @@ feature_model_args:
   epochs: 5
   batch_size: 512
   learning_rate: 0.2
+  early_stopping_patience: 10
 training_args:
   batch_size: 16
   epochs: 100

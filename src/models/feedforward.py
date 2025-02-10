@@ -17,6 +17,7 @@ class FeedForwardFeatureModel(nn.Module):
         hidden_network_sizes,
         save_dir,
         name="feedforward_feature",
+        load_model=False
     ):
         super(FeedForwardFeatureModel, self).__init__()
         self.generate_network(
@@ -25,9 +26,10 @@ class FeedForwardFeatureModel(nn.Module):
             hidden_network_sizes=hidden_network_sizes,
         )
         self.save_dir = save_dir + f"/{name}.pth"
-        loaded_model = self.load_model()
-        if loaded_model is not None:
-            self = loaded_model
+        if load_model:
+            loaded_model = self.load_model()
+            if loaded_model is not None:
+                self = loaded_model
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
         logging.info(

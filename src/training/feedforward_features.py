@@ -4,6 +4,7 @@ import random
 import pandas as pd
 import sys
 import os
+import torch
 
 
 FEATURES_NAMES = [
@@ -82,10 +83,14 @@ from src.plots.pca_train_test_pairing import (
 from src.plots.loss_history import plot_loss_history
 from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 
-
+# Setting seeds
 SEED = 42
 np.random.seed(SEED)
 random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 
 settings = read_yaml("../../experiments/gridloss/feedforward.yml")
@@ -108,6 +113,7 @@ feature_model_save_dir = settings["feature_model_args"]["model_params_storage_di
 feature_model_epochs = settings["feature_model_args"]["epochs"]
 feature_model_batch_size = settings["feature_model_args"]["batch_size"]
 feature_model_learning_rate = settings["feature_model_args"]["learning_rate"]
+feature_model_early_stopping_patience = settings["feature_model_args"]["early_stopping_patience"]
 
 forecasting_model_input_size = window_size * len(features_to_use)
 forecasting_model_output_size = horizon_length
@@ -176,16 +182,19 @@ feature_model = FeedForwardFeatureModel(
 )
 
 logging.info("Training model....")
-loss_history = train_model(
+train_loss_history, validation_loss_history = train_model(
     model=feature_model,
-    X=X_train,
-    y=y_train,
+    X_train=X_train,
+    y_train=y_train,
+    X_validation=X_validation,
+    y_validation=y_validation,
     batch_size=feature_model_batch_size,
     num_epochs=feature_model_epochs,
     learning_rate=feature_model_learning_rate,
+    early_stopping_patience=feature_model_early_stopping_patience
 )
 loss_fig = plot_loss_history(
-    train_loss_history=loss_history, epochs=feature_model_epochs
+    train_loss_history=train_loss_history, validation_loss_history=validation_loss_history, epochs=feature_model_epochs
 )
 loss_fig.write_html("training_loss_history.html")
 
@@ -193,7 +202,7 @@ logging.info("Saving training history to html...")
 
 logging.info("Running model inference...")
 predictions = run_model_inference(model=feature_model, X_test=X_test)
-# FIXME: This is so ugly
+# FIXME: The fact that we send the test supervised dataset as an argument is not pretty
 predictions = use_model_predictions_to_create_dataframe(
     predictions, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset
 )
