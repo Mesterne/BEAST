@@ -73,7 +73,6 @@ def train_model(
         train_loss_history.append(epoch_loss)
 
         model.eval()
-        val_loss = 0.0
         running_val_loss = 0.0
         with torch.no_grad():
             for inputs, targets in validation_dataloader:
@@ -87,7 +86,7 @@ def train_model(
         # Early stopping logic
         # The model has improved
         if val_epoch_loss < best_validation_loss:
-            best_validation_loss = val_loss
+            best_validation_loss = val_epoch_loss
             best_model_weigths = copy.deepcopy(model.state_dict())
             patience_counter = 0
         # The model is not improving
