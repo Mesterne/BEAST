@@ -99,7 +99,7 @@ torch.backends.cudnn.benchmark = False
 
 settings = read_yaml("../../experiments/gridloss/feedforward.yml")
 
-wandb.init(project="MTS-BEAST", config=settings['feature_model_args'])
+wandb.init(project="MTS-BEAST", config=settings["feature_model_args"])
 
 features_to_use = settings["dataset_args"]["timeseries_to_use"]
 data_dir = os.path.join(settings["dataset_args"]["directory"], "train.csv")
