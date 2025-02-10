@@ -1,6 +1,3 @@
-import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
 import logging
 import numpy as np
 import random
@@ -8,7 +5,6 @@ import pandas as pd
 import sys
 import os
 
-from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 
 FEATURES_NAMES = [
     "original_index",
@@ -73,15 +69,16 @@ from src.utils.pca import PCAWrapper
 from src.utils.yaml_loader import read_yaml
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.utils.features import decomp_and_features
-from src.utils.generate_dataset import generate_windows_dataset
-from src.data_transformations.generation_of_supervised_pairs import (
-    create_train_val_test_split,
-    generate_supervised_dataset_from_original_and_target_dist,
+from src.utils.generate_dataset import (
+    generate_feature_dataframe,
+    generate_windows_dataset,
 )
+from src.data_transformations.generation_of_supervised_pairs import create_train_val_test_split
 from src.plots.pca_train_test_pairing import (
-    pca_plot_train_test_pairing,
     pca_plot_train_test_pairing_with_predictions,
 )
+from src.plots.loss_history import plot_loss_history
+from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 
 
 SEED = 42
@@ -137,55 +134,14 @@ logging.info("Successfully generated windowed dataset")
 
 sp = 24  # STL parameter
 
-decomps, features = decomp_and_features(
-    data, series_periodicity=sp, dataset_size=dataset_size
+feature_df = generate_feature_dataframe(
+    data=data, series_periodicity=sp, dataset_size=dataset_size
 )
-
-mts_features_reshape = features.reshape(
-    (features.shape[0], features.shape[1] * features.shape[2])
-)
-
-ts_indices_to_names = {0: "grid-load", 1: "grid-loss", 2: "grid-temp"}
-
-data = []
-for idx in range(features.shape[0]):
-    for ts_idx in range(features.shape[1]):
-        row = {
-            "index": idx,
-            "ts_name": ts_indices_to_names[ts_idx],
-            "trend-strength": features[idx, ts_idx, 0],
-            "trend-slope": features[idx, ts_idx, 1],
-            "trend-linearity": features[idx, ts_idx, 2],
-            "seasonal-strength": features[idx, ts_idx, 3],
-        }
-        data.append(row)
-
-df = pd.DataFrame(data)
-
-feature_df = df.pivot_table(
-    index="index",
-    columns="ts_name",
-    values=["trend-strength", "trend-slope", "trend-linearity", "seasonal-strength"],
-)
-
-feature_df.columns = [f"{ts}_{feature}" for feature, ts in feature_df.columns]
-
-# Extract time series names and their features
-ts_names = df["ts_name"].unique()
-features = ["trend-strength", "trend-slope", "trend-linearity", "seasonal-strength"]
-
-
-# Create the ordered column list
-ordered_columns = [f"{ts}_{feature}" for ts in ts_names for feature in features]
-
-# Reorder columns based on the ordered list
-feature_df = feature_df[ordered_columns]
 
 logging.info("Successfully generated feature dataframe")
 
 pca_transformer = PCAWrapper()
 mts_pca_df = pca_transformer.fit_transform(feature_df)
-
 
 (
     X_train,
@@ -197,7 +153,13 @@ mts_pca_df = pca_transformer.fit_transform(feature_df)
     train_supervised_dataset,
     validation_supervised_dataset,
     test_supervised_dataset,
-) = create_train_val_test_split(feature_df=mts_pca_df)
+) = create_train_val_test_split(
+    pca_df=mts_pca_df,
+    feature_df=feature_df,
+    FEATURES_NAMES=FEATURES_NAMES,
+    TARGET_NAMES=TARGET_NAMES,
+    SEED=SEED
+)
 
 feature_model_input_size = X_train.shape[1]
 feature_model_output_size = y_train.shape[1]
@@ -220,29 +182,17 @@ loss_history = train_model(
     num_epochs=feature_model_epochs,
     learning_rate=feature_model_learning_rate,
 )
-
-fig = go.Figure()
-fig.add_trace(
-    go.Scatter(
-        x=list(range(1, feature_model_epochs + 1)),
-        y=loss_history,
-        mode="lines",
-        name="Training Loss",
-    )
+loss_fig = plot_loss_history(
+    train_loss_history=loss_history, epochs=feature_model_epochs
 )
-fig.update_layout(
-    title="Training Loss History",
-    xaxis_title="Epoch",
-    yaxis_title="Loss",
-    template="plotly_white",
-)
-fig.write_html("training_loss_history.html")
+loss_fig.write_html("training_loss_history.html")
 
 logging.info("Saving training history to html...")
 
 logging.info("Running model inference...")
 predictions = run_model_inference(model=feature_model, X_test=X_test)
-predictions = use_model_predictions_to_create_dataframe(predictions)
+# FIXME: This is so ugly
+predictions = use_model_predictions_to_create_dataframe(predictions, TARGET_NAMES=TARGET_NAMES, target_dataframe=test_supervised_dataset)
 logging.info("Successfully ran inference...")
 
 logging.info("Plotting predictions...")
@@ -275,7 +225,6 @@ fig.write_html("dist_error_features.html")
 overall_mse, mse_values_for_each_feature = get_mse_for_features_and_overall(
     differences_df
 )
-overall_mse
 
 logging.info(f"Overall MSE for model: {overall_mse}")
 logging.info(f"Program finished...")
