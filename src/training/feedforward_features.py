@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import sys
 import os
 import torch
+import wandb
 
 plt.style.use("ggplot")
 
@@ -97,6 +98,11 @@ torch.backends.cudnn.benchmark = False
 
 
 settings = read_yaml("../../experiments/gridloss/feedforward.yml")
+
+wandb.init(
+    project="MTS-BEAST",
+    config=settings
+)
 
 features_to_use = settings["dataset_args"]["timeseries_to_use"]
 data_dir = os.path.join(settings["dataset_args"]["directory"], "train.csv")

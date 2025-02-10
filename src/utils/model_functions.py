@@ -4,6 +4,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 import logging
 import copy
+import wandb
 
 
 def train_model(
@@ -83,6 +84,7 @@ def train_model(
         val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
         validation_loss_history.append(val_epoch_loss)
 
+
         # Early stopping logic
         # The model has improved
         if val_epoch_loss < best_validation_loss:
@@ -95,9 +97,16 @@ def train_model(
             if patience_counter >= early_stopping_patience:
                 logging.info(f"Early stopping triggered for epoch {epoch}.")
                 break
-
+        wandb.log({
+            'Training loss': epoch_loss,
+            'Validation loss': val_epoch_loss,
+            'patience_counter': patience_counter
+        })
+        
     model.load_state_dict(best_model_weigths)
     model.save_model()
+
+    wandb.finish()
 
     return train_loss_history, validation_loss_history
 
