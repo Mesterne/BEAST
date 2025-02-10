@@ -201,11 +201,10 @@ train_loss_history, validation_loss_history = train_model(
 loss_fig = plot_loss_history(
     train_loss_history=train_loss_history,
     validation_loss_history=validation_loss_history,
-    epochs=feature_model_epochs,
 )
 loss_fig.savefig("training_loss_history.png")
 
-logging.info("Saving training history to html...")
+logging.info("Saving training history to png...")
 
 logging.info("Running model inference on validation set...")
 predictions_validation = run_model_inference(model=feature_model, X_test=X_validation)

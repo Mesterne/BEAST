@@ -82,10 +82,6 @@ def train_model(
 
         val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
         validation_loss_history.append(val_epoch_loss)
-        logging.info(
-            f"Epoch {epoch + 1}/{num_epochs}, "
-            f"Training Loss: {epoch_loss:.4f}, Validation Loss: {val_epoch_loss:.4f}"
-        )
 
         # Early stopping logic
         # The model has improved
@@ -96,9 +92,6 @@ def train_model(
         # The model is not improving
         else:
             patience_counter += 1
-            logging.info(
-                f"Early stopping patience counter: {patience_counter}/{early_stopping_patience}"
-            )
             if patience_counter >= early_stopping_patience:
                 logging.info(f"Early stopping triggered for epoch {epoch}.")
                 break
