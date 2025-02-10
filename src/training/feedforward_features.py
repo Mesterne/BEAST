@@ -113,7 +113,9 @@ feature_model_save_dir = settings["feature_model_args"]["model_params_storage_di
 feature_model_epochs = settings["feature_model_args"]["epochs"]
 feature_model_batch_size = settings["feature_model_args"]["batch_size"]
 feature_model_learning_rate = settings["feature_model_args"]["learning_rate"]
-feature_model_early_stopping_patience = settings["feature_model_args"]["early_stopping_patience"]
+feature_model_early_stopping_patience = settings["feature_model_args"][
+    "early_stopping_patience"
+]
 
 forecasting_model_input_size = window_size * len(features_to_use)
 forecasting_model_output_size = horizon_length
@@ -191,10 +193,12 @@ train_loss_history, validation_loss_history = train_model(
     batch_size=feature_model_batch_size,
     num_epochs=feature_model_epochs,
     learning_rate=feature_model_learning_rate,
-    early_stopping_patience=feature_model_early_stopping_patience
+    early_stopping_patience=feature_model_early_stopping_patience,
 )
 loss_fig = plot_loss_history(
-    train_loss_history=train_loss_history, validation_loss_history=validation_loss_history, epochs=feature_model_epochs
+    train_loss_history=train_loss_history,
+    validation_loss_history=validation_loss_history,
+    epochs=feature_model_epochs,
 )
 loss_fig.write_html("training_loss_history.html")
 

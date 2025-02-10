@@ -15,7 +15,7 @@ def train_model(
     batch_size: int,
     num_epochs: int,
     learning_rate: float,
-    early_stopping_patience: float
+    early_stopping_patience: float,
 ) -> List[float]:
     """
     Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -35,7 +35,6 @@ def train_model(
     logging.info(f"Training model with device: {device}")
     model.to(device)
 
-
     loss_function = torch.nn.L1Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -47,12 +46,14 @@ def train_model(
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     validation_dataset = TensorDataset(X_validation_tensor, y_validation_tensor)
-    validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+    validation_dataloader = DataLoader(
+        validation_dataset, batch_size=batch_size, shuffle=False
+    )
 
     train_loss_history = []
     validation_loss_history = []
 
-    best_validation_loss = float('inf')
+    best_validation_loss = float("inf")
     best_model_weigths = copy.deepcopy(model.state_dict())
 
     for epoch in tqdm(range(num_epochs)):
@@ -81,9 +82,11 @@ def train_model(
 
         val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
         validation_loss_history.append(val_epoch_loss)
-        logging.info(f"Epoch {epoch + 1}/{num_epochs}, "
-         f"Training Loss: {epoch_loss:.4f}, Validation Loss: {val_epoch_loss:.4f}")
-        
+        logging.info(
+            f"Epoch {epoch + 1}/{num_epochs}, "
+            f"Training Loss: {epoch_loss:.4f}, Validation Loss: {val_epoch_loss:.4f}"
+        )
+
         # Early stopping logic
         # The model has improved
         if val_epoch_loss < best_validation_loss:
@@ -93,9 +96,11 @@ def train_model(
         # The model is not improving
         else:
             patience_counter += 1
-            logging.info(f"Early stopping patience counter: {patience_counter}/{early_stopping_patience}")
+            logging.info(
+                f"Early stopping patience counter: {patience_counter}/{early_stopping_patience}"
+            )
             if patience_counter >= early_stopping_patience:
-                logging.info(f'Early stopping triggered for epoch {epoch}.')
+                logging.info(f"Early stopping triggered for epoch {epoch}.")
                 break
 
     model.load_state_dict(best_model_weigths)

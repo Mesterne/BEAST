@@ -10,7 +10,12 @@ from tqdm import tqdm
 
 class FeedForwardForecaster(nn.Module):
     def __init__(
-        self, input_size, output_size, save_dir, name="feedforward_forecaster", load_model=False
+        self,
+        input_size,
+        output_size,
+        save_dir,
+        name="feedforward_forecaster",
+        load_model=False,
     ):
         super(FeedForwardForecaster, self).__init__()
         self.fc1 = nn.Linear(input_size, 100)
