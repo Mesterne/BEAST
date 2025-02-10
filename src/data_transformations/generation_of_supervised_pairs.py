@@ -1,6 +1,7 @@
 import logging
 import pandas as pd
 import numpy as np
+from random import sample
 from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
 
 
@@ -130,23 +131,23 @@ def generate_supervised_dataset_from_original_and_target_dist(
         - Cross joins between distributions are used to create all possible pairs.
         - Randomly selects one delta column per row and sets other deltas to zero.
     """
-    # We copy the distributions, to avoid inplace alteration. Also add prefix
-    # to each column
+    # Copy distributions to avoid inplace alteration and add prefixes to columns
     orig_copy = original_distribution.copy().add_prefix("original_")
     target_copy = target_distribution.copy().add_prefix("target_")
 
-    # Fix index of the original and target distribution
+    # Reset and rename indices to avoid conflicts during merging
     orig_copy.reset_index(inplace=True)
     target_copy.reset_index(inplace=True)
     orig_copy.rename(columns={"index": "original_index"}, inplace=True)
     target_copy.rename(columns={"index": "target_index"}, inplace=True)
 
-    # This is where we match original distribution with target distribution using
-    # cross join.
+    # Perform cross join to create all possible pairs
     dataset = pd.merge(orig_copy, target_copy, how="cross")
 
+    # Remove pairs where the original and target indices are identical
     dataset = dataset[dataset["original_index"] != dataset["target_index"]]
 
+    # Compute delta columns
     for col in orig_copy.columns:
         if col.startswith("original_"):
             target_col = "target_" + col[len("original_") :]
@@ -155,14 +156,19 @@ def generate_supervised_dataset_from_original_and_target_dist(
 
     delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
 
-    # Finally we choose a random column to simulate the 'user changes on'
-    for index, _ in dataset.iterrows():
-        # Randomly choose one delta column to keep
-        chosen_delta_column = np.random.choice(delta_columns)
+    # Create one row per active delta column
+    expanded_rows = []
+    for index, row in dataset.iterrows():
+        sampled_cols = sample(delta_columns, 3)
+        for delta_col in sampled_cols:
+            new_row = row.copy()
+            # Set all delta columns to 0 except the current one
+            for col in delta_columns:
+                new_row[col] = 0
+            new_row[delta_col] = row[delta_col]
+            expanded_rows.append(new_row)
 
-        # Set all other delta columns to 0
-        for delta_col in delta_columns:
-            if delta_col != chosen_delta_column:
-                dataset.at[index, delta_col] = 0
+    # Create a new DataFrame from the expanded rows
+    expanded_dataset = pd.DataFrame(expanded_rows)
 
-    return dataset.drop(columns=["delta_index"])
+    return expanded_dataset

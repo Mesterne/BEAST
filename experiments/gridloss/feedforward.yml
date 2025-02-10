@@ -28,8 +28,8 @@ feature_model_args:
   model_params_storage_dir: models/feedforward
   model_params_storage_dir: .
   epochs: 500
-  batch_size: 256
-  learning_rate: 0.05
-  early_stopping_patience: 15
+  batch_size: 32
+  learning_rate: 0.001
+  early_stopping_patience: 25
 training_args:
   log_to_wandb: True
