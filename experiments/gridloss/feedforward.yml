@@ -23,12 +23,11 @@ feature_model_args:
     - 256
     - 256
     - 256
-    - 256
   model_name: feedforward_feature_space
   model_params_storage_dir: models/feedforward
   model_params_storage_dir: .
   epochs: 500
-  batch_size: 16
+  batch_size: 64
   learning_rate: 0.001
   early_stopping_patience: 25
 training_args:
