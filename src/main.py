@@ -17,6 +17,10 @@ project_root = os.path.abspath(os.path.join(os.getcwd()))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logging.info(f"Running from directory: {project_root}")
+
 from src.utils.yaml_loader import read_yaml
 from src.utils.generate_dataset import (
     generate_windows_dataset,
@@ -54,9 +58,12 @@ dataset_size = (df.shape[0] - context_length) // step_size
 
 mts_dataset = generate_windows_dataset(df, context_length, step_size, timeseries_to_use)
 
+logging.info("Successfully generated multivariate time series dataset")
+
 # Generate feature dataframe
 sp = config["stl_args"]["series_periodicity"]
 mts_feature_df = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=sp, dataset_size=dataset_size
 )
+
 logging.info("Successfully generated feature dataframe")
