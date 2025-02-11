@@ -1,0 +1,37 @@
+dataset_args:
+  directory: data/gridloss
+  training_data: train.csv
+  test_data: test.csv
+  window_size: 168
+  step_size: 24
+  timeseries_to_use:
+  - grid1-load
+  - grid1-temp
+  - grid1-loss
+forecasting_model_args:
+  window_size: 168
+  network_size:
+    - 100
+    - 100
+  horizon_length: 24
+  model_name: feedforward_forecaster
+  model_params_storage_dir: models/feedforward
+  learning_rate: 0.001
+feature_model_args:
+  hidden_network_size:
+    - 256
+    - 256
+    - 256
+    - 256
+    - 256
+  model_name: feedforward_feature_space
+  model_params_storage_dir: models/feedforward
+  model_params_storage_dir: .
+  epochs: 5
+  batch_size: 32
+  learning_rate: 0.001
+  early_stopping_patience: 25
+training_args:
+  log_to_wandb: True
+stl_args:
+  series_periodicity: 24
