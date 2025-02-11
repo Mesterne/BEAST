@@ -111,7 +111,7 @@ def generate_supervised_dataset_from_original_and_target_dist(
     """
     Generate a supervised dataset by creating all possible pairwise combinations between
     an original distribution and a target distribution, computing deltas between paired features,
-    and simulating user change behavior by selecting one random delta column for each pair.
+    and simulating user change behavior by activating specific groups of delta columns.
 
     Args:
         original_distribution (pd.DataFrame): The DataFrame representing the original distribution.
@@ -123,13 +123,13 @@ def generate_supervised_dataset_from_original_and_target_dist(
         pd.DataFrame: A DataFrame containing:
             - Features from both the original and target distributions, prefixed by `original_` and `target_`.
             - Delta columns showing the difference between paired features, prefixed by `delta_`.
-            - For each row, only one `delta_` column retains a non-zero value to simulate user changes.
+            - For each row, specific groups of `delta_` columns retain non-zero values while others are set to zero.
 
     Notes:
         - The original and target indices are reset and renamed to avoid conflicts during merging.
         - The function filters out rows where the original and target indices are identical.
         - Cross joins between distributions are used to create all possible pairs.
-        - Randomly selects one delta column per row and sets other deltas to zero.
+        - Activates grouped delta columns together based on specific prefixes.
     """
     # Copy distributions to avoid inplace alteration and add prefixes to columns
     orig_copy = original_distribution.copy().add_prefix("original_")
@@ -156,19 +156,27 @@ def generate_supervised_dataset_from_original_and_target_dist(
 
     delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
 
-    # Create one row per active delta column
+    # Define groups of delta columns
+    load_columns = [col for col in delta_columns if col.startswith("delta_grid-load")]
+    loss_columns = [col for col in delta_columns if col.startswith("delta_grid-loss")]
+    temp_columns = [col for col in delta_columns if col.startswith("delta_grid-temp")]
+
+    grouped_columns = [load_columns, loss_columns, temp_columns]
+
+    # Create rows by activating each group separately
     expanded_rows = []
     for index, row in dataset.iterrows():
-        sampled_cols = sample(delta_columns, 3)
-        for delta_col in sampled_cols:
+        for group in grouped_columns:
             new_row = row.copy()
-            # Set all delta columns to 0 except the current one
+            # Set all delta columns to 0
             for col in delta_columns:
                 new_row[col] = 0
-            new_row[delta_col] = row[delta_col]
+            # Activate all columns in the current group
+            for col in group:
+                new_row[col] = row[col]
             expanded_rows.append(new_row)
 
     # Create a new DataFrame from the expanded rows
-    expanded_dataset = pd.DataFrame(expanded_rows)
+    expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
 
     return expanded_dataset
