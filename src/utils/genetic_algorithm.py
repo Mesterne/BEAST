@@ -3,11 +3,11 @@ from pygad import GA
 
 from statsmodels.tsa.seasonal import DecomposeResult  # For type hinting
 
-from utils.transformations import (
+from .transformations import (
     manipulate_seasonal_component,
     manipulate_trend_component,
 )
-from utils.features import (
+from .features import (
     trend_strength,
     trend_slope,
     trend_linearity,
@@ -25,6 +25,7 @@ class GeneticAlgorithm:
         num_parents_mating: int,
         sol_per_pop: int,
         num_genes: int,
+        gene_space: list,
         init_range_low: int,
         init_range_high: int,
         parent_selection_type: str = "sss",
@@ -38,6 +39,7 @@ class GeneticAlgorithm:
         self.num_parents_mating = num_parents_mating
         self.sol_per_pop = sol_per_pop
         self.num_genes = num_genes
+        self.gene_space = gene_space
         self.init_range_low = init_range_low
         self.init_range_high = init_range_high
         self.parent_selection_type = parent_selection_type
@@ -92,6 +94,7 @@ class GeneticAlgorithm:
             num_parents_mating=self.num_parents_mating,
             sol_per_pop=self.sol_per_pop,
             num_genes=self.num_genes,
+            gene_space=self.gene_space,
             init_range_low=self.init_range_low,
             init_range_high=self.init_range_high,
             parent_selection_type=self.parent_selection_type,

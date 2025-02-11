@@ -7,7 +7,7 @@ dependencies:
   - python=3.12
   - numpy
   - pandas
-  - matplotlib
+  - matplotlib==3.7.3 # Latest version cause conflict with seaborn
   - seaborn
   - scikit-learn
   - flake8
