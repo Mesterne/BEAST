@@ -1,5 +1,108 @@
+import logging
 import pandas as pd
 import numpy as np
+from random import sample
+from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
+
+
+def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED):
+    """
+    Generate X and y list for train, validation and testing supervised datasets.
+    It does this by selecting certain regions in the PCA space which is looked at as
+    out of distribution.
+    Args:
+        feature_df (pd.DataFrame): The feature dataframe, haing the features of all MTSs in the dataset!
+    Returns:
+        X_train
+        y_train
+        X_validation
+        y_validation
+        X_test
+        y_test
+        These are the numpy arrays of feature/target pairs for train, validation and test
+    """
+    logging.info(
+        f"Generating X,y pairs of feature space for train, validation and test sets..."
+    )
+
+    validation_indices = pca_df[
+        (pca_df["pca1"] > 0.0) & (pca_df["pca1"] < 0.2) & (pca_df["pca2"] > 0.4)
+    ]["index"].values
+    test_indices = pca_df[(pca_df["pca1"] > 0.8) & (pca_df["pca2"] > 0)]["index"].values
+    train_indices = pca_df["index"][
+        ~(pca_df["index"].isin(test_indices) | pca_df["index"].isin(validation_indices))
+    ].values
+
+    pca_df["isTrain"] = pca_df["index"].isin(train_indices)
+    pca_df["isValidation"] = pca_df["index"].isin(validation_indices)
+    pca_df["isTest"] = pca_df["index"].isin(test_indices)
+
+    train_features = feature_df[feature_df.index.isin(train_indices)]
+    validation_features = feature_df[feature_df.index.isin(validation_indices)]
+    test_features = feature_df[feature_df.index.isin(test_indices)]
+
+    # To generate a training set, we create a matching between all MTSs in the
+    # defined training feature space
+    logging.info(f"Generating supervised training dataset...")
+    train_supervised_dataset = (
+        generate_supervised_dataset_from_original_and_target_dist(
+            train_features, train_features
+        )
+    )
+    logging.info(f"Generating supervised validation dataset...")
+    validation_supervised_dataset = (
+        generate_supervised_dataset_from_original_and_target_dist(
+            train_features, validation_features
+        )
+    )
+    logging.info(f"Generating supervised test dataset...")
+    test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
+        train_features, test_features
+    )
+
+    dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
+        drop=True
+    )
+    fig = pca_plot_train_test_pairing(pca_df, dataset_row)
+    fig.savefig("pca_train_test_pairing.png")
+    logging.info("Generated PCA plot with target/test pairing")
+
+    def generate_X_y_pairs_from_df(df):
+        # Extract X and y as NumPy arrays (if needed by the model)
+        X = df.loc[:, FEATURES_NAMES].values
+        y = df.loc[:, TARGET_NAMES].values
+
+        return X, y
+
+    logging.info(f"Generating X,y pairs for training dataset...")
+    X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
+    logging.info(f"Generating X,y pairs for validation dataset...")
+    X_validation, y_validation = generate_X_y_pairs_from_df(
+        validation_supervised_dataset
+    )
+    logging.info(f"Generating X,y pairs for test dataset...")
+    X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
+    logging.info(
+        f""" Generated X, y pairs for training, test and validation. With shapes:
+            X_training: {X_train.shape}         
+            y_training: {y_train.shape}         
+            X_validation: {X_validation.shape}         
+            y_validation: {y_validation.shape}         
+            X_test: {X_test.shape}         
+            y_test: {y_test.shape}         
+    """
+    )
+    return (
+        X_train,
+        y_train,
+        X_validation,
+        y_validation,
+        X_test,
+        y_test,
+        train_supervised_dataset,
+        validation_supervised_dataset,
+        test_supervised_dataset,
+    )
 
 
 def generate_supervised_dataset_from_original_and_target_dist(
@@ -28,24 +131,23 @@ def generate_supervised_dataset_from_original_and_target_dist(
         - Cross joins between distributions are used to create all possible pairs.
         - Randomly selects one delta column per row and sets other deltas to zero.
     """
-    # We copy the distributions, to avoid inplace alteration. Also add prefix
-    # to each column
+    # Copy distributions to avoid inplace alteration and add prefixes to columns
     orig_copy = original_distribution.copy().add_prefix("original_")
     target_copy = target_distribution.copy().add_prefix("target_")
 
-    # Fix index of the original and target distribution
+    # Reset and rename indices to avoid conflicts during merging
     orig_copy.reset_index(inplace=True)
     target_copy.reset_index(inplace=True)
     orig_copy.rename(columns={"index": "original_index"}, inplace=True)
     target_copy.rename(columns={"index": "target_index"}, inplace=True)
 
-    # This is where we match original distribution with target distribution using
-    # cross join.
+    # Perform cross join to create all possible pairs
     dataset = pd.merge(orig_copy, target_copy, how="cross")
 
-    # To avoid the target and original MTS being the same, we filter on this
+    # Remove pairs where the original and target indices are identical
     dataset = dataset[dataset["original_index"] != dataset["target_index"]]
 
+    # Compute delta columns
     for col in orig_copy.columns:
         if col.startswith("original_"):
             target_col = "target_" + col[len("original_") :]
@@ -54,14 +156,19 @@ def generate_supervised_dataset_from_original_and_target_dist(
 
     delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
 
-    # Finally we choose a random column to simulate the 'user changes on'
-    for index, _ in dataset.iterrows():
-        # Randomly choose one delta column to keep
-        chosen_delta_column = np.random.choice(delta_columns)
+    # Create one row per active delta column
+    expanded_rows = []
+    for index, row in dataset.iterrows():
+        sampled_cols = sample(delta_columns, 3)
+        for delta_col in sampled_cols:
+            new_row = row.copy()
+            # Set all delta columns to 0 except the current one
+            for col in delta_columns:
+                new_row[col] = 0
+            new_row[delta_col] = row[delta_col]
+            expanded_rows.append(new_row)
 
-        # Set all other delta columns to 0
-        for delta_col in delta_columns:
-            if delta_col != chosen_delta_column:
-                dataset.at[index, delta_col] = 0
+    # Create a new DataFrame from the expanded rows
+    expanded_dataset = pd.DataFrame(expanded_rows)
 
-    return dataset.drop(columns=["delta_index"])
+    return expanded_dataset
