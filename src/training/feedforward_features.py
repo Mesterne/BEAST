@@ -64,7 +64,6 @@ logging.basicConfig(level=logging.INFO)
 logging.info(f"Running from directory: {project_root}")
 
 from src.models.feedforward import FeedForwardFeatureModel
-from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 from src.utils.evaluation.feature_space_evaluation import (
     find_error_of_each_feature_for_each_sample,
 )
@@ -86,6 +85,7 @@ from src.plots.pca_train_test_pairing import (
 )
 from src.plots.loss_history import plot_loss_history
 from src.utils.data_formatting import use_model_predictions_to_create_dataframe
+from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 
 # Setting seeds
 SEED = 42
@@ -243,7 +243,6 @@ prediction = predictions_validation.sample(n=1, random_state=SEED).reset_index(
 )
 index = prediction["prediction_index"][0]
 dataset_row = validation_supervised_dataset.loc[index]
-dataset_row
 fig = pca_plot_train_test_pairing_with_predictions(
     mts_pca_df, dataset_row, predictions_validation, prediction
 )
@@ -263,9 +262,14 @@ logging.info("Plotting errors for each prediction on validation set...")
 fig = plot_distribution_of_feature_wise_error(differences_df_validation)
 fig.savefig("dist_error_features.png")
 
-
+logging.info(
+    f"Calculating overall MSE for predictions of validation set. There are {len(differences_df_validation)} predictions"
+)
 overall_mse_validation, mse_values_for_each_feature_validation = (
     get_mse_for_features_and_overall(differences_df_validation)
+)
+logging.info(
+    f"Calculating overall MSE for predictions of validation set. There are {len(differences_df_test)} predictions"
 )
 overall_mse_test, mse_values_for_each_feature_test = get_mse_for_features_and_overall(
     differences_df_test

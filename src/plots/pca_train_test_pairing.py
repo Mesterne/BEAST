@@ -1,3 +1,4 @@
+import logging
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -101,7 +102,7 @@ def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFr
 def pca_plot_train_test_pairing_with_predictions(
     mts_pca_df, dataset_row, predictions, prediction_sample
 ):
-    # Extract the necessary indices
+    # Extract relevant indices
     original_idx = dataset_row.loc["original_index"]
     target_idx = dataset_row.loc["target_index"]
 
