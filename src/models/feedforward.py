@@ -9,6 +9,7 @@ from tqdm import tqdm
 from src.utils.logging_config import logger
 import os
 
+
 class FeedForwardFeatureModel(nn.Module):
     def __init__(
         self,
