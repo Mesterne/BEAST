@@ -132,6 +132,9 @@ if log_training_to_wandb:
 
 logger.info("Initialized system")
 logger.info(f"Running with experiment settings:\n{settings}")
+logger.info(
+    f"All outputs will be stored in: {output_dir} (Relative to where you ran the program from)"
+)
 
 
 model = FeedForwardForecaster(
