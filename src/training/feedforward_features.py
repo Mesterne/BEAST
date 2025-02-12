@@ -7,7 +7,7 @@ import sys
 import os
 import torch
 import wandb
-
+import uuid
 plt.style.use("ggplot")
 
 FEATURES_NAMES = [
@@ -127,7 +127,8 @@ forecasting_model_input_size = window_size * len(features_to_use)
 forecasting_model_output_size = horizon_length
 
 if log_training_to_wandb:
-    wandb.init(project="MTS-BEAST", config=settings["feature_model_args"])
+    job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
+    wandb.init(project="MTS-BEAST", name=job_name, config=settings["feature_model_args"])
 
 
 logger.info("Initialized system")

@@ -30,6 +30,7 @@ conda activate IBUN_BEAST
 
 # Set output directory environment variable for the Python script
 export OUTPUT_DIR="${run_dir}"
+export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
