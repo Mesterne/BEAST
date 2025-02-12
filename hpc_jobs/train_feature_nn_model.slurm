@@ -16,7 +16,6 @@
 
 WORKDIR=${SLURM_SUBMIT_DIR}
 run_dir="${WORKDIR}/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
-mkdir -p "idun_outputs"
 mkdir -p "idun_outputs/${run_dir}"
 
 echo "Running from directory: ${WORKDIR}"
