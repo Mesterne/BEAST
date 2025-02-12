@@ -8,15 +8,16 @@
 #SBATCH --mem=16G
 #SBATCH --nodes=1
 
-#SBATCH --output=%x_%j/output.txt
-#SBATCH --error=%x_%j/output.err
+#SBATCH --output=idun_outputs/%x_%j/output.txt
+#SBATCH --error=idun_outputs/%x_%j/output.err
 
 #SBATCH --mail-user=vegasj@stud.ntnu.no
 #SBATCH --mail-type=ALL
 
 WORKDIR=${SLURM_SUBMIT_DIR}
 run_dir="${WORKDIR}/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
-mkdir -p "${run_dir}"
+mkdir -p "idun_outputs"
+mkdir -p "idun_outputs/${run_dir}"
 
 echo "Running from directory: ${WORKDIR}"
 echo "Name of job: ${SLURM_JOB_NAME}"
@@ -29,7 +30,7 @@ module load Anaconda3/2024.02-1
 conda activate IBUN_BEAST
 
 # Set output directory environment variable for the Python script
-export OUTPUT_DIR="${run_dir}"
+export OUTPUT_DIR="idun_outputs/${run_dir}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
