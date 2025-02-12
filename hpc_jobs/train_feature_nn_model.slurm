@@ -11,9 +11,6 @@
 #SBATCH --output=idun_outputs/%x_%j/output.txt
 #SBATCH --error=idun_outputs/%x_%j/output.err
 
-#SBATCH --mail-user=vegasj@stud.ntnu.no
-#SBATCH --mail-type=ALL
-
 WORKDIR=${SLURM_SUBMIT_DIR}
 run_dir="${WORKDIR}/idun_outputs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 mkdir -p "${run_dir}"
