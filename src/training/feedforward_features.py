@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 import random
 import pandas as pd
@@ -55,13 +54,10 @@ TARGET_NAMES = [
 ]
 
 # Add project root to the system path
-project_root = os.path.abspath(os.path.join(os.getcwd(), "../../"))
+project_root = os.path.abspath(os.path.join(os.getcwd(), ""))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-logging.basicConfig(level=logging.INFO)
-
-logging.info(f"Running from directory: {project_root}")
 
 from src.models.feedforward import FeedForwardFeatureModel
 from src.utils.evaluation.feature_space_evaluation import (
@@ -86,6 +82,9 @@ from src.plots.pca_train_test_pairing import (
 from src.plots.loss_history import plot_loss_history
 from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
+from src.utils.logging_config import logger
+
+logger.info(f"Running from directory: {project_root}")
 
 # Setting seeds
 SEED = 42
@@ -97,7 +96,9 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 
-settings = read_yaml("../../experiments/gridloss/feedforward.yml")
+output_dir = os.getenv("OUTPUT_DIR", "")
+
+settings = read_yaml("experiments/gridloss/feedforward.yml")
 
 
 features_to_use = settings["dataset_args"]["timeseries_to_use"]
@@ -129,7 +130,8 @@ if log_training_to_wandb:
     wandb.init(project="MTS-BEAST", config=settings["feature_model_args"])
 
 
-logging.info("Initialized system")
+logger.info("Initialized system")
+logger.info(f"Running with experiment settings:\n{settings}")
 
 
 model = FeedForwardForecaster(
@@ -149,7 +151,7 @@ dataset_size = (df.shape[0] - window_size) // step_size + 1
 
 data = generate_windows_dataset(df, window_size, step_size, features_to_use)
 
-logging.info("Successfully generated windowed dataset")
+logger.info("Successfully generated windowed dataset")
 
 sp = 24  # STL parameter
 
@@ -157,7 +159,7 @@ feature_df = generate_feature_dataframe(
     data=data, series_periodicity=sp, dataset_size=dataset_size
 )
 
-logging.info("Successfully generated feature dataframe")
+logger.info("Successfully generated feature dataframe")
 
 pca_transformer = PCAWrapper()
 mts_pca_df = pca_transformer.fit_transform(feature_df)
@@ -178,12 +180,13 @@ mts_pca_df = pca_transformer.fit_transform(feature_df)
     FEATURES_NAMES=FEATURES_NAMES,
     TARGET_NAMES=TARGET_NAMES,
     SEED=SEED,
+    output_dir=output_dir,
 )
 
 feature_model_input_size = X_train.shape[1]
 feature_model_output_size = y_train.shape[1]
 
-logging.info("Building model...")
+logger.info("Building model...")
 feature_model = FeedForwardFeatureModel(
     input_size=feature_model_input_size,
     output_size=feature_model_output_size,
@@ -192,7 +195,7 @@ feature_model = FeedForwardFeatureModel(
     name="feedforward_feature",
 )
 
-logging.info("Training model....")
+logger.info("Training model....")
 train_loss_history, validation_loss_history = train_model(
     model=feature_model,
     X_train=X_train,
@@ -209,11 +212,11 @@ loss_fig = plot_loss_history(
     train_loss_history=train_loss_history,
     validation_loss_history=validation_loss_history,
 )
-loss_fig.savefig("training_loss_history.png")
+loss_fig.savefig(os.path.join(output_dir, "training_loss_history.png"))
 
-logging.info("Saving training history to png...")
+logger.info("Saving training history to png...")
 
-logging.info("Running model inference on validation set...")
+logger.info("Running model inference on validation set...")
 predictions_validation = run_model_inference(model=feature_model, X_test=X_validation)
 # FIXME: The fact that we send the test supervised dataset as an argument is not pretty
 predictions_validation = use_model_predictions_to_create_dataframe(
@@ -221,9 +224,9 @@ predictions_validation = use_model_predictions_to_create_dataframe(
     TARGET_NAMES=TARGET_NAMES,
     target_dataframe=validation_supervised_dataset,
 )
-logging.info("Successfully ran inference on validation set...")
+logger.info("Successfully ran inference on validation set...")
 
-logging.info("Running model inference on test set...")
+logger.info("Running model inference on test set...")
 predictions_test = run_model_inference(model=feature_model, X_test=X_test)
 # FIXME: The fact that we send the test supervised dataset as an argument is not pretty
 predictions_test = use_model_predictions_to_create_dataframe(
@@ -231,9 +234,9 @@ predictions_test = use_model_predictions_to_create_dataframe(
     TARGET_NAMES=TARGET_NAMES,
     target_dataframe=test_supervised_dataset,
 )
-logging.info("Successfully ran inference on test set...")
+logger.info("Successfully ran inference on test set...")
 
-logging.info("Plotting predictions for validation set...")
+logger.info("Plotting predictions for validation set...")
 predictions_without_index = predictions_validation.drop(columns=["prediction_index"])
 predictions_pca = pca_transformer.transform(predictions_without_index)
 predictions_validation["pca1"] = predictions_pca["pca1"]
@@ -246,10 +249,10 @@ dataset_row = validation_supervised_dataset.loc[index]
 fig = pca_plot_train_test_pairing_with_predictions(
     mts_pca_df, dataset_row, predictions_validation, prediction
 )
-fig.savefig("train_validation_predictions_results.png")
+fig.savefig(os.path.join(output_dir, "train_validation_predictions_results.png"))
 
 
-logging.info("Calculating errors for each prediction")
+logger.info("Calculating errors for each prediction")
 differences_df_validation = find_error_of_each_feature_for_each_sample(
     predictions=predictions_validation,
     labelled_test_dataset=validation_supervised_dataset,
@@ -258,24 +261,24 @@ differences_df_test = find_error_of_each_feature_for_each_sample(
     predictions=predictions_test, labelled_test_dataset=test_supervised_dataset
 )
 
-logging.info("Plotting errors for each prediction on validation set...")
+logger.info("Plotting errors for each prediction on validation set...")
 fig = plot_distribution_of_feature_wise_error(differences_df_validation)
-fig.savefig("dist_error_features.png")
+fig.savefig(os.path.join(output_dir, "dist_error_features.png"))
 
-logging.info(
+logger.info(
     f"Calculating overall MSE for predictions of validation set. There are {len(differences_df_validation)} predictions"
 )
 overall_mse_validation, mse_values_for_each_feature_validation = (
     get_mse_for_features_and_overall(differences_df_validation)
 )
-logging.info(
+logger.info(
     f"Calculating overall MSE for predictions of validation set. There are {len(differences_df_test)} predictions"
 )
 overall_mse_test, mse_values_for_each_feature_test = get_mse_for_features_and_overall(
     differences_df_test
 )
 
-logging.info(
+logger.info(
     f"Overall MSE for model\nValidation: {overall_mse_validation}\nTest: {overall_mse_test}"
 )
-logging.info(f"Program finished...")
+logger.info(f"Program finished...")

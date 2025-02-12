@@ -6,7 +6,7 @@ from torch import save, load
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 from tqdm import tqdm
-import logging
+from src.utils.logging_config import logger
 
 
 class FeedForwardFeatureModel(nn.Module):
@@ -32,7 +32,7 @@ class FeedForwardFeatureModel(nn.Module):
                 self = loaded_model
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
-        logging.info(
+        logger.info(
             f"Building feedforward forecaster with hidden sizes: {hidden_network_sizes}"
         )
         self.layers = nn.ModuleList()
@@ -50,17 +50,17 @@ class FeedForwardFeatureModel(nn.Module):
         return x
 
     def save_model(self):
-        logging.info(f"Saving trained model to {self.save_dir}...")
+        logger.info(f"Saving trained model to {self.save_dir}...")
         save(self, self.save_dir)
 
     def load_model(self):
-        logging.info(f"Loading trained model from {self.save_dir}...")
+        logger.info(f"Loading trained model from {self.save_dir}...")
         try:
             model = load(self.save_dir)
         except FileNotFoundError:
-            logging.warning("Could not find saved model...")
+            logger.warning("Could not find saved model...")
             return None
         except Exception as e:
-            logging.error(f"Issues with loading model: {e}")
+            logger.error(f"Issues with loading model: {e}")
             return None
         return model

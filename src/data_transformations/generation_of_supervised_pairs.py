@@ -1,11 +1,14 @@
-import logging
 import pandas as pd
 import numpy as np
 from random import sample
 from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
+from src.utils.logging_config import logger
+import os
 
 
-def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED):
+def create_train_val_test_split(
+    pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED, output_dir
+):
     """
     Generate X and y list for train, validation and testing supervised datasets.
     It does this by selecting certain regions in the PCA space which is looked at as
@@ -21,7 +24,7 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
         y_test
         These are the numpy arrays of feature/target pairs for train, validation and test
     """
-    logging.info(
+    logger.info(
         f"Generating X,y pairs of feature space for train, validation and test sets..."
     )
 
@@ -43,19 +46,19 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
 
     # To generate a training set, we create a matching between all MTSs in the
     # defined training feature space
-    logging.info(f"Generating supervised training dataset...")
+    logger.info(f"Generating supervised training dataset...")
     train_supervised_dataset = (
         generate_supervised_dataset_from_original_and_target_dist(
             train_features, train_features
         )
     )
-    logging.info(f"Generating supervised validation dataset...")
+    logger.info(f"Generating supervised validation dataset...")
     validation_supervised_dataset = (
         generate_supervised_dataset_from_original_and_target_dist(
             train_features, validation_features
         )
     )
-    logging.info(f"Generating supervised test dataset...")
+    logger.info(f"Generating supervised test dataset...")
     test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
         train_features, test_features
     )
@@ -64,8 +67,8 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
         drop=True
     )
     fig = pca_plot_train_test_pairing(pca_df, dataset_row)
-    fig.savefig("pca_train_test_pairing.png")
-    logging.info("Generated PCA plot with target/test pairing")
+    fig.savefig(os.path.join(output_dir, "pca_train_test_pairing.png"))
+    logger.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
         # Extract X and y as NumPy arrays (if needed by the model)
@@ -74,15 +77,15 @@ def create_train_val_test_split(pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES
 
         return X, y
 
-    logging.info(f"Generating X,y pairs for training dataset...")
+    logger.info(f"Generating X,y pairs for training dataset...")
     X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
-    logging.info(f"Generating X,y pairs for validation dataset...")
+    logger.info(f"Generating X,y pairs for validation dataset...")
     X_validation, y_validation = generate_X_y_pairs_from_df(
         validation_supervised_dataset
     )
-    logging.info(f"Generating X,y pairs for test dataset...")
+    logger.info(f"Generating X,y pairs for test dataset...")
     X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
-    logging.info(
+    logger.info(
         f""" Generated X, y pairs for training, test and validation. With shapes:
             X_training: {X_train.shape}         
             y_training: {y_train.shape}         
