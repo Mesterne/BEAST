@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 from tqdm import tqdm
 from src.utils.logging_config import logger
-
+import os
 
 class FeedForwardFeatureModel(nn.Module):
     def __init__(
@@ -25,7 +25,7 @@ class FeedForwardFeatureModel(nn.Module):
             output_size=output_size,
             hidden_network_sizes=hidden_network_sizes,
         )
-        self.save_dir = save_dir + f"/{name}.pth"
+        self.save_dir = os.path.join(save_dir, f"{name}.pth")
         if load_model:
             loaded_model = self.load_model()
             if loaded_model is not None:

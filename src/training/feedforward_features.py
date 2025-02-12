@@ -144,7 +144,7 @@ logger.info(
 model = FeedForwardForecaster(
     input_size=forecasting_model_input_size,
     output_size=forecasting_model_output_size,
-    save_dir=model_save_dir,
+    save_dir=output_dir,
 )
 
 df = pd.read_csv(data_dir, index_col=0)
@@ -198,7 +198,7 @@ feature_model = FeedForwardFeatureModel(
     input_size=feature_model_input_size,
     output_size=feature_model_output_size,
     hidden_network_sizes=feature_model_hidden_network_sizes,
-    save_dir=feature_model_save_dir,
+    save_dir=output_dir,
     name="feedforward_feature",
 )
 
