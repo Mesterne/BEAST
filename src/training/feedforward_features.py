@@ -110,13 +110,11 @@ log_training_to_wandb = settings["training_args"]["log_to_wandb"]
 
 window_size = settings["forecasting_model_args"]["window_size"]
 horizon_length = settings["forecasting_model_args"]["horizon_length"]
-model_save_dir = settings["forecasting_model_args"]["model_params_storage_dir"]
 
 feature_model_hidden_network_sizes = settings["feature_model_args"][
     "hidden_network_size"
 ]
 
-feature_model_save_dir = settings["feature_model_args"]["model_params_storage_dir"]
 feature_model_epochs = settings["feature_model_args"]["epochs"]
 feature_model_batch_size = settings["feature_model_args"]["batch_size"]
 feature_model_learning_rate = settings["feature_model_args"]["learning_rate"]
