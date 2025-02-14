@@ -20,3 +20,14 @@ def get_mse_for_features_and_overall(differences_df):
     mse_series = pd.Series(mse_values_for_each_feature, index=feature_columns)
 
     return overall_mse, mse_series
+
+
+def get_error_for_each_row(differences_df):
+    logger.info("Calculating MSE for each feature")
+
+    # Excluding 'prediction_index' without explicit dropping
+    feature_columns = differences_df.columns.difference(["prediction_index"])
+
+    differences_df["total_error"] = differences_df[feature_columns].sum()
+
+    return differences_df[["prediction_index", "total_error"]]

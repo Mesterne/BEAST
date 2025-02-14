@@ -4,6 +4,7 @@ from random import sample
 from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
 from src.utils.logging_config import logger
 import os
+from scipy.stats import zscore
 
 
 def create_train_val_test_split(
@@ -95,6 +96,104 @@ def create_train_val_test_split(
             y_test: {y_test.shape}         
     """
     )
+    return (
+        X_train,
+        y_train,
+        X_validation,
+        y_validation,
+        X_test,
+        y_test,
+        train_supervised_dataset,
+        validation_supervised_dataset,
+        test_supervised_dataset,
+    )
+
+
+def create_train_val_test_split_outliers(
+    pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED, output_dir
+):
+    """
+    Generate X and y lists for train, validation, and test supervised datasets.
+    It detects outliers in PCA space using Z-scores and assigns them to validation and test sets.
+    """
+    logger.info("Generating X, y pairs for train, validation, and test sets...")
+
+    # Compute Z-scores for each PCA component
+    pca_df["z_pca1"] = zscore(pca_df["pca1"])
+    pca_df["z_pca2"] = zscore(pca_df["pca2"])
+
+    # Compute overall outlier score (e.g., Euclidean distance in Z-score space)
+    pca_df["outlier_score"] = np.sqrt(pca_df["z_pca1"] ** 2 + pca_df["z_pca2"] ** 2)
+
+    # Define outliers as points with a Z-score distance > threshold (e.g., 3 std devs)
+    outlier_threshold = 2  # Adjustable threshold
+    outliers = pca_df[pca_df["outlier_score"] > outlier_threshold].copy()
+    logger.info(f"Found {len(outliers)} outliers")
+
+    # Randomly split outliers into validation and test sets
+    outlier_indices = outliers.index.values
+    np.random.shuffle(outlier_indices)
+
+    split_idx = len(outlier_indices) // 2
+    validation_indices = outlier_indices[:split_idx]
+    test_indices = outlier_indices[split_idx:]
+
+    # Remaining points go to training set
+    train_indices = pca_df.index[~pca_df.index.isin(outlier_indices)].values
+
+    pca_df["isTrain"] = pca_df.index.isin(train_indices)
+    pca_df["isValidation"] = pca_df.index.isin(validation_indices)
+    pca_df["isTest"] = pca_df.index.isin(test_indices)
+
+    train_features = feature_df.loc[train_indices]
+    validation_features = feature_df.loc[validation_indices]
+    test_features = feature_df.loc[test_indices]
+
+    logger.info("Generating supervised training dataset...")
+    train_supervised_dataset = (
+        generate_supervised_dataset_from_original_and_target_dist(
+            train_features, train_features
+        )
+    )
+    logger.info("Generating supervised validation dataset...")
+    validation_supervised_dataset = (
+        generate_supervised_dataset_from_original_and_target_dist(
+            train_features, validation_features
+        )
+    )
+    logger.info("Generating supervised test dataset...")
+    test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
+        train_features, test_features
+    )
+
+    dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
+        drop=True
+    )
+    fig = pca_plot_train_test_pairing(pca_df, dataset_row)
+    fig.savefig(os.path.join(output_dir, "pca_train_test_pairing.png"))
+    logger.info("Generated PCA plot with target/test pairing")
+
+    def generate_X_y_pairs_from_df(df):
+        X = df.loc[:, FEATURES_NAMES].values
+        y = df.loc[:, TARGET_NAMES].values
+        return X, y
+
+    logger.info("Generating X, y pairs for training dataset...")
+    X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
+    logger.info("Generating X, y pairs for validation dataset...")
+    X_validation, y_validation = generate_X_y_pairs_from_df(
+        validation_supervised_dataset
+    )
+    logger.info("Generating X, y pairs for test dataset...")
+    X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
+
+    logger.info(
+        f"Generated X, y pairs with shapes:\n"
+        f"X_train: {X_train.shape}, y_train: {y_train.shape}\n"
+        f"X_validation: {X_validation.shape}, y_validation: {y_validation.shape}\n"
+        f"X_test: {X_test.shape}, y_test: {y_test.shape}"
+    )
+
     return (
         X_train,
         y_train,
