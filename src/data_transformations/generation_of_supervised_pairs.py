@@ -180,3 +180,55 @@ def generate_supervised_dataset_from_original_and_target_dist(
     expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
 
     return expanded_dataset
+
+
+def get_col_names_original_target_delta():
+    ORIGNIAL_COLS = [
+        "original_index",
+        "original_grid-load_trend-strength",
+        "original_grid-load_trend-slope",
+        "original_grid-load_trend-linearity",
+        "original_grid-load_seasonal-strength",
+        "original_grid-loss_trend-strength",
+        "original_grid-loss_trend-slope",
+        "original_grid-loss_trend-linearity",
+        "original_grid-loss_seasonal-strength",
+        "original_grid-temp_trend-strength",
+        "original_grid-temp_trend-slope",
+        "original_grid-temp_trend-linearity",
+        "original_grid-temp_seasonal-strength",
+    ]
+
+    TARGET_COLS = [
+        "target_index",
+        "target_grid-load_trend-strength",
+        "target_grid-load_trend-slope",
+        "target_grid-load_trend-linearity",
+        "target_grid-load_seasonal-strength",
+        "target_grid-loss_trend-strength",
+        "target_grid-loss_trend-slope",
+        "target_grid-loss_trend-linearity",
+        "target_grid-loss_seasonal-strength",
+        "target_grid-temp_trend-strength",
+        "target_grid-temp_trend-slope",
+        "target_grid-temp_trend-linearity",
+        "target_grid-temp_seasonal-strength",
+    ]
+
+    DELTA_COLS = [
+        "delta_index",
+        "delta_grid-load_trend-strength",
+        "delta_grid-load_trend-slope",
+        "delta_grid-load_trend-linearity",
+        "delta_grid-load_seasonal-strength",
+        "delta_grid-loss_trend-strength",
+        "delta_grid-loss_trend-slope",
+        "delta_grid-loss_trend-linearity",
+        "delta_grid-loss_seasonal-strength",
+        "delta_grid-temp_trend-strength",
+        "delta_grid-temp_trend-slope",
+        "delta_grid-temp_trend-linearity",
+        "delta_grid-temp_seasonal-strength",
+    ]
+
+    return [*ORIGNIAL_COLS, *TARGET_COLS, *DELTA_COLS]
