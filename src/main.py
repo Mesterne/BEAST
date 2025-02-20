@@ -113,8 +113,21 @@ init_mts_features = mts_feature_df.iloc[init_mts_index]
 init_uts = init_mts[init_uts_name]  # Series
 init_uts_decomp = init_mts_decomps[init_uts_index]
 
-print(init_mts.head(0))
-print(mts_dataset[init_mts_index].head(0))
+manual_init_transform = config["transformation_args"]["manual_init_transform"]
+print("MANUAL INIT TRANSFORM: ", manual_init_transform)
+
+target_mts_index = (
+    config["transformation_args"]["auto_init_transform"]["target_mts_index"]
+    if not manual_init_transform
+    else None
+)
+target_mts = mts_dataset[target_mts_index] if not manual_init_transform else None
+target_mts_decomps = (
+    mts_decomps[target_mts_index] if not manual_init_transform else None
+)
+target_mts_features = (
+    mts_feature_df.iloc[target_mts_index] if not manual_init_transform else None
+)
 
 trend_det_factor = config["transformation_args"]["trend_det_factor"]
 trend_slope_factor = config["transformation_args"]["trend_slope_factor"]
@@ -149,43 +162,56 @@ logging.info("Successfully trained the correlation model")
 # Prepare model input dataframe
 uts_feature_col_names = get_col_names_original_target_delta()
 dummy_original_index, dummy_target_index, dummy_delta_index = 0, 0, 0
-original_values, target_values, delta_values = (
-    [dummy_original_index],
-    [dummy_target_index],
-    [dummy_delta_index],
-)
+if manual_init_transform:
+    original_values, target_values, delta_values = (
+        [dummy_original_index],
+        [dummy_target_index],
+        [dummy_delta_index],
+    )
 
-for uts_index in tqdm(range(num_uts_in_mts)):
-    if uts_index == init_uts_index:
-        original_values = [
-            *original_values,
-            *init_mts_features.iloc[uts_index : uts_index + 4],
-        ]
-        target_values = [
-            *target_values,
-            *transformed_uts_features,
-        ]
-        delta_features = np.asarray(transformed_uts_features) - np.asarray(
-            init_mts_features.iloc[uts_index : uts_index + 4]
-        )
-        delta_values = [
-            *delta_values,
-            *delta_features,
-        ]
-    else:
-        original_values = [
-            *original_values,
-            *init_mts_features.iloc[uts_index : uts_index + 4],
-        ]
-        # NOTE: Can be viewed as dummy values, these are what we are trying to predict
-        target_values = [
-            *target_values,
-            *init_mts_features.iloc[uts_index : uts_index + 4],
-        ]
-        delta_values = [
-            *delta_values,
-            *np.zeros(4),
-        ]
+    for uts_index in tqdm(range(num_uts_in_mts)):
+        if uts_index == init_uts_index:
+            original_values = [
+                *original_values,
+                *init_mts_features.iloc[uts_index : uts_index + 4],
+            ]
+            target_values = [
+                *target_values,
+                *transformed_uts_features,
+            ]
+            delta_features = np.asarray(transformed_uts_features) - np.asarray(
+                init_mts_features.iloc[uts_index : uts_index + 4]
+            )
+            delta_values = [
+                *delta_values,
+                *delta_features,
+            ]
+        else:
+            original_values = [
+                *original_values,
+                *init_mts_features.iloc[uts_index : uts_index + 4],
+            ]
+            # NOTE: Can be viewed as dummy values, these are what we are trying to predict
+            target_values = [
+                *target_values,
+                *init_mts_features.iloc[uts_index : uts_index + 4],
+            ]
+            delta_values = [
+                *delta_values,
+                *np.zeros(4),
+            ]
+else:
+    # Use actual target_mts and delta for model input
+    original_values = [init_mts_index, *init_mts_features]
+    target_values = [target_mts_index, *target_mts_features]
+    delta_features = np.asarray(
+        init_mts_features.iloc[init_uts_index : init_uts_index + 4]
+    ) - np.asarray(target_mts_features.iloc[init_uts_index : init_uts_index + 4])
+    delta_values = [dummy_delta_index, *delta_features, *np.zeros(8)]
+    print("DELTA FEATURES: ", delta_features)
+    print("DELTA VALUES: ", delta_values)
+
+
 model_input_values = np.asarray([*original_values, *target_values, *delta_values])
 model_input_df = pd.DataFrame([model_input_values], columns=uts_feature_col_names)
 
@@ -262,7 +288,7 @@ for _ in tqdm(range(num_GA_runs)):
     transformed_mts_factors = []
 
     for i in range(num_uts_in_mts):
-        if i == init_uts_index:
+        if i == init_uts_index and manual_init_transform:
             transformed_mts.append(transformed_uts)
             transformed_mts_features.append(transformed_uts_features)
             transformed_mts_factors.append(
@@ -350,7 +376,22 @@ for i in range(num_uts_in_mts):
 
 logging.info("Successfully generated PCA spaces")
 
-# Add transofmed points to PCA spaces
+# Add corr model predicted features to PCA spaces
+pred_features_pca_input = np.asarray(predicted_features_reshape).reshape(
+    tot_num_mts_features
+)
+pred_features_pca_df = mts_pca_transformer.transform(
+    pd.DataFrame([pred_features_pca_input])
+)
+pred_uts_features_pca_df_list = []
+for i in range(num_uts_in_mts):
+    uts_features_pca_input = predicted_features_reshape[i]
+    uts_features_pca_df = uts_pca_transformer.transform(
+        pd.DataFrame([uts_features_pca_input])
+    )
+    pred_uts_features_pca_df_list.append(uts_features_pca_df)
+
+# Add GA transofmed points to PCA spaces
 # FIXME: Add feature names to avoid warnings
 mts_features_pca_input = np.asarray(GA_runs_features[0]).reshape(tot_num_mts_features)
 transformed_mts_pca_df = mts_pca_transformer.transform(
@@ -374,8 +415,9 @@ for i in range(num_uts_in_mts):
     transformed_uts_pca_df_list.append(transformed_uts_pca_df)
 
 # Estimate expected target regions in PCA space based on K-nearest neighbors
-k = 100
+k = 50
 
+# FIXME: This choses points close to original UTS, want to choose points close to transformed UTS!
 init_uts_features = mts_feature_df[
     mts_feature_columns[init_uts_index : init_uts_index + 4]
 ].to_numpy()
@@ -384,33 +426,49 @@ init_uts_feature_distances = np.linalg.norm(
 )
 distance_indices = np.argsort(init_uts_feature_distances)[:k]
 
+print(np.sort(init_uts_feature_distances)[:k])
+
 # Save results to pdf
 pdf_filename = os.path.join("src", "results", "experiment_results.pdf")
 with PdfPages(pdf_filename) as pdf:
 
-    # Plot original and transformed UTS
-    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
-    fig.suptitle("Original and Transformed UTS")
-    axs[0].plot(init_uts, label="Original UTS")
-    axs[0].set_title(f"Original {init_uts_name}")
-    axs[0].legend()
-    axs[1].plot(transformed_uts, label="Transformed UTS")
-    axs[1].set_title(f"Transformed {init_uts_name}")
-    axs[1].legend()
-    pdf.savefig(fig)
-    plt.close()
+    if manual_init_transform:
+        # Plot original and transformed UTS
+        fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+        if not manual_init_transform:
+            fig.suptitle(
+                f"Original {init_uts_index}, Transformed UTS, and Target {target_mts_index}"
+            )
+        else:
+            fig.suptitle(f"Original {init_uts_index} and Transformed UTS")
+        axs[0].plot(init_uts, label="Original UTS")
+        axs[0].set_title(f"Original {init_uts_name}")
+        axs[0].legend()
+        axs[1].plot(transformed_uts, label="Transformed UTS")
+        axs[1].set_title(f"Transformed {init_uts_name}")
+        axs[1].legend()
+        pdf.savefig(fig)
+        plt.close()
 
     # Plot original and transformed MTS
-    fig, axs = plt.subplots(num_uts_in_mts, 2, figsize=(10, 10))
-    fig.suptitle("Original and Transformed MTS")
+    fig, axs = plt.subplots(num_uts_in_mts, 3, figsize=(10, 10))
+    if not manual_init_transform:
+        fig.suptitle(
+            f"Original {init_mts_index}, Transformed UTS, and Target {target_mts_index}"
+        )
+    else:
+        fig.suptitle(f"Original {init_mts_index} and Transformed UTS")
     for i in range(num_uts_in_mts):
         uts_name = timeseries_to_use[i]
-        axs[i, 0].plot(init_mts[uts_name], label=f"{uts_name}")
+        axs[i, 0].plot(init_mts[uts_name])
         axs[i, 0].set_title(f"Original {uts_name}")
         axs[i, 0].legend()
-        axs[i, 1].plot(GA_runs_mts[0][i], label=f"t_{uts_name}")
+        axs[i, 1].plot(GA_runs_mts[0][i])
         axs[i, 1].set_title(f"Transformed {uts_name}")
         axs[i, 1].legend()
+        axs[i, 2].plot(target_mts[uts_name])
+        axs[i, 2].set_title(f"Target {uts_name}")
+        axs[i, 2].legend()
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     pdf.savefig(fig)
     plt.close()
@@ -420,6 +478,7 @@ with PdfPages(pdf_filename) as pdf:
     fig.suptitle("PCA Spaces")
     # All MTS points
     axs[0].scatter(mts_pca_df["pca1"], mts_pca_df["pca2"], label="MTS")
+    # Original MTS
     axs[0].scatter(
         mts_pca_df["pca1"][init_mts_index],
         mts_pca_df["pca2"][init_mts_index],
@@ -428,15 +487,39 @@ with PdfPages(pdf_filename) as pdf:
         edgecolors="black",
         label="Original",
     )
-    # Expected target region based on K-nearest neighbors
-    for mts_index in distance_indices:
+
+    # Target MTS
+    if not manual_init_transform:
         axs[0].scatter(
-            mts_pca_df["pca1"][mts_index],
-            mts_pca_df["pca2"][mts_index],
-            color="green",
-            s=50,
-            alpha=0.5,
+            mts_pca_df["pca1"][target_mts_index],
+            mts_pca_df["pca2"][target_mts_index],
+            color="orange",
+            s=100,
+            edgecolors="black",
+            label="Target",
         )
+
+    if manual_init_transform:
+        # Expected target region based on K-nearest neighbors
+        for mts_index in distance_indices:
+            axs[0].scatter(
+                mts_pca_df["pca1"][mts_index],
+                mts_pca_df["pca2"][mts_index],
+                color="green",
+                s=50,
+                alpha=0.5,
+            )
+
+    # Correlation model predicted features
+    axs[0].scatter(
+        pred_features_pca_df["pca1"].iloc[0],
+        pred_features_pca_df["pca2"].iloc[0],
+        color="pink",
+        s=100,
+        edgecolors="black",
+        label="Predicted (Correlation)",
+    )
+
     # The transformed MTS
     axs[0].scatter(
         transformed_mts_pca_df["pca1"].iloc[0],
@@ -444,7 +527,7 @@ with PdfPages(pdf_filename) as pdf:
         color="red",
         s=100,
         edgecolors="black",
-        label="Transformed",
+        label="Transformed (GA)",
     )
 
     axs[0].set_title("MTS PCA Space")
@@ -465,16 +548,40 @@ with PdfPages(pdf_filename) as pdf:
             edgecolors="black",
             label="Original",
         )
-        # Expected target region based on K-nearest neighbors
-        if i == init_uts_index:
-            for mts_index in distance_indices:
-                axs[i + 1].scatter(
-                    uts_pca_df_list[i]["pca1"][mts_index],
-                    uts_pca_df_list[i]["pca2"][mts_index],
-                    color="green",
-                    s=50,
-                    alpha=0.5,
-                )
+
+        # Target UTS
+        if not manual_init_transform:
+            axs[i + 1].scatter(
+                uts_pca_df_list[i]["pca1"][target_mts_index],
+                uts_pca_df_list[i]["pca2"][target_mts_index],
+                color="orange",
+                s=100,
+                edgecolors="black",
+                label="Target",
+            )
+
+        if manual_init_transform:
+            # Expected target region based on K-nearest neighbors
+            if i == init_uts_index:
+                for mts_index in distance_indices:
+                    axs[i + 1].scatter(
+                        uts_pca_df_list[i]["pca1"][mts_index],
+                        uts_pca_df_list[i]["pca2"][mts_index],
+                        color="green",
+                        s=50,
+                        alpha=0.5,
+                    )
+
+        # Correlation model predicted features
+        axs[i + 1].scatter(
+            pred_uts_features_pca_df_list[i]["pca1"].iloc[0],
+            pred_uts_features_pca_df_list[i]["pca2"].iloc[0],
+            color="pink",
+            s=100,
+            edgecolors="black",
+            label="Predicted (Correlation)",
+        )
+
         # The transformed UTS
         axs[i + 1].scatter(
             transformed_uts_pca_df_list[i]["pca1"].iloc[0],
@@ -482,7 +589,7 @@ with PdfPages(pdf_filename) as pdf:
             color="red",
             s=100,
             edgecolors="black",
-            label="Transformed",
+            label="Transformed (GA)",
         )
 
         axs[i + 1].set_title(f"{uts_name} PCA")
