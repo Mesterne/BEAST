@@ -32,7 +32,11 @@ class CorrelationModel:
 
         for idx, row in tqdm(updated_values.iterrows(), total=len(updated_values)):
             # Find the non-zero delta column
-            delta_columns = [col for col in row.index if col.startswith("delta_")]
+            delta_columns = [
+                col
+                for col in row.index
+                if col.startswith("delta_") and "index" not in col
+            ]
             non_zero_delta = None
             feature_name = None
 

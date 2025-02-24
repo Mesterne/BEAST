@@ -41,6 +41,7 @@ from src.utils.transformations import (
 from src.utils.experiment_helper import (
     get_mts_dataset,
     get_transformed_uts_with_features_and_decomps,
+    get_model_by_type,
 )
 
 from src.models.naive_correlation import CorrelationModel
@@ -102,258 +103,52 @@ mts_decomps, _ = decomp_and_features(
 
 logging.info("Successfully generated multivariate time series decompositions")
 
-# Direct transformation of univariate time series
-init_mts_index = config["transformation_args"]["mts_index"]
-init_uts_index = config["transformation_args"]["init_transform_uts"]["index"]
-init_uts_name = config["transformation_args"]["init_transform_uts"]["name"]
+# Time series arguments
+num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
+original_mts_index = config["time_series_args"]["original_mts_index"]
+init_uts_index = config["time_series_args"]["init_transform_uts"]["index"]
+init_uts_name = config["time_series_args"]["init_transform_uts"]["name"]
+original_mts = mts_dataset[original_mts_index]  # DataFrame
+original_mts_decomps = mts_decomps[original_mts_index]
+original_mts_features = mts_feature_df.iloc[original_mts_index]
+init_uts = original_mts[init_uts_name]  # Series
+init_uts_decomp = original_mts_decomps[init_uts_index]
+target_mts_index = config["time_series_args"]["target_mts_index"]
+target_mts = mts_dataset[target_mts_index]  # DataFrame
+manual_init_transform = config["time_series_args"]["manual_init_transform"]
 
-init_mts = mts_dataset[init_mts_index]  # DataFrame
-init_mts_decomps = mts_decomps[init_mts_index]
-init_mts_features = mts_feature_df.iloc[init_mts_index]
-init_uts = init_mts[init_uts_name]  # Series
-init_uts_decomp = init_mts_decomps[init_uts_index]
-
-manual_init_transform = config["transformation_args"]["manual_init_transform"]
-print("MANUAL INIT TRANSFORM: ", manual_init_transform)
-
-target_mts_index = (
-    config["transformation_args"]["auto_init_transform"]["target_mts_index"]
-    if not manual_init_transform
-    else None
+# Model initialization
+model_type = config["model_args"]["model_type"]
+model_params = config["model_args"]
+model = get_model_by_type(
+    model_type,
+    model_params,
+    mts_dataset,
+    mts_feature_df,
+    mts_decomps,
+    num_uts_in_mts,
+    num_features_per_uts,
+    manual_init_transform,
 )
-target_mts = mts_dataset[target_mts_index] if not manual_init_transform else None
-target_mts_decomps = (
-    mts_decomps[target_mts_index] if not manual_init_transform else None
-)
-target_mts_features = (
-    mts_feature_df.iloc[target_mts_index] if not manual_init_transform else None
-)
+logging.info(f"Successfully initialized the {model_type} model")
 
-trend_det_factor = config["transformation_args"]["trend_det_factor"]
-trend_slope_factor = config["transformation_args"]["trend_slope_factor"]
-trend_lin_factor = config["transformation_args"]["trend_lin_factor"]
-seasonal_det_factor = config["transformation_args"]["seasonal_det_factor"]
+# Fit model to data
+model.fit()
 
-transformed_uts, transformed_uts_features, transformed_uts_decomp = (
-    get_transformed_uts_with_features_and_decomps(
-        uts_decomp=init_uts_decomp,
-        trend_det_factor=trend_det_factor,
-        trend_slope_factor=trend_slope_factor,
-        trend_lin_factor=trend_lin_factor,
-        seasonal_det_factor=seasonal_det_factor,
-    )
-)
-
-logging.info(f"Successfully transformed {init_uts_name} of mts {init_mts_index}")
-
-# TODO: Perform automatic transformation of the other time series in the MTS
-# How this is done should be specified in configuration file
-# Models are asumed to be pre-trained and saved in the specified directories
-# NOTE: MVP with correlation model
-
-# Initialize the correlation model
-model = CorrelationModel()
-
-# Train the correlation model
-model.train(mts_feature_df)
-
-logging.info("Successfully trained the correlation model")
-
-# Prepare model input dataframe
-uts_feature_col_names = get_col_names_original_target_delta()
-dummy_original_index, dummy_target_index, dummy_delta_index = 0, 0, 0
-if manual_init_transform:
-    original_values, target_values, delta_values = (
-        [dummy_original_index],
-        [dummy_target_index],
-        [dummy_delta_index],
-    )
-
-    for uts_index in tqdm(range(num_uts_in_mts)):
-        if uts_index == init_uts_index:
-            original_values = [
-                *original_values,
-                *init_mts_features.iloc[uts_index : uts_index + 4],
-            ]
-            target_values = [
-                *target_values,
-                *transformed_uts_features,
-            ]
-            delta_features = np.asarray(transformed_uts_features) - np.asarray(
-                init_mts_features.iloc[uts_index : uts_index + 4]
-            )
-            delta_values = [
-                *delta_values,
-                *delta_features,
-            ]
-        else:
-            original_values = [
-                *original_values,
-                *init_mts_features.iloc[uts_index : uts_index + 4],
-            ]
-            # NOTE: Can be viewed as dummy values, these are what we are trying to predict
-            target_values = [
-                *target_values,
-                *init_mts_features.iloc[uts_index : uts_index + 4],
-            ]
-            delta_values = [
-                *delta_values,
-                *np.zeros(4),
-            ]
-else:
-    # Use actual target_mts and delta for model input
-    original_values = [init_mts_index, *init_mts_features]
-    target_values = [target_mts_index, *target_mts_features]
-    delta_features = np.asarray(
-        init_mts_features.iloc[init_uts_index : init_uts_index + 4]
-    ) - np.asarray(target_mts_features.iloc[init_uts_index : init_uts_index + 4])
-    delta_values = [dummy_delta_index, *delta_features, *np.zeros(8)]
-    print("DELTA FEATURES: ", delta_features)
-    print("DELTA VALUES: ", delta_values)
+# FIXME: Transform return values are not yet really model agnostic
+# Transform MTS
+(
+    transformed_mts_list,
+    transformed_features_list,
+    transformed_factors_list,
+    corr_predicted_features,
+) = model.transform(original_mts_index, target_mts_index, init_uts_index)
 
 
-model_input_values = np.asarray([*original_values, *target_values, *delta_values])
-model_input_df = pd.DataFrame([model_input_values], columns=uts_feature_col_names)
-
-logging.info("Successfully generated model input dataframe")
-
-# Predict features
-predicted_features = model.infer(model_input_df)
-# Get all columns that are not index columns in predicted_features df
-
-
-logging.info("Successfully predicted features")
-
-# Transform other UTS in MTS with GA
-
-# Genetic Algorithm parameters
-num_GA_runs = config["genetic_algorithm_args"]["num_runs"]
-num_generations = config["genetic_algorithm_args"]["num_generations"]
-num_parents_mating = config["genetic_algorithm_args"]["num_parents_mating"]
-sol_per_pop = config["genetic_algorithm_args"]["solutions_per_population"]
-init_range_low = config["genetic_algorithm_args"]["init_range_low"]
-init_range_high = config["genetic_algorithm_args"]["init_range_high"]
-parent_selection_type = config["genetic_algorithm_args"]["parent_selection_type"]
-crossover_type = config["genetic_algorithm_args"]["crossover_type"]
-mutation_type = config["genetic_algorithm_args"]["mutation_type"]
-mutation_percent_genes = config["genetic_algorithm_args"]["mutation_percent_genes"]
-num_genes = 4
-trend_det_factor_low = config["genetic_algorithm_args"]["legal_values"][
-    "trend_det_factor"
-][0]
-trend_det_factor_high = config["genetic_algorithm_args"]["legal_values"][
-    "trend_det_factor"
-][1]
-trend_slope_factor_low = config["genetic_algorithm_args"]["legal_values"][
-    "trend_slope_factor"
-][0]
-trend_slope_factor_high = config["genetic_algorithm_args"]["legal_values"][
-    "trend_slope_factor"
-][1]
-trend_lin_factor_low = config["genetic_algorithm_args"]["legal_values"][
-    "trend_lin_factor"
-][0]
-trend_lin_factor_high = config["genetic_algorithm_args"]["legal_values"][
-    "trend_lin_factor"
-][1]
-seasonal_det_factor_low = config["genetic_algorithm_args"]["legal_values"][
-    "seasonal_det_factor"
-][0]
-seasonal_det_factor_high = config["genetic_algorithm_args"]["legal_values"][
-    "seasonal_det_factor"
-][1]
-
-# Contstraint on GA solutions
-legal_factor_values = [
-    np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
-    np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
-    np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
-    np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
-]
-
-is_index_column = predicted_features.columns.str.contains("index")
-predicted_features_reshape = (
-    predicted_features.loc[:, ~is_index_column].to_numpy().reshape(3, 4)
-)
-
-GA_runs_mts = []
-GA_runs_features = []
-GA_runs_factors = []
-
-logging.info("Starting genetic algorithm runs...")
-for _ in tqdm(range(num_GA_runs)):
-
-    transformed_mts = []
-    transformed_mts_features = []
-    transformed_mts_factors = []
-
-    for i in range(num_uts_in_mts):
-        if i == init_uts_index and manual_init_transform:
-            transformed_mts.append(transformed_uts)
-            transformed_mts_features.append(transformed_uts_features)
-            transformed_mts_factors.append(
-                [
-                    trend_det_factor,
-                    trend_slope_factor,
-                    trend_lin_factor,
-                    seasonal_det_factor,
-                ]
-            )
-            continue
-
-        univariate_decomps = init_mts_decomps[i]
-        univariate_target_features = predicted_features_reshape[i]
-
-        ga_instance = GeneticAlgorithm(
-            original_time_series_decomp=univariate_decomps,
-            target_features=univariate_target_features,
-            num_generations=num_generations,
-            num_parents_mating=num_parents_mating,
-            sol_per_pop=sol_per_pop,
-            num_genes=num_genes,
-            gene_space=legal_factor_values,
-            init_range_low=init_range_low,
-            init_range_high=init_range_high,
-            parent_selection_type=parent_selection_type,
-            crossover_type=crossover_type,
-            mutation_type=mutation_type,
-            mutation_percent_genes=mutation_percent_genes,
-        )
-
-        ga_instance.run_genetic_algorithm()
-
-        factors, _, _ = ga_instance.get_best_solution()
-
-        transformed_trend = manipulate_trend_component(
-            univariate_decomps.trend, factors[0], factors[1], factors[2], m=0
-        )
-        transformed_seasonal = manipulate_seasonal_component(
-            univariate_decomps.seasonal, factors[3]
-        )
-
-        transformed_ts = (
-            transformed_trend + transformed_seasonal + univariate_decomps.resid
-        )
-        transformed_mts.append(transformed_ts)
-
-        transformed_mts_features.append(
-            [
-                trend_strength(transformed_trend, univariate_decomps.resid),
-                trend_slope(transformed_trend),
-                trend_linearity(transformed_trend),
-                seasonal_strength(transformed_seasonal, univariate_decomps.resid),
-            ]
-        )
-
-        transformed_mts_factors.append(factors)
-
-    GA_runs_mts.append(transformed_mts)
-    GA_runs_features.append(transformed_mts_features)
-    GA_runs_factors.append(transformed_mts_factors)
-
-logging.info(
-    f"Successfully transformed the other univariate time series in the MTS. {num_GA_runs} genetic algorithm runs completed."
-)
+# NOTE: By default, we will only consider the first run in visualization
+DEFAULT_RUN_INDEX = 0
+transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
+transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
 
 # Create pca spaces for 2D visualization
 # MTS PCA
@@ -361,55 +156,55 @@ mts_pca_transformer = PCAWrapper()
 mts_pca_df = mts_pca_transformer.fit_transform(mts_feature_df)
 
 # One PCA for each UTS
-tot_num_mts_features = (
-    predicted_features_reshape.shape[0] * predicted_features_reshape.shape[1]
-)
-num_uts_features = (tot_num_mts_features) // num_uts_in_mts
+tot_num_mts_features = num_uts_in_mts * num_features_per_uts
 mts_feature_columns = list(mts_feature_df.columns)
 uts_pca_df_list = []
+uts_pca_transformer_list = []
 for i in range(num_uts_in_mts):
     uts_pca_transformer = PCAWrapper()
-    uts_columns = mts_feature_columns[i * num_uts_features : (i + 1) * num_uts_features]
+    uts_columns = mts_feature_columns[
+        i * num_features_per_uts : (i + 1) * num_features_per_uts
+    ]
     uts_feature_df = mts_feature_df[uts_columns]
     uts_pca_df = uts_pca_transformer.fit_transform(uts_feature_df)
     uts_pca_df_list.append(uts_pca_df)
+    uts_pca_transformer_list.append(uts_pca_transformer)
 
 logging.info("Successfully generated PCA spaces")
 
 # Add corr model predicted features to PCA spaces
-pred_features_pca_input = np.asarray(predicted_features_reshape).reshape(
-    tot_num_mts_features
-)
+pred_features_pca_input = corr_predicted_features
 pred_features_pca_df = mts_pca_transformer.transform(
-    pd.DataFrame([pred_features_pca_input])
+    pd.DataFrame([pred_features_pca_input], columns=mts_feature_columns)
 )
 pred_uts_features_pca_df_list = []
 for i in range(num_uts_in_mts):
-    uts_features_pca_input = predicted_features_reshape[i]
-    uts_features_pca_df = uts_pca_transformer.transform(
-        pd.DataFrame([uts_features_pca_input])
+    uts_features_pca_input = pred_features_pca_input[
+        i * num_features_per_uts : (i + 1) * num_features_per_uts
+    ]
+    uts_columns = mts_feature_columns[
+        i * num_features_per_uts : (i + 1) * num_features_per_uts
+    ]
+    uts_features_pca_df = uts_pca_transformer_list[i].transform(
+        pd.DataFrame([uts_features_pca_input], columns=uts_columns)
     )
     pred_uts_features_pca_df_list.append(uts_features_pca_df)
 
 # Add GA transofmed points to PCA spaces
-# FIXME: Add feature names to avoid warnings
-mts_features_pca_input = np.asarray(GA_runs_features[0]).reshape(tot_num_mts_features)
+mts_features_pca_input = np.asarray(transformed_features).reshape(tot_num_mts_features)
 transformed_mts_pca_df = mts_pca_transformer.transform(
-    # pd.DataFrame([mts_features_pca_input], columns=mts_feature_columns)
-    pd.DataFrame([mts_features_pca_input])
+    pd.DataFrame([mts_features_pca_input], columns=mts_feature_columns)
 )
 transformed_uts_pca_df_list = []
 for i in range(num_uts_in_mts):
-    uts_features_pca_input = GA_runs_features[0][i]
-    transformed_uts_pca_df = uts_pca_transformer.transform(
-        # pd.DataFrame(
-        #     [uts_features_pca_input],
-        #     columns=mts_feature_columns[
-        #         i * num_uts_features : (i + 1) * num_uts_features
-        #     ],
-        # )
+    uts_features_pca_input = transformed_features[i]
+    uts_columns = mts_feature_columns[
+        i * num_features_per_uts : (i + 1) * num_features_per_uts
+    ]
+    transformed_uts_pca_df = uts_pca_transformer_list[i].transform(
         pd.DataFrame(
             [uts_features_pca_input],
+            columns=uts_columns,
         )
     )
     transformed_uts_pca_df_list.append(transformed_uts_pca_df)
@@ -422,17 +217,32 @@ init_uts_features = mts_feature_df[
     mts_feature_columns[init_uts_index : init_uts_index + 4]
 ].to_numpy()
 init_uts_feature_distances = np.linalg.norm(
-    init_uts_features - init_uts_features[init_mts_index], axis=1
+    init_uts_features - init_uts_features[original_mts_index], axis=1
 )
 distance_indices = np.argsort(init_uts_feature_distances)[:k]
 
-print(np.sort(init_uts_feature_distances)[:k])
+uts_reshape_original_mts_features = original_mts_features.to_numpy().reshape(
+    num_uts_in_mts, num_features_per_uts
+)
+uts_reshape_target_mts_features = (
+    mts_feature_df.iloc[target_mts_index]
+    .to_numpy()
+    .reshape(num_uts_in_mts, num_features_per_uts)
+)
+uts_reshape_transformed_mts_features = np.asarray(transformed_features).reshape(
+    num_uts_in_mts, num_features_per_uts
+)
 
 # Save results to pdf
 pdf_filename = os.path.join("src", "results", "experiment_results.pdf")
 with PdfPages(pdf_filename) as pdf:
 
     if manual_init_transform:
+        assert (
+            (model.manual_transformed_uts is not None)
+            and (model.manual_transformed_uts_decomp is not None)
+            and (model.manual_transformed_uts_features is not None)
+        ), "Manual transform not done"
         # Plot original and transformed UTS
         fig, axs = plt.subplots(2, 1, figsize=(10, 10))
         if not manual_init_transform:
@@ -444,7 +254,7 @@ with PdfPages(pdf_filename) as pdf:
         axs[0].plot(init_uts, label="Original UTS")
         axs[0].set_title(f"Original {init_uts_name}")
         axs[0].legend()
-        axs[1].plot(transformed_uts, label="Transformed UTS")
+        axs[1].plot(model.manual_transformed_uts, label="Transformed UTS")
         axs[1].set_title(f"Transformed {init_uts_name}")
         axs[1].legend()
         pdf.savefig(fig)
@@ -454,19 +264,34 @@ with PdfPages(pdf_filename) as pdf:
     fig, axs = plt.subplots(num_uts_in_mts, 3, figsize=(10, 10))
     if not manual_init_transform:
         fig.suptitle(
-            f"Original {init_mts_index}, Transformed UTS, and Target {target_mts_index}"
+            f"Original {original_mts_index}, Transformed UTS, and Target {target_mts_index}"
         )
     else:
-        fig.suptitle(f"Original {init_mts_index} and Transformed UTS")
+        fig.suptitle(f"Original {original_mts_index} and Transformed UTS")
     for i in range(num_uts_in_mts):
         uts_name = timeseries_to_use[i]
-        axs[i, 0].plot(init_mts[uts_name])
+
+        orig_feat_val = uts_reshape_original_mts_features[i]
+        axs[i, 0].plot(
+            original_mts[uts_name],
+            label=f"TD: {orig_feat_val[0]:.2f}, TS: {orig_feat_val[1]:.2f}, TL: {orig_feat_val[2]:.2f}, SS: {orig_feat_val[3]:.2f}",
+        )
         axs[i, 0].set_title(f"Original {uts_name}")
-        axs[i, 0].legend()
-        axs[i, 1].plot(GA_runs_mts[0][i])
+        axs[i, 0].legend(handletextpad=2, labelspacing=1.5)
+
+        transformed_feat_val = uts_reshape_transformed_mts_features[i]
+        axs[i, 1].plot(
+            transformed_mts[i],
+            label=f"TD: {transformed_feat_val[0]:.2f}, TS: {transformed_feat_val[1]:.2f}, TL: {transformed_feat_val[2]:.2f}, SS: {transformed_feat_val[3]:.2f}",
+        )
         axs[i, 1].set_title(f"Transformed {uts_name}")
         axs[i, 1].legend()
-        axs[i, 2].plot(target_mts[uts_name])
+
+        target_feat_val = uts_reshape_target_mts_features[i]
+        axs[i, 2].plot(
+            target_mts[uts_name],
+            label=f"TD: {target_feat_val[0]:.2f}, TS: {target_feat_val[1]:.2f}, TL: {target_feat_val[2]:.2f}, SS: {target_feat_val[3]:.2f}",
+        )
         axs[i, 2].set_title(f"Target {uts_name}")
         axs[i, 2].legend()
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -480,8 +305,8 @@ with PdfPages(pdf_filename) as pdf:
     axs[0].scatter(mts_pca_df["pca1"], mts_pca_df["pca2"], label="MTS")
     # Original MTS
     axs[0].scatter(
-        mts_pca_df["pca1"][init_mts_index],
-        mts_pca_df["pca2"][init_mts_index],
+        mts_pca_df["pca1"][original_mts_index],
+        mts_pca_df["pca2"][original_mts_index],
         color="yellow",
         s=100,
         edgecolors="black",
@@ -541,8 +366,8 @@ with PdfPages(pdf_filename) as pdf:
         )
         # The initial UTS
         axs[i + 1].scatter(
-            uts_pca_df_list[i]["pca1"][init_mts_index],
-            uts_pca_df_list[i]["pca2"][init_mts_index],
+            uts_pca_df_list[i]["pca1"][original_mts_index],
+            uts_pca_df_list[i]["pca2"][original_mts_index],
             color="yellow",
             s=100,
             edgecolors="black",
@@ -599,15 +424,3 @@ with PdfPages(pdf_filename) as pdf:
     plt.close()
 
 logging.info(f"Results were succesfully saved to {pdf_filename}")
-
-# TODO: Load the pre-trained forecasting model
-# Perform forcasting on both original and transformed MTS
-
-# TODO: Report results/plots. Save to file/directory.
-# Statistics
-# Initial transformation vs. original
-# MTS transformation vs. original
-# PCA space transformation vs. original
-# Forecasting results on original vs. transformed MTS
-
-# TODO: Support multiple runs. Random initial transformations?

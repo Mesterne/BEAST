@@ -1,5 +1,10 @@
 import pandas as pd
 import numpy as np
+import logging
+from tqdm import tqdm
+from typing import List, Tuple
+from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
+from abc import ABC, abstractmethod
 from src.utils.generate_dataset import generate_windows_dataset
 from src.utils.transformations import (
     manipulate_seasonal_component,
@@ -12,7 +17,17 @@ from src.utils.features import (
     seasonal_strength,
 )
 
+from src.models.naive_correlation import CorrelationModel
+from src.data_transformations.generation_of_supervised_pairs import (
+    get_col_names_original_target_delta,
+)
+from src.utils.genetic_algorithm import GeneticAlgorithm
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+
+
+# DATA
 def get_mts_dataset(
     data_dir, time_series_to_use, context_length, step_size, backfill=True, index_col=0
 ):
@@ -69,60 +84,352 @@ def get_transformed_uts_with_features_and_decomps(
     return transformed_uts, transformed_uts_features, transformed_uts_decomp
 
 
-def mts_transformation_feature_feedforward(
-    mts,
-    mts_features,
-    mts_decomps,
-    transformed_uts,
-    transformed_uts_features,
-    transformed_uts_decomp,
-    GA_args,
-):
-    pass
+# MODELS
+class TimeSeriesTransformationModel(ABC):
+    def __init__(
+        self,
+        model_type: str,
+        model_params: dict,
+        mts_dataset: pd.DataFrame,
+        mts_features: pd.DataFrame,
+        mts_decomp: List[DecompResults],
+    ):
+        self.model_type = model_type
+        self.model_params = model_params
+        self.mts_dataset = mts_dataset
+        self.mts_features = mts_features
+        self.mts_decomp = mts_decomp
 
-def mts_transformation_naive_correlation(
-    mts,
-    mts_features,
-    mts_decomps,
-    transformed_uts,
-    transformed_uts_features,
-    transformed_uts_decomp,
-    GA_args,
-):
-    pass
+    @abstractmethod
+    def fit(self):
+        pass
+
+    @abstractmethod
+    def transform(self):
+        pass
 
 
-def fit_mts_to_transformed_uts(
-    mts,
-    mts_features,
-    mts_decomps,
-    transformed_uts,
-    transformed_uts_features,
-    transformed_uts_decomp,
-    model_type,
-    GA_args=None,
-):
-    if model_type == "naive_correlation":
-        new_mts = mts_transformation_naive_correlation(
-            mts,
-            mts_features,
-            mts_decomps,
-            transformed_uts,
-            transformed_uts_features,
-            transformed_uts_decomp,
-            model_type,
-            GA_args,
+class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
+    def __init__(
+        self,
+        model_type: str,
+        model_params: dict,
+        mts_dataset: pd.DataFrame,
+        mts_features: pd.DataFrame,
+        mts_decomp: List[DecompResults],
+        num_uts_in_mts: int,
+        num_features_per_uts: int,
+        manual_init_transform: bool = False,
+    ):
+        super().__init__(
+            model_type, model_params, mts_dataset, mts_features, mts_decomp
         )
-    if model_type == "feature_space_feedforward":
-        new_mts = mts_transformation_feature_feedforward(
-            mts,
-            mts_features,
-            mts_decomps,
-            transformed_uts,
-            transformed_uts_features,
-            transformed_uts_decomp,
-            model_type,
-            GA_args,
+        self.model = CorrelationModel()
+        self.num_features_per_uts = num_features_per_uts
+        self.num_uts_in_mts = num_uts_in_mts
+        self.manual_init_transform = manual_init_transform
+        self.data_set_size = len(mts_dataset)
+
+    def fit(self) -> None:
+        self.model.train(self.mts_features)
+        logging.info("Successfully fit correlation model to feature data")
+
+    def predict_mts_feature_values(
+        self, original_mts_index, target_mts_index, init_uts_index
+    ):
+        uts_feature_col_names = get_col_names_original_target_delta()
+        # TODO: Check what the delta index is used for
+        dummy_original_index, dummy_target_index, dummy_delta_index = 0, 0, 0
+        original_mts_features = self.mts_features.iloc[original_mts_index]
+        if self.manual_init_transform:
+            assert (
+                (self.manual_transformed_uts is not None)
+                and (self.manual_transformed_uts_decomp is not None)
+                and (self.manual_transformed_uts_features is not None)
+            ), "Manual transform not done"
+
+            logging.info("Predicting features based on manually transformed UTS")
+            original_values, target_values, delta_values = (
+                [dummy_original_index],
+                [dummy_target_index],
+                [dummy_delta_index],
+            )
+            for uts_index in range(self.num_uts_in_mts):
+                if uts_index == init_uts_index:
+                    original_values = [
+                        *original_values,
+                        *original_mts_features.iloc[uts_index : uts_index + 4],
+                    ]
+                    target_values = [
+                        *target_values,
+                        *self.manual_transformed_uts_features,
+                    ]
+                    delta_features = np.asarray(
+                        self.manual_transformed_uts_features
+                    ) - np.asarray(
+                        original_mts_features.iloc[uts_index : uts_index + 4]
+                    )
+                    delta_values = [
+                        *delta_values,
+                        *delta_features,
+                    ]
+                else:
+                    original_values = [
+                        *original_values,
+                        *original_mts_features.iloc[uts_index : uts_index + 4],
+                    ]
+                    # NOTE: Can be viewed as dummy values, these are what we are trying to predict
+                    target_values = [
+                        *target_values,
+                        *original_mts_features.iloc[uts_index : uts_index + 4],
+                    ]
+                    delta_values = [
+                        *delta_values,
+                        *np.zeros(4),
+                    ]
+        else:
+            logging.info("Predicting features based on original and target TS")
+            target_mts_features = self.mts_features.iloc[target_mts_index]
+            original_values = [original_mts_index, *original_mts_features]
+            target_values = [target_mts_index, *target_mts_features]
+            # TODO: Why are we only using delta from ONE uts in mts and NOT ALL?
+            # (When not performing manual transform)
+            init_uts_original_features = original_mts_features.iloc[
+                init_uts_index : init_uts_index + self.num_features_per_uts
+            ]
+            init_uts_target_features = target_mts_features.iloc[
+                init_uts_index : init_uts_index + self.num_features_per_uts
+            ]
+            init_uts_delta_features = np.asarray(
+                init_uts_original_features
+            ) - np.asarray(init_uts_target_features)
+            delta_values = [
+                dummy_delta_index,
+                *np.zeros(self.num_features_per_uts * self.num_uts_in_mts),
+            ]
+            delta_values = np.asarray(delta_values)
+            delta_values[
+                1 + init_uts_index : 1 + init_uts_index + self.num_features_per_uts
+            ] += init_uts_delta_features
+
+        model_input_values = np.asarray(
+            [*original_values, *target_values, *delta_values]
+        )
+        model_input_df = pd.DataFrame(
+            [model_input_values], columns=uts_feature_col_names
+        )
+        logging.info("Successfully generated model input dataframe")
+
+        predicted_features = self.model.infer(model_input_df)
+        return predicted_features
+
+    def transform(
+        self, original_mts_index, target_mts_index, init_uts_index
+    ) -> Tuple[List, List, List, np.ndarray]:
+        predicted_features_df = self.predict_mts_feature_values(
+            original_mts_index, target_mts_index, init_uts_index
+        )
+        logging.info("Successfully predicted features")
+
+        # Get GA parameters
+        num_GA_runs = self.model_params["genetic_algorithm_args"]["num_runs"]
+        num_generations = self.model_params["genetic_algorithm_args"]["num_generations"]
+        num_parents_mating = self.model_params["genetic_algorithm_args"][
+            "num_parents_mating"
+        ]
+        solutions_per_pop = self.model_params["genetic_algorithm_args"][
+            "solutions_per_population"
+        ]
+        init_range_low = self.model_params["genetic_algorithm_args"]["init_range_low"]
+        init_range_high = self.model_params["genetic_algorithm_args"]["init_range_high"]
+        parent_selection_type = self.model_params["genetic_algorithm_args"][
+            "parent_selection_type"
+        ]
+        crossover_type = self.model_params["genetic_algorithm_args"]["crossover_type"]
+        mutation_type = self.model_params["genetic_algorithm_args"]["mutation_type"]
+        mutation_percent_genes = self.model_params["genetic_algorithm_args"][
+            "mutation_percent_genes"
+        ]
+        trend_det_factor_low = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_det_factor"][0]
+        trend_det_factor_high = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_det_factor"][1]
+        trend_slope_factor_low = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_slope_factor"][0]
+        trend_slope_factor_high = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_slope_factor"][1]
+        trend_lin_factor_low = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_lin_factor"][0]
+        trend_lin_factor_high = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["trend_lin_factor"][1]
+        seasonal_det_factor_low = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["seasonal_det_factor"][0]
+        seasonal_det_factor_high = self.model_params["genetic_algorithm_args"][
+            "legal_values"
+        ]["seasonal_det_factor"][1]
+
+        num_genes = self.num_features_per_uts
+
+        # Contstraint on GA solutions
+        legal_factor_values = [
+            np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
+            np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
+            np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
+            np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
+        ]
+
+        # Get predicted feature values in right shape
+        is_index_column = predicted_features_df.columns.str.contains("index")
+        predicted_features = predicted_features_df.loc[:, ~is_index_column].to_numpy()
+        predicted_features_reshape = predicted_features.reshape(3, 4)
+
+        # Run genetic algorithm
+        GA_runs_mts = []
+        GA_runs_features = []
+        GA_runs_factors = []
+
+        logging.info("Starting genetic algorithm runs...")
+        for _ in tqdm(range(num_GA_runs)):
+            transformed_mts = []
+            transformed_mts_features = []
+            transformed_mts_factors = []
+
+            for i in range(self.num_uts_in_mts):
+                if i == init_uts_index and self.manual_init_transform:
+                    assert (
+                        (self.manual_transformed_uts is not None)
+                        and (self.manual_transformed_uts_decomp is not None)
+                        and (self.manual_transformed_uts_features is not None)
+                    ), "Manual transform not done"
+                    transformed_mts.append(self.manual_transformed_uts)
+                    transformed_mts_features.append(
+                        self.manual_transformed_uts_features
+                    )
+                    transformed_mts_factors.append(
+                        [
+                            self.manual_transform_factors[0],
+                            self.manual_transform_factors[1],
+                            self.manual_transform_factors[2],
+                            self.manual_transform_factors[3],
+                        ]
+                    )
+                    continue
+
+                init_mts_decomps = self.mts_decomp[original_mts_index]
+                univariate_decomps = init_mts_decomps[i]
+                univariate_target_features = predicted_features_reshape[i]
+
+                ga_instance = GeneticAlgorithm(
+                    original_time_series_decomp=univariate_decomps,
+                    target_features=univariate_target_features,
+                    num_generations=num_generations,
+                    num_parents_mating=num_parents_mating,
+                    sol_per_pop=solutions_per_pop,
+                    num_genes=num_genes,
+                    gene_space=legal_factor_values,
+                    init_range_low=init_range_low,
+                    init_range_high=init_range_high,
+                    parent_selection_type=parent_selection_type,
+                    crossover_type=crossover_type,
+                    mutation_type=mutation_type,
+                    mutation_percent_genes=mutation_percent_genes,
+                )
+
+                ga_instance.run_genetic_algorithm()
+
+                factors, _, _ = ga_instance.get_best_solution()
+
+                transformed_trend = manipulate_trend_component(
+                    univariate_decomps.trend, factors[0], factors[1], factors[2], m=0
+                )
+                transformed_seasonal = manipulate_seasonal_component(
+                    univariate_decomps.seasonal, factors[3]
+                )
+
+                transformed_ts = (
+                    transformed_trend + transformed_seasonal + univariate_decomps.resid
+                )
+                transformed_mts.append(transformed_ts)
+
+                transformed_mts_features.append(
+                    [
+                        trend_strength(transformed_trend, univariate_decomps.resid),
+                        trend_slope(transformed_trend),
+                        trend_linearity(transformed_trend),
+                        seasonal_strength(
+                            transformed_seasonal, univariate_decomps.resid
+                        ),
+                    ]
+                )
+
+                transformed_mts_factors.append(factors)
+
+            GA_runs_mts.append(transformed_mts)
+            GA_runs_features.append(transformed_mts_features)
+            GA_runs_factors.append(transformed_mts_factors)
+
+        logging.info(
+            f"Successfully transformed the other univariate time series in the MTS. {num_GA_runs} genetic algorithm runs completed."
         )
 
-    return new_mts
+        # NOTE: Only return one set of predicted features in this function
+        predicted_features = predicted_features[0]
+
+        return GA_runs_mts, GA_runs_features, GA_runs_factors, predicted_features
+
+    def manual_transform_uts(self, mts_index, uts_index):
+        assert self.manual_init_transform, "Manual transform not enabled"
+        self.manual_transform_factors = [
+            self.model_params["manual_transform"]["trend_det_factor"],
+            self.model_params["manual_transform"]["trend_slope_factor"],
+            self.model_params["manual_transform"]["trend_lin_factor"],
+            self.model_params["manual_transform"]["seasonal_det_factor"],
+        ]
+        uts_decomp = self.mts_decomp[mts_index][uts_index]
+        transformed_uts, transformed_uts_features, transformed_uts_decomp = (
+            get_transformed_uts_with_features_and_decomps(
+                uts_decomp,
+                self.manual_transform_factors[0],
+                self.manual_transform_factors[1],
+                self.manual_transform_factors[2],
+                self.manual_transform_factors[3],
+            )
+        )
+        self.manual_transformed_uts = transformed_uts
+        self.manual_transformed_uts_features = transformed_uts_features
+        self.manual_transformed_uts_decomp = transformed_uts_decomp
+
+
+def get_model_by_type(
+    model_type: str,
+    model_params: dict,
+    mts_dataset: pd.DataFrame,
+    mts_features: pd.DataFrame,
+    mts_decomp: List[DecompResults],
+    num_uts_in_mts: int,
+    num_features_per_uts: int,
+    manual_init_transform: bool,
+) -> TimeSeriesTransformationModel:
+    if model_type == "correlation_GA":
+        return CorrelationGeneticAlgorithmModel(
+            model_type,
+            model_params,
+            mts_dataset,
+            mts_features,
+            mts_decomp,
+            num_uts_in_mts,
+            num_features_per_uts,
+            manual_init_transform,
+        )
+    else:
+        raise ValueError(f"Model type {model_type} not supported")
+
+
+# PLOTTING

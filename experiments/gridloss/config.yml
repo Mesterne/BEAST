@@ -4,8 +4,9 @@ transformation_args:
   init_transform_uts:
     name: grid1-load
     index: 0
-  manual_init_transform: True
+  manual_init_transform: False
   auto_init_transform:
+    target_mts_index: 626
     num_runs: 10
     selection_strategy: random
   trend_det_factor: 2.5

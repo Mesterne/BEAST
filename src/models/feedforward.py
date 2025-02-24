@@ -10,6 +10,7 @@ import logging
 
 
 class FeedForwardFeatureModel(nn.Module):
+
     def __init__(
         self,
         input_size,
@@ -17,7 +18,6 @@ class FeedForwardFeatureModel(nn.Module):
         hidden_network_sizes,
         save_dir,
         name="feedforward_feature",
-        load_model=False,
     ):
         super(FeedForwardFeatureModel, self).__init__()
         self.generate_network(
@@ -26,10 +26,6 @@ class FeedForwardFeatureModel(nn.Module):
             hidden_network_sizes=hidden_network_sizes,
         )
         self.save_dir = save_dir + f"/{name}.pth"
-        if load_model:
-            loaded_model = self.load_model()
-            if loaded_model is not None:
-                self = loaded_model
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
         logging.info(
@@ -52,15 +48,3 @@ class FeedForwardFeatureModel(nn.Module):
     def save_model(self):
         logging.info(f"Saving trained model to {self.save_dir}...")
         save(self, self.save_dir)
-
-    def load_model(self):
-        logging.info(f"Loading trained model from {self.save_dir}...")
-        try:
-            model = load(self.save_dir)
-        except FileNotFoundError:
-            logging.warning("Could not find saved model...")
-            return None
-        except Exception as e:
-            logging.error(f"Issues with loading model: {e}")
-            return None
-        return model
