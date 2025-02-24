@@ -1,6 +1,67 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import numpy as np
+
+
+def pca_plot_train_test_validation(mts_pca_df: pd.DataFrame):
+    # Define categories
+    conditions = [
+        mts_pca_df["isTrain"],
+        mts_pca_df["isValidation"],
+        mts_pca_df["isTestInterpolate"],
+        mts_pca_df["isTestExtrapolate"],
+    ]
+    choices = ["Train", "Validation", "Test (interpolate)", "Test (extrapolate)"]
+    mts_pca_df["category"] = pd.Categorical(
+        np.select(conditions, choices, default="Other"), categories=choices
+    )
+
+    # Define full color mapping
+    full_palette = {
+        "Train": "grey",
+        "Validation": "green",
+        "Test (interpolate)": "blue",
+        "Test (extrapolate)": "blue",
+    }
+
+    # Create subplots
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True)
+
+    # Define plot configurations
+    plot_configs = [
+        ("Train", "Validation", "Train vs Validation", axes[0]),
+        ("Train", "Test (interpolate)", "Train vs Test (Interpolate)", axes[1]),
+        ("Train", "Test (extrapolate)", "Train vs Test (Extrapolate)", axes[2]),
+    ]
+
+    for train_label, other_label, title, ax in plot_configs:
+        subset = mts_pca_df[mts_pca_df["category"].isin([train_label, other_label])]
+
+        # Define the hue order explicitly (ensuring only relevant categories appear)
+        hue_order = [train_label, other_label]
+
+        sns.scatterplot(
+            data=subset,
+            x="pca1",
+            y="pca2",
+            hue="category",
+            hue_order=hue_order,  # Ensures only relevant categories are shown
+            palette=full_palette,  # Full palette to avoid missing key errors
+            s=50,
+            ax=ax,
+        )
+
+        # Adjust legend to only include plotted categories
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, title="Data Split", loc="best")
+
+        ax.set_title(title)
+        ax.set_xlabel("PCA1")
+        ax.set_ylabel("PCA2")
+
+    plt.tight_layout()
+    return fig
 
 
 def pca_plot_train_test_pairing(mts_pca_df: pd.DataFrame, dataset_row: pd.DataFrame):
@@ -111,17 +172,15 @@ def pca_plot_train_test_pairing_with_one_prediction(
     target_point = mts_pca_df[mts_pca_df["index"] == target_idx].iloc[0]
 
     # Assign labels and colors based on conditions
-    mts_pca_df["category"] = mts_pca_df.apply(
-        lambda row: (
-            "Train"
-            if row["isTrain"]
-            else (
-                "Validation"
-                if row["isValidation"]
-                else "Test" if row["isTest"] else "Other"
-            )
-        ),
-        axis=1,
+    conditions = [
+        mts_pca_df["isTrain"],
+        mts_pca_df["isValidation"],
+        mts_pca_df["isTestInterpolate"],
+        mts_pca_df["isTestExtrapolate"],
+    ]
+    choices = ["Train", "Validation", "Test (interpolate)", "Test (extrapolate)"]
+    mts_pca_df["category"] = pd.Categorical(
+        np.select(conditions, choices, default="Other"), categories=choices
     )
 
     # Plot scatter points using seaborn
