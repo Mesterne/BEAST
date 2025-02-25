@@ -119,7 +119,12 @@ ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
     validation_supervised_dataset,
     test_supervised_dataset,
 ) = create_train_val_test_split(
-    mts_pca_df, mts_feature_df, ORIGINAL_NAMES, TARGET_NAMES, SEED
+    mts_pca_df,
+    mts_feature_df,
+    ORIGINAL_NAMES,
+    TARGET_NAMES,
+    SEED,
+    output_dir=output_dir,
 )
 
 # FIXME: Currently only getting one RANDOM sample from test supervised dataset
@@ -250,10 +255,9 @@ uts_reshape_transformed_mts_features = np.asarray(transformed_features).reshape(
     num_uts_in_mts, num_features_per_uts
 )
 
-# FIXME: Believe saving independent plot in a folder is better than saving in pdf
-# FIXME: Use plot functions from utils/plots folder
 
 # Save results to pdf
+# TODO:  All plots should be function calls
 pdf_filename = os.path.join("src", "results", "experiment_results.pdf")
 with PdfPages(pdf_filename) as pdf:
 
