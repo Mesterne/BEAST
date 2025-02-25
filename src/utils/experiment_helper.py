@@ -18,9 +18,6 @@ from src.utils.features import (
 )
 
 from src.models.naive_correlation import CorrelationModel
-from src.data_transformations.generation_of_supervised_pairs import (
-    get_col_names_original_target_delta,
-)
 from src.utils.genetic_algorithm import GeneticAlgorithm
 
 # Set up logging
@@ -100,10 +97,12 @@ class TimeSeriesTransformationModel(ABC):
         self.mts_features = mts_features
         self.mts_decomp = mts_decomp
 
+    # NOTE: May want to send more params than necessary and only use relevant params for a given model
     @abstractmethod
     def fit(self):
         pass
 
+    # NOTE: Same as above
     @abstractmethod
     def transform(self):
         pass
@@ -135,99 +134,31 @@ class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
         logging.info("Successfully fit correlation model to feature data")
 
     def predict_mts_feature_values(
-        self, original_mts_index, target_mts_index, init_uts_index
+        self, model_input, original_mts_index, target_mts_index, init_uts_index
     ):
-        uts_feature_col_names = get_col_names_original_target_delta()
-        # TODO: Check what the delta index is used for
-        dummy_original_index, dummy_target_index, dummy_delta_index = 0, 0, 0
-        original_mts_features = self.mts_features.iloc[original_mts_index]
-        if self.manual_init_transform:
-            assert (
-                (self.manual_transformed_uts is not None)
-                and (self.manual_transformed_uts_decomp is not None)
-                and (self.manual_transformed_uts_features is not None)
-            ), "Manual transform not done"
-
-            logging.info("Predicting features based on manually transformed UTS")
-            original_values, target_values, delta_values = (
-                [dummy_original_index],
-                [dummy_target_index],
-                [dummy_delta_index],
-            )
-            for uts_index in range(self.num_uts_in_mts):
-                if uts_index == init_uts_index:
-                    original_values = [
-                        *original_values,
-                        *original_mts_features.iloc[uts_index : uts_index + 4],
-                    ]
-                    target_values = [
-                        *target_values,
-                        *self.manual_transformed_uts_features,
-                    ]
-                    delta_features = np.asarray(
-                        self.manual_transformed_uts_features
-                    ) - np.asarray(
-                        original_mts_features.iloc[uts_index : uts_index + 4]
-                    )
-                    delta_values = [
-                        *delta_values,
-                        *delta_features,
-                    ]
-                else:
-                    original_values = [
-                        *original_values,
-                        *original_mts_features.iloc[uts_index : uts_index + 4],
-                    ]
-                    # NOTE: Can be viewed as dummy values, these are what we are trying to predict
-                    target_values = [
-                        *target_values,
-                        *original_mts_features.iloc[uts_index : uts_index + 4],
-                    ]
-                    delta_values = [
-                        *delta_values,
-                        *np.zeros(4),
-                    ]
-        else:
-            logging.info("Predicting features based on original and target TS")
-            target_mts_features = self.mts_features.iloc[target_mts_index]
-            original_values = [original_mts_index, *original_mts_features]
-            target_values = [target_mts_index, *target_mts_features]
-            # TODO: Why are we only using delta from ONE uts in mts and NOT ALL?
-            # (When not performing manual transform)
-            init_uts_original_features = original_mts_features.iloc[
-                init_uts_index : init_uts_index + self.num_features_per_uts
-            ]
-            init_uts_target_features = target_mts_features.iloc[
-                init_uts_index : init_uts_index + self.num_features_per_uts
-            ]
-            init_uts_delta_features = np.asarray(
-                init_uts_original_features
-            ) - np.asarray(init_uts_target_features)
-            delta_values = [
-                dummy_delta_index,
-                *np.zeros(self.num_features_per_uts * self.num_uts_in_mts),
-            ]
-            delta_values = np.asarray(delta_values)
-            delta_values[
-                1 + init_uts_index : 1 + init_uts_index + self.num_features_per_uts
-            ] += init_uts_delta_features
-
-        model_input_values = np.asarray(
-            [*original_values, *target_values, *delta_values]
-        )
-        model_input_df = pd.DataFrame(
-            [model_input_values], columns=uts_feature_col_names
-        )
-        logging.info("Successfully generated model input dataframe")
-
-        predicted_features = self.model.infer(model_input_df)
+        predicted_features = self.model.infer(model_input)
         return predicted_features
 
     def transform(
-        self, original_mts_index, target_mts_index, init_uts_index
+        self,
+        model_input: pd.DataFrame,
+        original_mts_index: int,
+        target_mts_index: int,
+        init_uts_index: int,
     ) -> Tuple[List, List, List, np.ndarray]:
+        """Predict target features and transform MTS using genetic algorithm.
+
+        Args:
+            model_input (_type_): Dataframe containing model input for a singe MTS
+            original_mts_index (_type_): Index of the MTS that is to be transformed
+            target_mts_index (_type_): Index of the transformation target MTS
+            init_uts_index (_type_): Index of the UTS in the original MTS that we base the transformation on
+
+        Returns:
+            Tuple[List, List, List, np.ndarray]: List of transformed MTS, List of transformed MTS features, List of factors used for transformation, Predicted features
+        """
         predicted_features_df = self.predict_mts_feature_values(
-            original_mts_index, target_mts_index, init_uts_index
+            model_input, original_mts_index, target_mts_index, init_uts_index
         )
         logging.info("Successfully predicted features")
 
@@ -290,6 +221,7 @@ class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
         predicted_features = predicted_features_df.loc[:, ~is_index_column].to_numpy()
         predicted_features_reshape = predicted_features.reshape(3, 4)
 
+        # NOTE May want to drop support for multiple GA runs?
         # Run genetic algorithm
         GA_runs_mts = []
         GA_runs_features = []
@@ -302,6 +234,7 @@ class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
             transformed_mts_factors = []
 
             for i in range(self.num_uts_in_mts):
+                # NOTE: If manual transform is enabled, skip the GA run for the UTS that is manually transformed
                 if i == init_uts_index and self.manual_init_transform:
                     assert (
                         (self.manual_transformed_uts is not None)
@@ -344,6 +277,7 @@ class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
 
                 ga_instance.run_genetic_algorithm()
 
+                # Use GA solution to modify the trend and seasonal components
                 factors, _, _ = ga_instance.get_best_solution()
 
                 transformed_trend = manipulate_trend_component(
@@ -352,12 +286,12 @@ class CorrelationGeneticAlgorithmModel(TimeSeriesTransformationModel):
                 transformed_seasonal = manipulate_seasonal_component(
                     univariate_decomps.seasonal, factors[3]
                 )
-
+                # Reconstruct the transformed time series
                 transformed_ts = (
                     transformed_trend + transformed_seasonal + univariate_decomps.resid
                 )
                 transformed_mts.append(transformed_ts)
-
+                # Calculate features for the transformed time series
                 transformed_mts_features.append(
                     [
                         trend_strength(transformed_trend, univariate_decomps.resid),

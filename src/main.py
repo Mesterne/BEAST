@@ -6,7 +6,7 @@ import numpy as np
 import random
 import torch
 import logging
-from tqdm import tqdm
+from matplotlib.backends.backend_pdf import PdfPages
 
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
@@ -22,38 +22,18 @@ if project_root not in sys.path:
 logging.basicConfig(level=logging.INFO)
 logging.info(f"Running from directory: {project_root}")
 
-from src.utils.yaml_loader import read_yaml
-from src.utils.generate_dataset import (
-    generate_windows_dataset,
-    generate_feature_dataframe,
-)
-from src.utils.features import (
-    decomp_and_features,
-    trend_strength,
-    trend_slope,
-    trend_linearity,
-    seasonal_strength,
-)
-from src.utils.transformations import (
-    manipulate_seasonal_component,
-    manipulate_trend_component,
-)
-from src.utils.experiment_helper import (
+from src.utils.yaml_loader import read_yaml  # noqa: E402
+from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
+from src.utils.features import decomp_and_features  # noqa: E402
+from src.utils.pca import PCAWrapper  # noqa: E402
+from src.utils.experiment_helper import (  # noqa: E402
     get_mts_dataset,
-    get_transformed_uts_with_features_and_decomps,
     get_model_by_type,
 )
-
-from src.models.naive_correlation import CorrelationModel
-from src.data_transformations.generation_of_supervised_pairs import (
-    get_col_names_original_target_delta,
+from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
+    create_train_val_test_split,
+    get_col_names_original_target,
 )
-from src.utils.genetic_algorithm import GeneticAlgorithm
-
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-
-from src.utils.pca import PCAWrapper
 
 # Setting seeds
 SEED = 42
@@ -103,18 +83,48 @@ mts_decomps, _ = decomp_and_features(
 
 logging.info("Successfully generated multivariate time series decompositions")
 
-# Time series arguments
-num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
-original_mts_index = config["time_series_args"]["original_mts_index"]
-init_uts_index = config["time_series_args"]["init_transform_uts"]["index"]
-init_uts_name = config["time_series_args"]["init_transform_uts"]["name"]
-original_mts = mts_dataset[original_mts_index]  # DataFrame
+# Generate MTS PCA space
+mts_pca_transformer = PCAWrapper()
+mts_pca_df = mts_pca_transformer.fit_transform(mts_feature_df)
+
+logging.info("Successfully generated MTS PCA space")
+
+# Generate train, vlaidation and test splits
+ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
+(
+    X_train,
+    y_train,
+    X_validation,
+    y_validation,
+    X_test,
+    y_test,
+    train_supervised_dataset,
+    validation_supervised_dataset,
+    test_supervised_dataset,
+) = create_train_val_test_split(
+    mts_pca_df, mts_feature_df, ORIGINAL_NAMES, TARGET_NAMES, SEED
+)
+
+# FIXME: Currently only getting one RANDOM sample from test supervised dataset
+# Get random model input
+df_model_input = test_supervised_dataset.sample(1)
+# Original MTS
+original_mts_index = df_model_input["original_index"].values[0].astype(int)
+original_mts = mts_dataset[original_mts_index]
 original_mts_decomps = mts_decomps[original_mts_index]
 original_mts_features = mts_feature_df.iloc[original_mts_index]
+# Target MTS
+target_mts_index = df_model_input["target_index"].values[0].astype(int)
+target_mts = mts_dataset[target_mts_index]
+target_mts_features = mts_feature_df.iloc[target_mts_index]
+# UTS to transform
+num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
+init_uts_index = config["time_series_args"]["init_transform_uts"]["index"]
+init_uts_name = config["time_series_args"]["init_transform_uts"]["name"]
 init_uts = original_mts[init_uts_name]  # Series
 init_uts_decomp = original_mts_decomps[init_uts_index]
-target_mts_index = config["time_series_args"]["target_mts_index"]
-target_mts = mts_dataset[target_mts_index]  # DataFrame
+# FIXME: Manual transformation is currently not supported
+# Whether or not the initial transformation is based on values from config file
 manual_init_transform = config["time_series_args"]["manual_init_transform"]
 
 # Model initialization
@@ -135,26 +145,28 @@ logging.info(f"Successfully initialized the {model_type} model")
 # Fit model to data
 model.fit()
 
-# FIXME: Transform return values are not yet really model agnostic
+non_index_columns = df_model_input.columns[
+    ~df_model_input.columns.str.contains("index")
+]
+model_input = df_model_input[non_index_columns]
+# FIXME: Decide what input parameters transform should take.
+# Should it transform one MTS or multiple MTS?
 # Transform MTS
 (
     transformed_mts_list,
     transformed_features_list,
     transformed_factors_list,
-    corr_predicted_features,
-) = model.transform(original_mts_index, target_mts_index, init_uts_index)
+    model_predicted_features,
+) = model.transform(model_input, original_mts_index, target_mts_index, init_uts_index)
 
-
-# NOTE: By default, we will only consider the first run in visualization
+# NOTE: Code allows for mulitple GA runs. One of these has to be selected.
+# This also depends on the answer to the more general question of
+# whether or not to handle multiple MTS transformations at once.
 DEFAULT_RUN_INDEX = 0
 transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
 transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
 
-# Create pca spaces for 2D visualization
-# MTS PCA
-mts_pca_transformer = PCAWrapper()
-mts_pca_df = mts_pca_transformer.fit_transform(mts_feature_df)
-
+# NOTE: Thought it might be valuable to also visualize the PCA spaces of each UTS.
 # One PCA for each UTS
 tot_num_mts_features = num_uts_in_mts * num_features_per_uts
 mts_feature_columns = list(mts_feature_df.columns)
@@ -172,8 +184,8 @@ for i in range(num_uts_in_mts):
 
 logging.info("Successfully generated PCA spaces")
 
-# Add corr model predicted features to PCA spaces
-pred_features_pca_input = corr_predicted_features
+# Add model predicted features to PCA spaces
+pred_features_pca_input = model_predicted_features
 pred_features_pca_df = mts_pca_transformer.transform(
     pd.DataFrame([pred_features_pca_input], columns=mts_feature_columns)
 )
@@ -190,7 +202,7 @@ for i in range(num_uts_in_mts):
     )
     pred_uts_features_pca_df_list.append(uts_features_pca_df)
 
-# Add GA transofmed points to PCA spaces
+# Add GA transofomed points to PCA spaces
 mts_features_pca_input = np.asarray(transformed_features).reshape(tot_num_mts_features)
 transformed_mts_pca_df = mts_pca_transformer.transform(
     pd.DataFrame([mts_features_pca_input], columns=mts_feature_columns)
@@ -209,18 +221,6 @@ for i in range(num_uts_in_mts):
     )
     transformed_uts_pca_df_list.append(transformed_uts_pca_df)
 
-# Estimate expected target regions in PCA space based on K-nearest neighbors
-k = 50
-
-# FIXME: This choses points close to original UTS, want to choose points close to transformed UTS!
-init_uts_features = mts_feature_df[
-    mts_feature_columns[init_uts_index : init_uts_index + 4]
-].to_numpy()
-init_uts_feature_distances = np.linalg.norm(
-    init_uts_features - init_uts_features[original_mts_index], axis=1
-)
-distance_indices = np.argsort(init_uts_feature_distances)[:k]
-
 uts_reshape_original_mts_features = original_mts_features.to_numpy().reshape(
     num_uts_in_mts, num_features_per_uts
 )
@@ -232,6 +232,9 @@ uts_reshape_target_mts_features = (
 uts_reshape_transformed_mts_features = np.asarray(transformed_features).reshape(
     num_uts_in_mts, num_features_per_uts
 )
+
+# FIXME: Believe saving independent plot in a folder is better than saving in pdf
+# FIXME: Use plot functions from utils/plots folder
 
 # Save results to pdf
 pdf_filename = os.path.join("src", "results", "experiment_results.pdf")
@@ -274,6 +277,9 @@ with PdfPages(pdf_filename) as pdf:
         orig_feat_val = uts_reshape_original_mts_features[i]
         axs[i, 0].plot(
             original_mts[uts_name],
+            # FIXME: Want to add actual feature values to the result.
+            # This is one way to do it but it is not very readable.
+            # Maybe use its own text output file?
             label=f"TD: {orig_feat_val[0]:.2f}, TS: {orig_feat_val[1]:.2f}, TL: {orig_feat_val[2]:.2f}, SS: {orig_feat_val[3]:.2f}",
         )
         axs[i, 0].set_title(f"Original {uts_name}")
@@ -324,17 +330,6 @@ with PdfPages(pdf_filename) as pdf:
             label="Target",
         )
 
-    if manual_init_transform:
-        # Expected target region based on K-nearest neighbors
-        for mts_index in distance_indices:
-            axs[0].scatter(
-                mts_pca_df["pca1"][mts_index],
-                mts_pca_df["pca2"][mts_index],
-                color="green",
-                s=50,
-                alpha=0.5,
-            )
-
     # Correlation model predicted features
     axs[0].scatter(
         pred_features_pca_df["pca1"].iloc[0],
@@ -384,18 +379,6 @@ with PdfPages(pdf_filename) as pdf:
                 edgecolors="black",
                 label="Target",
             )
-
-        if manual_init_transform:
-            # Expected target region based on K-nearest neighbors
-            if i == init_uts_index:
-                for mts_index in distance_indices:
-                    axs[i + 1].scatter(
-                        uts_pca_df_list[i]["pca1"][mts_index],
-                        uts_pca_df_list[i]["pca2"][mts_index],
-                        color="green",
-                        s=50,
-                        alpha=0.5,
-                    )
 
         # Correlation model predicted features
         axs[i + 1].scatter(

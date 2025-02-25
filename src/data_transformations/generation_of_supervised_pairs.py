@@ -232,3 +232,37 @@ def get_col_names_original_target_delta():
     ]
 
     return [*ORIGNIAL_COLS, *TARGET_COLS, *DELTA_COLS]
+
+
+def get_col_names_original_target():
+    ORIGINAL_NAMES = [
+        "original_grid-load_trend-strength",
+        "original_grid-load_trend-slope",
+        "original_grid-load_trend-linearity",
+        "original_grid-load_seasonal-strength",
+        "original_grid-loss_trend-strength",
+        "original_grid-loss_trend-slope",
+        "original_grid-loss_trend-linearity",
+        "original_grid-loss_seasonal-strength",
+        "original_grid-temp_trend-strength",
+        "original_grid-temp_trend-slope",
+        "original_grid-temp_trend-linearity",
+        "original_grid-temp_seasonal-strength",
+    ]
+
+    TARGET_NAMES = [
+        "target_grid-load_trend-strength",
+        "target_grid-load_trend-slope",
+        "target_grid-load_trend-linearity",
+        "target_grid-load_seasonal-strength",
+        "target_grid-loss_trend-strength",
+        "target_grid-loss_trend-slope",
+        "target_grid-loss_trend-linearity",
+        "target_grid-loss_seasonal-strength",
+        "target_grid-temp_trend-strength",
+        "target_grid-temp_trend-slope",
+        "target_grid-temp_trend-linearity",
+        "target_grid-temp_seasonal-strength",
+    ]
+
+    return ORIGINAL_NAMES, TARGET_NAMES
