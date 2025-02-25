@@ -61,9 +61,7 @@ output_dir = os.getenv("OUTPUT_DIR", "")
 
 if log_training_to_wandb:
     job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
-    wandb.init(
-        project="MTS-BEAST", name=job_name, config=config["feature_model_args"]
-    )
+    wandb.init(project="MTS-BEAST", name=job_name, config=config["feature_model_args"])
 
 
 logger.info("Initialized system")
