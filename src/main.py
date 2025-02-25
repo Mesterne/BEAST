@@ -6,6 +6,7 @@ import numpy as np
 import random
 import torch
 import logging
+from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
 # Parse the configuration file path
