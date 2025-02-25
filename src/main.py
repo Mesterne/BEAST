@@ -19,6 +19,8 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
+import wandb
+import uuid
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
 from src.utils.features import decomp_and_features  # noqa: E402
@@ -53,6 +55,22 @@ data_dir = os.path.join(config["dataset_args"]["directory"], "train.csv")
 timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
 step_size = config["dataset_args"]["step_size"]
 context_length = config["dataset_args"]["window_size"]
+log_training_to_wandb = config["training_args"]["log_to_wandb"]
+
+output_dir = os.getenv("OUTPUT_DIR", "")
+
+if log_training_to_wandb:
+    job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
+    wandb.init(
+        project="MTS-BEAST", name=job_name, config=config["feature_model_args"]
+    )
+
+
+logger.info("Initialized system")
+logger.info(f"Running with experiment settings:\n{config}")
+logger.info(
+    f"All outputs will be stored in: {output_dir} (Relative to where you ran the program from)"
+)
 
 # Load data and generate dataset of multivariate time series context windows
 mts_dataset = get_mts_dataset(
