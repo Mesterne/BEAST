@@ -6,9 +6,9 @@ dataset_args:
   window_size: 168
   step_size: 24
   timeseries_to_use:
-  - grid1-load
-  - grid1-loss
-  - grid1-temp
+    - grid1-load
+    - grid1-loss
+    - grid1-temp
 stl_args:
   series_periodicity: 24
 time_series_args:
@@ -43,6 +43,8 @@ model_args:
       trend_slope_factor: [-1, 1]
       trend_lin_factor: [0.01, 10]
       seasonal_det_factor: [0.01, 10]
+  feature_model_args:
+    model_name: correlation_model
 forecasting_model_args:
   window_size: 168
   network_size:
@@ -52,3 +54,5 @@ forecasting_model_args:
   model_name: feedforward_forecaster
   model_params_storage_dir: models/feedforward
   learning_rate: 0.001
+training_args:
+  log_to_wandb: False

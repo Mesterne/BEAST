@@ -61,7 +61,11 @@ output_dir = os.getenv("OUTPUT_DIR", "")
 
 if log_training_to_wandb:
     job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
-    wandb.init(project="MTS-BEAST", name=job_name, config=config["feature_model_args"])
+    wandb.init(
+        project="MTS-BEAST",
+        name=job_name,
+        config=config["model_args"]["feature_model_args"],
+    )
 
 
 logger.info("Initialized system")
@@ -165,6 +169,7 @@ model = get_model_by_type(
 logger.info(f"Successfully initialized the {model_type} model")
 
 # Fit model to data
+# TODO:  Add posibility to pass log to  wandb
 model.fit()
 
 non_index_columns = df_model_input.columns[
@@ -189,6 +194,7 @@ transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
 transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
 
 # NOTE: Thought it might be valuable to also visualize the PCA spaces of each UTS.
+# TODO: Seperate into function
 # One PCA for each UTS
 tot_num_mts_features = num_uts_in_mts * num_features_per_uts
 mts_feature_columns = list(mts_feature_df.columns)
