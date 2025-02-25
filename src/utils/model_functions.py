@@ -2,9 +2,9 @@ from typing import List, Union
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
-import logging
 import copy
 import wandb
+from src.utils.logging_config import logger
 
 
 def train_model(
@@ -34,7 +34,7 @@ def train_model(
         List[float]: A list containing the loss history for each epoch.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logging.info(f"Training model with device: {device}")
+    logger.info(f"Training model with device: {device}")
     model.to(device)
 
     loss_function = torch.nn.L1Loss()
@@ -94,7 +94,7 @@ def train_model(
         else:
             patience_counter += 1
             if patience_counter >= early_stopping_patience:
-                logging.info(f"Early stopping triggered for epoch {epoch}.")
+                logger.info(f"Early stopping triggered for epoch {epoch}.")
                 break
         if log_wandb:
             wandb.log(
@@ -127,7 +127,7 @@ def run_model_inference(
         List[float]: Predicted values as a list.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    logging.info(f"Running model inference with device: {device}")
+    logger.info(f"Running model inference with device: {device}")
 
     model.eval()
 

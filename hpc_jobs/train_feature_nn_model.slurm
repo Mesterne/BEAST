@@ -1,32 +1,34 @@
 #!/bin/sh
-#SBATCH --account=ie-idi       # E.g. "ie-idi" if you belong to IDI
+#SBATCH --account=ie-idi
 #SBATCH --job-name=train_feed_forward_feature_model
-#SBATCH --time=0-23:00:00         # format: D-HH:MM:SS
+#SBATCH --time=0-23:00:00
 
-#SBATCH --partition=GPUQ          # Asking for a GPU
-#SBATCH --gres=gpu:1             # Setting the number of GPUs to 1
-#SBATCH --mem=16G                 # Asking for 16GB RAM
+#SBATCH --partition=GPUQ
+#SBATCH --gres=gpu:1
+#SBATCH --mem=16G
 #SBATCH --nodes=1
-#SBATCH --output=run_logs/output.txt      # Specifying 'stdout'
-#SBATCH --error=run_logs/output.err        # Specifying 'stderr'
 
-#SBATCH --mail-user=vegasj@stud.ntnu.no
-#SBATCH --mail-type=ALL
+#SBATCH --output=idun_outputs/%x_%j/output.txt
+#SBATCH --error=idun_outputs/%x_%j/output.err
 
 WORKDIR=${SLURM_SUBMIT_DIR}
-cd ${WORKDIR}
-current_run_id=$(date +%Y%m%d_%H%M%S)
-mkdir "${current_run_id}"
-cd "${current_run_id}"
-echo "Running from this directory: $SLURM_SUBMIT_DIR"
-echo "Name of job: $SLURM_JOB_NAME"
-echo "ID of job: $SLURM_JOB_ID"
-echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
+run_dir="${WORKDIR}/idun_outputs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
+mkdir -p "${run_dir}"
 
+echo "Running from directory: ${WORKDIR}"
+echo "Name of job: ${SLURM_JOB_NAME}"
+echo "ID of job: ${SLURM_JOB_ID}"
+echo "Nodes used: ${SLURM_JOB_NODELIST}"
+echo "Output directory: ${run_dir}"
 
-# Running your python file
+# Activate environment
 module load Anaconda3/2024.02-1
 conda activate IBUN_BEAST
-# conda install -c conda-forge python=3.12 numpy pandas matplotlib seaborn scikit-learn flake8 black pytorch tqdm pyyaml matplotlib-inline statsmodels plotly nbformat pygad 
-# conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-python ../../src/training/feedforward_features.py
+
+# Set output directory environment variable for the Python script
+export OUTPUT_DIR="${run_dir}"
+export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
+
+# Run Python script from the parent directory
+cd "${WORKDIR}"
+python src/training/feedforward_features.py
