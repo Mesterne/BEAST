@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import random
 import torch
-import logging
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -19,9 +18,6 @@ project_root = os.path.abspath(os.path.join(os.getcwd()))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logging.info(f"Running from directory: {project_root}")
 
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -35,6 +31,10 @@ from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E
     create_train_val_test_split,
     get_col_names_original_target,
 )
+from src.utils.logging_config import logger  # noqa: E402
+
+# Set up logging
+logger.info(f"Running from directory: {project_root}")
 
 # Setting seeds
 SEED = 42
@@ -64,7 +64,7 @@ mts_dataset = get_mts_dataset(
 dataset_size = len(mts_dataset)
 num_uts_in_mts = len(timeseries_to_use)
 
-logging.info("Successfully generated multivariate time series dataset")
+logger.info("Successfully generated multivariate time series dataset")
 
 # Generate feature dataframe
 sp = config["stl_args"]["series_periodicity"]
@@ -72,7 +72,7 @@ mts_feature_df = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=sp, dataset_size=dataset_size
 )
 
-logging.info("Successfully generated feature dataframe")
+logger.info("Successfully generated feature dataframe")
 
 # Generate decompositions dataset
 mts_decomps, _ = decomp_and_features(
@@ -82,13 +82,13 @@ mts_decomps, _ = decomp_and_features(
     decomps_only=True,
 )
 
-logging.info("Successfully generated multivariate time series decompositions")
+logger.info("Successfully generated multivariate time series decompositions")
 
 # Generate MTS PCA space
 mts_pca_transformer = PCAWrapper()
 mts_pca_df = mts_pca_transformer.fit_transform(mts_feature_df)
 
-logging.info("Successfully generated MTS PCA space")
+logger.info("Successfully generated MTS PCA space")
 
 # Generate train, vlaidation and test splits
 ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
@@ -141,7 +141,7 @@ model = get_model_by_type(
     num_features_per_uts,
     manual_init_transform,
 )
-logging.info(f"Successfully initialized the {model_type} model")
+logger.info(f"Successfully initialized the {model_type} model")
 
 # Fit model to data
 model.fit()
@@ -183,7 +183,7 @@ for i in range(num_uts_in_mts):
     uts_pca_df_list.append(uts_pca_df)
     uts_pca_transformer_list.append(uts_pca_transformer)
 
-logging.info("Successfully generated PCA spaces")
+logger.info("Successfully generated PCA spaces")
 
 # Add model predicted features to PCA spaces
 pred_features_pca_input = model_predicted_features
@@ -407,4 +407,4 @@ with PdfPages(pdf_filename) as pdf:
     pdf.savefig(fig)
     plt.close()
 
-logging.info(f"Results were succesfully saved to {pdf_filename}")
+logger.info(f"Results were succesfully saved to {pdf_filename}")
