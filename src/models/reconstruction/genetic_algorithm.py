@@ -3,11 +3,11 @@ from pygad import GA
 
 from statsmodels.tsa.seasonal import DecomposeResult  # For type hinting
 
-from .transformations import (
+from src.utils.transformations import (
     manipulate_seasonal_component,
     manipulate_trend_component,
 )
-from .features import (
+from src.utils.features import (
     trend_strength,
     trend_slope,
     trend_linearity,
