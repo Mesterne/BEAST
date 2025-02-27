@@ -5,8 +5,6 @@ import pandas as pd
 import numpy as np
 import random
 import torch
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
 
 # Parse the configuration file path
@@ -40,6 +38,7 @@ from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithm
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )  # noqa: E402
+from src.plots.full_time_series import plot_time_series_for_all_uts  # noqa: E402
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -270,175 +269,20 @@ uts_wise_pca_fig = plot_pca_for_each_uts_with_transformed(
 uts_wise_pca_fig.savefig(os.path.join(output_dir, "uts_wise_pca.png"))
 logger.info("Successfully generated PCA spaces")
 
-# Save results to pdf
-# TODO:  All plots should be function calls
-pdf_filename = os.path.join("src", "results", "experiment_results.pdf")
-with PdfPages(pdf_filename) as pdf:
 
-    if manual_init_transform:
-        assert (
-            (model.manual_transformed_uts is not None)
-            and (model.manual_transformed_uts_decomp is not None)
-            and (model.manual_transformed_uts_features is not None)
-        ), "Manual transform not done"
-        # Plot original and transformed UTS
-        fig, axs = plt.subplots(2, 1, figsize=(10, 10))
-        if not manual_init_transform:
-            fig.suptitle(
-                f"Original {init_uts_index}, Transformed UTS, and Target {target_mts_index}"
-            )
-        else:
-            fig.suptitle(f"Original {init_uts_index} and Transformed UTS")
-        axs[0].plot(init_uts, label="Original UTS")
-        axs[0].set_title(f"Original {init_uts_name}")
-        axs[0].legend()
-        axs[1].plot(model.manual_transformed_uts, label="Transformed UTS")
-        axs[1].set_title(f"Transformed {init_uts_name}")
-        axs[1].legend()
-        pdf.savefig(fig)
-        plt.close()
+transformed_mts = pd.DataFrame(
+    {name: transformed_mts[i] for i, name in enumerate(original_mts.columns)}
+)
 
-    # Plot original and transformed MTS
-    fig, axs = plt.subplots(num_uts_in_mts, 3, figsize=(10, 10))
-    if not manual_init_transform:
-        fig.suptitle(
-            f"Original {original_mts_index}, Transformed UTS, and Target {target_mts_index}"
-        )
-    else:
-        fig.suptitle(f"Original {original_mts_index} and Transformed UTS")
-    for i in range(num_uts_in_mts):
-        uts_name = timeseries_to_use[i]
+logger.info(f"Original MTS: {original_mts}")
+logger.info(f"Target MTS: {target_mts}")
+logger.info(f"Transformed MTS: {transformed_mts}")
 
-        orig_feat_val = uts_reshape_original_mts_features[i]
-        axs[i, 0].plot(
-            original_mts[uts_name],
-            # FIXME: Want to add actual feature values to the result.
-            # This is one way to do it but it is not very readable.
-            # Maybe use its own text output file?
-            label=f"TD: {orig_feat_val[0]:.2f}, TS: {orig_feat_val[1]:.2f}, TL: {orig_feat_val[2]:.2f}, SS: {orig_feat_val[3]:.2f}",
-        )
-        axs[i, 0].set_title(f"Original {uts_name}")
-        axs[i, 0].legend(handletextpad=2, labelspacing=1.5)
 
-        transformed_feat_val = uts_reshape_transformed_mts_features[i]
-        axs[i, 1].plot(
-            transformed_mts[i],
-            label=f"TD: {transformed_feat_val[0]:.2f}, TS: {transformed_feat_val[1]:.2f}, TL: {transformed_feat_val[2]:.2f}, SS: {transformed_feat_val[3]:.2f}",
-        )
-        axs[i, 1].set_title(f"Transformed {uts_name}")
-        axs[i, 1].legend()
-
-        target_feat_val = uts_reshape_target_mts_features[i]
-        axs[i, 2].plot(
-            target_mts[uts_name],
-            label=f"TD: {target_feat_val[0]:.2f}, TS: {target_feat_val[1]:.2f}, TL: {target_feat_val[2]:.2f}, SS: {target_feat_val[3]:.2f}",
-        )
-        axs[i, 2].set_title(f"Target {uts_name}")
-        axs[i, 2].legend()
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    pdf.savefig(fig)
-    plt.close()
-
-    # Plot PCA spaces
-    fig, axs = plt.subplots(4, 1, figsize=(10, 20))
-    fig.suptitle("PCA Spaces")
-    # All MTS points
-    axs[0].scatter(mts_pca_df["pca1"], mts_pca_df["pca2"], label="MTS")
-    # Original MTS
-    axs[0].scatter(
-        mts_pca_df["pca1"][original_mts_index],
-        mts_pca_df["pca2"][original_mts_index],
-        color="yellow",
-        s=100,
-        edgecolors="black",
-        label="Original",
-    )
-
-    # Target MTS
-    if not manual_init_transform:
-        axs[0].scatter(
-            mts_pca_df["pca1"][target_mts_index],
-            mts_pca_df["pca2"][target_mts_index],
-            color="orange",
-            s=100,
-            edgecolors="black",
-            label="Target",
-        )
-
-    # Correlation model predicted features
-    axs[0].scatter(
-        pred_features_pca_df["pca1"].iloc[0],
-        pred_features_pca_df["pca2"].iloc[0],
-        color="pink",
-        s=100,
-        edgecolors="black",
-        label="Predicted (Correlation)",
-    )
-
-    # The transformed MTS
-    axs[0].scatter(
-        transformed_mts_pca_df["pca1"].iloc[0],
-        transformed_mts_pca_df["pca2"].iloc[0],
-        color="red",
-        s=100,
-        edgecolors="black",
-        label="Transformed (GA)",
-    )
-
-    axs[0].set_title("MTS PCA Space")
-    axs[0].legend()
-
-    for i in range(num_uts_in_mts):
-        # All points for one UTS
-        uts_name = timeseries_to_use[i]
-        axs[i + 1].scatter(
-            uts_pca_df_list[i]["pca1"], uts_pca_df_list[i]["pca2"], label=f"{uts_name}"
-        )
-        # The initial UTS
-        axs[i + 1].scatter(
-            uts_pca_df_list[i]["pca1"][original_mts_index],
-            uts_pca_df_list[i]["pca2"][original_mts_index],
-            color="yellow",
-            s=100,
-            edgecolors="black",
-            label="Original",
-        )
-
-        # Target UTS
-        if not manual_init_transform:
-            axs[i + 1].scatter(
-                uts_pca_df_list[i]["pca1"][target_mts_index],
-                uts_pca_df_list[i]["pca2"][target_mts_index],
-                color="orange",
-                s=100,
-                edgecolors="black",
-                label="Target",
-            )
-
-        # Correlation model predicted features
-        axs[i + 1].scatter(
-            pred_uts_features_pca_df_list[i]["pca1"].iloc[0],
-            pred_uts_features_pca_df_list[i]["pca2"].iloc[0],
-            color="pink",
-            s=100,
-            edgecolors="black",
-            label="Predicted (Correlation)",
-        )
-
-        # The transformed UTS
-        axs[i + 1].scatter(
-            transformed_uts_pca_df_list[i]["pca1"].iloc[0],
-            transformed_uts_pca_df_list[i]["pca2"].iloc[0],
-            color="red",
-            s=100,
-            edgecolors="black",
-            label="Transformed (GA)",
-        )
-
-        axs[i + 1].set_title(f"{uts_name} PCA")
-        axs[i + 1].legend()
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    pdf.savefig(fig)
-    plt.close()
-
-logger.info(f"Results were succesfully saved to {pdf_filename}")
+full_time_series_fig = plot_time_series_for_all_uts(
+    original_mts=original_mts,
+    target_mts=target_mts,
+    transformed_mts=transformed_mts,
+)
+full_time_series_fig.savefig(os.path.join(output_dir, "full_time_series.png"))
+logger.info("Successfully generated full time series plots")
