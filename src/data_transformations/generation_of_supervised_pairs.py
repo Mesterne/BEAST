@@ -88,12 +88,12 @@ def create_train_val_test_split(
     X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
     logger.info(
         f""" Generated X, y pairs for training, test and validation. With shapes:
-            X_training: {X_train.shape}         
-            y_training: {y_train.shape}         
-            X_validation: {X_validation.shape}         
-            y_validation: {y_validation.shape}         
-            X_test: {X_test.shape}         
-            y_test: {y_test.shape}         
+            X_training: {X_train.shape}
+            y_training: {y_train.shape}
+            X_validation: {X_validation.shape}
+            y_validation: {y_validation.shape}
+            X_test: {X_test.shape}
+            y_test: {y_test.shape}
     """
     )
     return (
@@ -259,9 +259,9 @@ def generate_supervised_dataset_from_original_and_target_dist(
     delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
 
     # Define groups of delta columns
-    load_columns = [col for col in delta_columns if col.startswith("delta_grid-load")]
-    loss_columns = [col for col in delta_columns if col.startswith("delta_grid-loss")]
-    temp_columns = [col for col in delta_columns if col.startswith("delta_grid-temp")]
+    load_columns = [col for col in delta_columns if col.startswith("delta_grid1-load")]
+    loss_columns = [col for col in delta_columns if col.startswith("delta_grid1-loss")]
+    temp_columns = [col for col in delta_columns if col.startswith("delta_grid1-temp")]
 
     grouped_columns = [load_columns, loss_columns, temp_columns]
 
@@ -287,50 +287,50 @@ def generate_supervised_dataset_from_original_and_target_dist(
 def get_col_names_original_target_delta():
     ORIGNIAL_COLS = [
         "original_index",
-        "original_grid-load_trend-strength",
-        "original_grid-load_trend-slope",
-        "original_grid-load_trend-linearity",
-        "original_grid-load_seasonal-strength",
-        "original_grid-loss_trend-strength",
-        "original_grid-loss_trend-slope",
-        "original_grid-loss_trend-linearity",
-        "original_grid-loss_seasonal-strength",
-        "original_grid-temp_trend-strength",
-        "original_grid-temp_trend-slope",
-        "original_grid-temp_trend-linearity",
-        "original_grid-temp_seasonal-strength",
+        "original_grid1-load_trend-strength",
+        "original_grid1-load_trend-slope",
+        "original_grid1-load_trend-linearity",
+        "original_grid1-load_seasonal-strength",
+        "original_grid1-loss_trend-strength",
+        "original_grid1-loss_trend-slope",
+        "original_grid1-loss_trend-linearity",
+        "original_grid1-loss_seasonal-strength",
+        "original_grid1-temp_trend-strength",
+        "original_grid1-temp_trend-slope",
+        "original_grid1-temp_trend-linearity",
+        "original_grid1-temp_seasonal-strength",
     ]
 
     TARGET_COLS = [
         "target_index",
-        "target_grid-load_trend-strength",
-        "target_grid-load_trend-slope",
-        "target_grid-load_trend-linearity",
-        "target_grid-load_seasonal-strength",
-        "target_grid-loss_trend-strength",
-        "target_grid-loss_trend-slope",
-        "target_grid-loss_trend-linearity",
-        "target_grid-loss_seasonal-strength",
-        "target_grid-temp_trend-strength",
-        "target_grid-temp_trend-slope",
-        "target_grid-temp_trend-linearity",
-        "target_grid-temp_seasonal-strength",
+        "target_grid1-load_trend-strength",
+        "target_grid1-load_trend-slope",
+        "target_grid1-load_trend-linearity",
+        "target_grid1-load_seasonal-strength",
+        "target_grid1-loss_trend-strength",
+        "target_grid1-loss_trend-slope",
+        "target_grid1-loss_trend-linearity",
+        "target_grid1-loss_seasonal-strength",
+        "target_grid1-temp_trend-strength",
+        "target_grid1-temp_trend-slope",
+        "target_grid1-temp_trend-linearity",
+        "target_grid1-temp_seasonal-strength",
     ]
 
     DELTA_COLS = [
         "delta_index",
-        "delta_grid-load_trend-strength",
-        "delta_grid-load_trend-slope",
-        "delta_grid-load_trend-linearity",
-        "delta_grid-load_seasonal-strength",
-        "delta_grid-loss_trend-strength",
-        "delta_grid-loss_trend-slope",
-        "delta_grid-loss_trend-linearity",
-        "delta_grid-loss_seasonal-strength",
-        "delta_grid-temp_trend-strength",
-        "delta_grid-temp_trend-slope",
-        "delta_grid-temp_trend-linearity",
-        "delta_grid-temp_seasonal-strength",
+        "delta_grid1-load_trend-strength",
+        "delta_grid1-load_trend-slope",
+        "delta_grid1-load_trend-linearity",
+        "delta_grid1-load_seasonal-strength",
+        "delta_grid1-loss_trend-strength",
+        "delta_grid1-loss_trend-slope",
+        "delta_grid1-loss_trend-linearity",
+        "delta_grid1-loss_seasonal-strength",
+        "delta_grid1-temp_trend-strength",
+        "delta_grid1-temp_trend-slope",
+        "delta_grid1-temp_trend-linearity",
+        "delta_grid1-temp_seasonal-strength",
     ]
 
     return [*ORIGNIAL_COLS, *TARGET_COLS, *DELTA_COLS]
@@ -338,33 +338,33 @@ def get_col_names_original_target_delta():
 
 def get_col_names_original_target():
     ORIGINAL_NAMES = [
-        "original_grid-load_trend-strength",
-        "original_grid-load_trend-slope",
-        "original_grid-load_trend-linearity",
-        "original_grid-load_seasonal-strength",
-        "original_grid-loss_trend-strength",
-        "original_grid-loss_trend-slope",
-        "original_grid-loss_trend-linearity",
-        "original_grid-loss_seasonal-strength",
-        "original_grid-temp_trend-strength",
-        "original_grid-temp_trend-slope",
-        "original_grid-temp_trend-linearity",
-        "original_grid-temp_seasonal-strength",
+        "original_grid1-load_trend-strength",
+        "original_grid1-load_trend-slope",
+        "original_grid1-load_trend-linearity",
+        "original_grid1-load_seasonal-strength",
+        "original_grid1-loss_trend-strength",
+        "original_grid1-loss_trend-slope",
+        "original_grid1-loss_trend-linearity",
+        "original_grid1-loss_seasonal-strength",
+        "original_grid1-temp_trend-strength",
+        "original_grid1-temp_trend-slope",
+        "original_grid1-temp_trend-linearity",
+        "original_grid1-temp_seasonal-strength",
     ]
 
     TARGET_NAMES = [
-        "target_grid-load_trend-strength",
-        "target_grid-load_trend-slope",
-        "target_grid-load_trend-linearity",
-        "target_grid-load_seasonal-strength",
-        "target_grid-loss_trend-strength",
-        "target_grid-loss_trend-slope",
-        "target_grid-loss_trend-linearity",
-        "target_grid-loss_seasonal-strength",
-        "target_grid-temp_trend-strength",
-        "target_grid-temp_trend-slope",
-        "target_grid-temp_trend-linearity",
-        "target_grid-temp_seasonal-strength",
+        "target_grid1-load_trend-strength",
+        "target_grid1-load_trend-slope",
+        "target_grid1-load_trend-linearity",
+        "target_grid1-load_seasonal-strength",
+        "target_grid1-loss_trend-strength",
+        "target_grid1-loss_trend-slope",
+        "target_grid1-loss_trend-linearity",
+        "target_grid1-loss_seasonal-strength",
+        "target_grid1-temp_trend-strength",
+        "target_grid1-temp_trend-slope",
+        "target_grid1-temp_trend-linearity",
+        "target_grid1-temp_seasonal-strength",
     ]
 
     return ORIGINAL_NAMES, TARGET_NAMES

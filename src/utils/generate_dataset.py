@@ -10,7 +10,7 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
         data, series_periodicity=series_periodicity, dataset_size=dataset_size
     )
 
-    ts_indices_to_names = {0: "grid-load", 1: "grid-loss", 2: "grid-temp"}
+    ts_indices_to_names = {0: "grid1-load", 1: "grid1-loss", 2: "grid1-temp"}
 
     data = []
     for idx in range(features.shape[0]):

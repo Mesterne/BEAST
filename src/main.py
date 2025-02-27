@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 import random
 import torch
+import matplotlib.pyplot as plt
+
+plt.style.use("ggplot")
 
 
 # Parse the configuration file path
@@ -95,7 +98,7 @@ logger.info("Successfully generated multivariate time series dataset")
 sp = config["stl_args"]["series_periodicity"]
 mts_feature_df = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=sp, dataset_size=dataset_size
-).sample(frac=0.25)
+)
 
 logger.info("Successfully generated feature dataframe")
 
@@ -118,48 +121,6 @@ logger.info("Successfully generated MTS PCA space")
 # Generate train, vlaidation and test splits
 ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
 
-FEATURES_NAMES = [
-    "original_index",
-    "original_grid-load_trend-strength",
-    "original_grid-load_trend-slope",
-    "original_grid-load_trend-linearity",
-    "original_grid-load_seasonal-strength",
-    "original_grid-loss_trend-strength",
-    "original_grid-loss_trend-slope",
-    "original_grid-loss_trend-linearity",
-    "original_grid-loss_seasonal-strength",
-    "original_grid-temp_trend-strength",
-    "original_grid-temp_trend-slope",
-    "original_grid-temp_trend-linearity",
-    "original_grid-temp_seasonal-strength",
-    "delta_grid-load_trend-strength",
-    "delta_grid-load_trend-slope",
-    "delta_grid-load_trend-linearity",
-    "delta_grid-load_seasonal-strength",
-    "delta_grid-loss_trend-strength",
-    "delta_grid-loss_trend-slope",
-    "delta_grid-loss_trend-linearity",
-    "delta_grid-loss_seasonal-strength",
-    "delta_grid-temp_trend-strength",
-    "delta_grid-temp_trend-slope",
-    "delta_grid-temp_trend-linearity",
-    "delta_grid-temp_seasonal-strength",
-]
-
-TARGET_NAMES = [
-    "target_grid-load_trend-strength",
-    "target_grid-load_trend-slope",
-    "target_grid-load_trend-linearity",
-    "target_grid-load_seasonal-strength",
-    "target_grid-loss_trend-strength",
-    "target_grid-loss_trend-slope",
-    "target_grid-loss_trend-linearity",
-    "target_grid-loss_seasonal-strength",
-    "target_grid-temp_trend-strength",
-    "target_grid-temp_trend-slope",
-    "target_grid-temp_trend-linearity",
-    "target_grid-temp_seasonal-strength",
-]
 (
     X_train,
     y_train,
@@ -173,7 +134,7 @@ TARGET_NAMES = [
 ) = create_train_val_test_split(
     mts_pca_df,
     mts_feature_df,
-    FEATURES_NAMES,
+    ORIGINAL_NAMES,
     TARGET_NAMES,
     SEED,
     output_dir=output_dir,
@@ -256,7 +217,7 @@ transformed_features = pd.DataFrame(
     [transformed_features], columns=sampled_predicted_features.columns
 )
 
-uts_names = ["grid-load", "grid-loss", "grid-temp"]
+uts_names = ["grid1-load", "grid1-loss", "grid1-temp"]
 
 uts_wise_pca_fig = plot_pca_for_each_uts_with_transformed(
     mts_features_df=mts_feature_df,
@@ -274,15 +235,13 @@ transformed_mts = pd.DataFrame(
     {name: transformed_mts[i] for i, name in enumerate(original_mts.columns)}
 )
 
-logger.info(f"Original MTS: {original_mts}")
-logger.info(f"Target MTS: {target_mts}")
-logger.info(f"Transformed MTS: {transformed_mts}")
-
-
 full_time_series_fig = plot_time_series_for_all_uts(
     original_mts=original_mts,
     target_mts=target_mts,
     transformed_mts=transformed_mts,
+    original_mts_features=original_mts_features,
+    target_mts_features=target_mts_features,
+    transformed_mts_features=transformed_features,
 )
 full_time_series_fig.savefig(os.path.join(output_dir, "full_time_series.png"))
 logger.info("Successfully generated full time series plots")
