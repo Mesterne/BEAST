@@ -8,6 +8,7 @@ import torch
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
 argument_parser.add_argument("config_path", type=str)
@@ -34,6 +35,11 @@ from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E
     get_col_names_original_target,
 )
 from src.utils.logging_config import logger  # noqa: E402
+from src.models.naive_correlation import CorrelationModel
+from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.plots.pca_for_each_uts_with_transformed import (
+    plot_pca_for_each_uts_with_transformed,
+)  # noqa: E402
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -90,7 +96,7 @@ logger.info("Successfully generated multivariate time series dataset")
 sp = config["stl_args"]["series_periodicity"]
 mts_feature_df = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=sp, dataset_size=dataset_size
-)
+).sample(frac=0.25)
 
 logger.info("Successfully generated feature dataframe")
 
@@ -112,6 +118,49 @@ logger.info("Successfully generated MTS PCA space")
 
 # Generate train, vlaidation and test splits
 ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
+
+FEATURES_NAMES = [
+    "original_index",
+    "original_grid-load_trend-strength",
+    "original_grid-load_trend-slope",
+    "original_grid-load_trend-linearity",
+    "original_grid-load_seasonal-strength",
+    "original_grid-loss_trend-strength",
+    "original_grid-loss_trend-slope",
+    "original_grid-loss_trend-linearity",
+    "original_grid-loss_seasonal-strength",
+    "original_grid-temp_trend-strength",
+    "original_grid-temp_trend-slope",
+    "original_grid-temp_trend-linearity",
+    "original_grid-temp_seasonal-strength",
+    "delta_grid-load_trend-strength",
+    "delta_grid-load_trend-slope",
+    "delta_grid-load_trend-linearity",
+    "delta_grid-load_seasonal-strength",
+    "delta_grid-loss_trend-strength",
+    "delta_grid-loss_trend-slope",
+    "delta_grid-loss_trend-linearity",
+    "delta_grid-loss_seasonal-strength",
+    "delta_grid-temp_trend-strength",
+    "delta_grid-temp_trend-slope",
+    "delta_grid-temp_trend-linearity",
+    "delta_grid-temp_seasonal-strength",
+]
+
+TARGET_NAMES = [
+    "target_grid-load_trend-strength",
+    "target_grid-load_trend-slope",
+    "target_grid-load_trend-linearity",
+    "target_grid-load_seasonal-strength",
+    "target_grid-loss_trend-strength",
+    "target_grid-loss_trend-slope",
+    "target_grid-loss_trend-linearity",
+    "target_grid-loss_seasonal-strength",
+    "target_grid-temp_trend-strength",
+    "target_grid-temp_trend-slope",
+    "target_grid-temp_trend-linearity",
+    "target_grid-temp_seasonal-strength",
+]
 (
     X_train,
     y_train,
@@ -125,15 +174,16 @@ ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
 ) = create_train_val_test_split(
     mts_pca_df,
     mts_feature_df,
-    ORIGINAL_NAMES,
+    FEATURES_NAMES,
     TARGET_NAMES,
     SEED,
     output_dir=output_dir,
 )
 
+
 # FIXME: Currently only getting one RANDOM sample from test supervised dataset
 # Get random model input
-df_model_input = test_supervised_dataset.sample(1)
+df_model_input = validation_supervised_dataset.sample(1)
 # Original MTS
 original_mts_index = df_model_input["original_index"].values[0].astype(int)
 original_mts = mts_dataset[original_mts_index]
@@ -156,111 +206,69 @@ manual_init_transform = config["time_series_args"]["manual_init_transform"]
 # Model initialization
 model_type = config["model_args"]["model_type"]
 model_params = config["model_args"]
-model = get_model_by_type(
-    model_type,
-    model_params,
-    mts_dataset,
-    mts_feature_df,
-    mts_decomps,
-    num_uts_in_mts,
-    num_features_per_uts,
-    manual_init_transform,
+
+feature_model = CorrelationModel()
+ga = GeneticAlgorithmWrapper(
+    model_type=model_type,
+    model_params=model_params,
+    mts_dataset=mts_dataset,
+    mts_features=mts_feature_df,
+    mts_decomp=mts_decomps,
+    num_uts_in_mts=num_uts_in_mts,
+    num_features_per_uts=num_features_per_uts,
+    manual_init_transform=manual_init_transform,
 )
 logger.info(f"Successfully initialized the {model_type} model")
 
 # Fit model to data
 # TODO:  Add posibility to pass log to  wandb
-model.fit()
+feature_model.train(training_set=mts_feature_df)
 
-non_index_columns = df_model_input.columns[
-    ~df_model_input.columns.str.contains("index")
-]
-model_input = df_model_input[non_index_columns]
-# FIXME: Decide what input parameters transform should take.
-# Should it transform one MTS or multiple MTS?
-# Transform MTS
+validation_predicted_features = feature_model.infer(validation_supervised_dataset)
+
+sampled_predicted_features = validation_predicted_features.sample(1)
+sampled_prediction_index = (
+    sampled_predicted_features["prediction_index"].astype(int).values[0]
+)
+sampled_row_in_validation = validation_supervised_dataset.iloc[sampled_prediction_index]
+sampled_original_mts_index = int(sampled_row_in_validation["original_index"])
+sampled_target_mts_index = int(sampled_row_in_validation["target_index"])
+sampled_predicted_features = sampled_predicted_features.drop(
+    ["prediction_index"], axis=1
+)
+
 (
     transformed_mts_list,
     transformed_features_list,
     transformed_factors_list,
-    model_predicted_features,
-) = model.transform(model_input, original_mts_index, target_mts_index, init_uts_index)
+) = ga.transform(
+    predicted_features=sampled_predicted_features,
+    original_mts_index=sampled_original_mts_index,
+    target_mts_index=sampled_target_mts_index,
+)
 
-# NOTE: Code allows for mulitple GA runs. One of these has to be selected.
-# This also depends on the answer to the more general question of
-# whether or not to handle multiple MTS transformations at once.
 DEFAULT_RUN_INDEX = 0
 transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
 transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
 
-# NOTE: Thought it might be valuable to also visualize the PCA spaces of each UTS.
-# TODO: Seperate into function
-# One PCA for each UTS
-tot_num_mts_features = num_uts_in_mts * num_features_per_uts
-mts_feature_columns = list(mts_feature_df.columns)
-uts_pca_df_list = []
-uts_pca_transformer_list = []
-for i in range(num_uts_in_mts):
-    uts_pca_transformer = PCAWrapper()
-    uts_columns = mts_feature_columns[
-        i * num_features_per_uts : (i + 1) * num_features_per_uts
-    ]
-    uts_feature_df = mts_feature_df[uts_columns]
-    uts_pca_df = uts_pca_transformer.fit_transform(uts_feature_df)
-    uts_pca_df_list.append(uts_pca_df)
-    uts_pca_transformer_list.append(uts_pca_transformer)
+transformed_features = [item for sublist in transformed_features for item in sublist]
 
+transformed_features = pd.DataFrame(
+    [transformed_features], columns=sampled_predicted_features.columns
+)
+
+uts_names = ["grid-load", "grid-loss", "grid-temp"]
+
+uts_wise_pca_fig = plot_pca_for_each_uts_with_transformed(
+    mts_features_df=mts_feature_df,
+    predicted_features=sampled_predicted_features,
+    transformed_features=transformed_features,
+    original_index=sampled_original_mts_index,
+    target_index=sampled_target_mts_index,
+    uts_names=uts_names,
+)
+uts_wise_pca_fig.savefig(os.path.join(output_dir, "uts_wise_pca.png"))
 logger.info("Successfully generated PCA spaces")
-
-# Add model predicted features to PCA spaces
-pred_features_pca_input = model_predicted_features
-pred_features_pca_df = mts_pca_transformer.transform(
-    pd.DataFrame([pred_features_pca_input], columns=mts_feature_columns)
-)
-pred_uts_features_pca_df_list = []
-for i in range(num_uts_in_mts):
-    uts_features_pca_input = pred_features_pca_input[
-        i * num_features_per_uts : (i + 1) * num_features_per_uts
-    ]
-    uts_columns = mts_feature_columns[
-        i * num_features_per_uts : (i + 1) * num_features_per_uts
-    ]
-    uts_features_pca_df = uts_pca_transformer_list[i].transform(
-        pd.DataFrame([uts_features_pca_input], columns=uts_columns)
-    )
-    pred_uts_features_pca_df_list.append(uts_features_pca_df)
-
-# Add GA transofomed points to PCA spaces
-mts_features_pca_input = np.asarray(transformed_features).reshape(tot_num_mts_features)
-transformed_mts_pca_df = mts_pca_transformer.transform(
-    pd.DataFrame([mts_features_pca_input], columns=mts_feature_columns)
-)
-transformed_uts_pca_df_list = []
-for i in range(num_uts_in_mts):
-    uts_features_pca_input = transformed_features[i]
-    uts_columns = mts_feature_columns[
-        i * num_features_per_uts : (i + 1) * num_features_per_uts
-    ]
-    transformed_uts_pca_df = uts_pca_transformer_list[i].transform(
-        pd.DataFrame(
-            [uts_features_pca_input],
-            columns=uts_columns,
-        )
-    )
-    transformed_uts_pca_df_list.append(transformed_uts_pca_df)
-
-uts_reshape_original_mts_features = original_mts_features.to_numpy().reshape(
-    num_uts_in_mts, num_features_per_uts
-)
-uts_reshape_target_mts_features = (
-    mts_feature_df.iloc[target_mts_index]
-    .to_numpy()
-    .reshape(num_uts_in_mts, num_features_per_uts)
-)
-uts_reshape_transformed_mts_features = np.asarray(transformed_features).reshape(
-    num_uts_in_mts, num_features_per_uts
-)
-
 
 # Save results to pdf
 # TODO:  All plots should be function calls

@@ -36,30 +36,21 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         super().__init__(
             model_type, model_params, mts_dataset, mts_features, mts_decomp
         )
-        self.model = CorrelationModel()
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts
         self.manual_init_transform = manual_init_transform
         self.data_set_size = len(mts_dataset)
 
     def fit(self) -> None:
-        self.model.train(self.mts_features)
-        logger.info("Successfully fit correlation model to feature data")
-
-    def predict_mts_feature_values(
-        self, model_input, original_mts_index, target_mts_index, init_uts_index
-    ):
-        predicted_features = self.model.infer(model_input)
-        return predicted_features
+        pass
 
     def transform(
         self,
-        model_input: pd.DataFrame,
+        predicted_features: pd.DataFrame,
         original_mts_index: int,
         target_mts_index: int,
-        init_uts_index: int,
     ) -> Tuple[List, List, List, np.ndarray]:
-        """Predict target features and transform MTS using genetic algorithm.
+        """Transform MTS using genetic algorithm.
 
         Args:
             model_input (_type_): Dataframe containing model input for a singe MTS
@@ -70,12 +61,9 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         Returns:
             Tuple[List, List, List, np.ndarray]: List of transformed MTS, List of transformed MTS features, List of factors used for transformation, Predicted features
         """
-        predicted_features_df = self.predict_mts_feature_values(
-            model_input, original_mts_index, target_mts_index, init_uts_index
-        )
-        logger.info("Successfully predicted features")
+        predicted_features = predicted_features.copy()
 
-        # Get GA parameters
+        ####  Get Genetic Algorithm Parameters ##########
         num_GA_runs = self.model_params["genetic_algorithm_args"]["num_runs"]
         num_generations = self.model_params["genetic_algorithm_args"]["num_generations"]
         num_parents_mating = self.model_params["genetic_algorithm_args"][
@@ -130,8 +118,8 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         ]
 
         # Get predicted feature values in right shape
-        is_index_column = predicted_features_df.columns.str.contains("index")
-        predicted_features = predicted_features_df.loc[:, ~is_index_column].to_numpy()
+        is_index_column = predicted_features.columns.str.contains("index")
+        predicted_features = predicted_features.loc[:, ~is_index_column].to_numpy()
         predicted_features_reshape = predicted_features.reshape(3, 4)
 
         # NOTE May want to drop support for multiple GA runs?
@@ -147,29 +135,8 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
             transformed_mts_factors = []
 
             for i in range(self.num_uts_in_mts):
-                # NOTE: If manual transform is enabled, skip the GA run for the UTS that is manually transformed
-                if i == init_uts_index and self.manual_init_transform:
-                    assert (
-                        (self.manual_transformed_uts is not None)
-                        and (self.manual_transformed_uts_decomp is not None)
-                        and (self.manual_transformed_uts_features is not None)
-                    ), "Manual transform not done"
-                    transformed_mts.append(self.manual_transformed_uts)
-                    transformed_mts_features.append(
-                        self.manual_transformed_uts_features
-                    )
-                    transformed_mts_factors.append(
-                        [
-                            self.manual_transform_factors[0],
-                            self.manual_transform_factors[1],
-                            self.manual_transform_factors[2],
-                            self.manual_transform_factors[3],
-                        ]
-                    )
-                    continue
-
-                init_mts_decomps = self.mts_decomp[original_mts_index]
-                univariate_decomps = init_mts_decomps[i]
+                original_mts_decomp = self.mts_decomp[original_mts_index]
+                univariate_decomps = original_mts_decomp[i]
                 univariate_target_features = predicted_features_reshape[i]
 
                 ga_instance = GeneticAlgorithm(
@@ -226,10 +193,7 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
             f"Successfully transformed the other univariate time series in the MTS. {num_GA_runs} genetic algorithm runs completed."
         )
 
-        # NOTE: Only return one set of predicted features in this function
-        predicted_features = predicted_features[0]
-
-        return GA_runs_mts, GA_runs_features, GA_runs_factors, predicted_features
+        return GA_runs_mts, GA_runs_features, GA_runs_factors
 
     def manual_transform_uts(self, mts_index, uts_index):
         pass
