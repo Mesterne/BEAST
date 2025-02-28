@@ -58,13 +58,18 @@ plt.style.use("ggplot")
 # Load the configuration file
 # TODO: Sort
 config = read_yaml(args["config_path"])
+
 data_dir = os.path.join(config["dataset_args"]["directory"], "train.csv")
 timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
 step_size = config["dataset_args"]["step_size"]
 context_length = config["dataset_args"]["window_size"]
+
 log_training_to_wandb = config["training_args"]["log_to_wandb"]
+
 seasonal_period = config["stl_args"]["series_periodicity"]
+
 num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
+
 model_type = config["model_args"]["model_type"]
 model_params = config["model_args"]
 
