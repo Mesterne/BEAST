@@ -23,11 +23,9 @@ import wandb
 import uuid
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
-from src.utils.features import decomp_and_features  # noqa: E402
 from src.utils.pca import PCAWrapper  # noqa: E402
 from src.utils.experiment_helper import (  # noqa: E402
     get_mts_dataset,
-    get_model_by_type,
 )
 from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
@@ -40,6 +38,7 @@ from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )  # noqa: E402
 from src.plots.full_time_series import plot_time_series_for_all_uts  # noqa: E402
+from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -106,10 +105,11 @@ mts_feature_df, mts_decomps = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
 
+
 logger.info("Successfully generated feature dataframe")
 
 # Generate train, vlaidation and test splits
-ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
+ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES = get_col_names_original_target()
 
 # Generate PCA space used to create train test splits
 mts_pca_df = PCAWrapper().fit_transform(mts_feature_df)
@@ -129,6 +129,7 @@ logger.info("Successfully generated MTS PCA space")
     mts_pca_df,
     mts_feature_df,
     ORIGINAL_NAMES,
+    DELTA_NAMES,
     TARGET_NAMES,
     SEED,
     output_dir=output_dir,
@@ -150,7 +151,13 @@ target_mts_index = df_model_input["target_index"].values[0].astype(int)
 target_mts = mts_dataset[target_mts_index]
 target_mts_features = mts_feature_df.iloc[target_mts_index]
 
-feature_model = CorrelationModel()
+params = {
+    "number_of_features_in_each_uts": 4,
+    "number_of_uts_in_mts": 3,
+}
+
+
+feature_model = CorrelationModel(params)
 ga = GeneticAlgorithmWrapper(
     model_type=model_type,
     model_params=model_params,
@@ -163,10 +170,20 @@ ga = GeneticAlgorithmWrapper(
 logger.info(f"Successfully initialized the {model_type} model")
 
 # Fit model to data
-# TODO:  Add posibility to pass log to  wandb
-feature_model.train(training_set=mts_feature_df)
+feature_model.train(
+    X_train=X_train,
+    y_train=y_train,
+    X_val=X_validation,
+    y_val=y_validation,
+    log_to_wandb=False,
+)
 
-validation_predicted_features = feature_model.infer(validation_supervised_dataset)
+validation_predicted_features = feature_model.infer(X_validation)
+validation_predicted_features = use_model_predictions_to_create_dataframe(
+    validation_predicted_features,
+    TARGET_NAMES=TARGET_NAMES,
+    target_dataframe=validation_supervised_dataset,
+)
 
 sampled_predicted_features = validation_predicted_features.sample(1)
 sampled_prediction_index = (

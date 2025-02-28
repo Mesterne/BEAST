@@ -1,17 +1,11 @@
-import torch
 import torch.nn.functional as F
-from torch import optim
 from torch import nn
 from torch import save, load
-from torch.utils.data import DataLoader, TensorDataset
-import numpy as np
-from tqdm import tqdm
 from src.utils.logging_config import logger
 import os
 
 
 class FeedForwardFeatureModel(nn.Module):
-
     def __init__(
         self,
         input_size,
