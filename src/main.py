@@ -102,24 +102,11 @@ num_uts_in_mts = len(timeseries_to_use)
 
 logger.info("Successfully generated multivariate time series dataset")
 
-# Generate feature dataframe
-mts_feature_df = generate_feature_dataframe(
+mts_feature_df, mts_decomps = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
 
 logger.info("Successfully generated feature dataframe")
-
-# Generate decompositions dataset
-# TODO: Why do this, when we already have the features?
-mts_decomps, _ = decomp_and_features(
-    data=mts_dataset,
-    series_periodicity=seasonal_period,
-    dataset_size=dataset_size,
-    decomps_only=True,
-)
-
-logger.info("Successfully generated multivariate time series decompositions")
-
 
 # Generate train, vlaidation and test splits
 ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()

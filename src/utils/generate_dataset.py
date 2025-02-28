@@ -49,7 +49,7 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
 
     # Reorder columns based on the ordered list
     feature_df = feature_df[ordered_columns]
-    return feature_df
+    return feature_df, decomps
 
 
 def generate_windows_dataset(
