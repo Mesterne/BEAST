@@ -43,7 +43,10 @@ def seasonal_strength(seasonal_comp: pd.Series, resid_comp: pd.Series) -> float:
 
 
 def decomp_and_features(
-    data: List[pd.DataFrame], series_periodicity: int, dataset_size: int = None
+    data: List[pd.DataFrame],
+    series_periodicity: int,
+    dataset_size: int = None,
+    decomps_only: bool = False,
 ) -> Tuple[List[DecomposeResult], np.ndarray]:
     if dataset_size is not None:
         data = data[:dataset_size]
@@ -57,6 +60,8 @@ def decomp_and_features(
             ts = df[col]
             decomp = STL(ts, period=series_periodicity).fit()
             mts_decomp.append(decomp)
+            if decomps_only:
+                continue
             features[i, j, 0] = trend_strength(decomp.trend, decomp.resid)
             features[i, j, 1] = trend_slope(decomp.trend)
             features[i, j, 2] = trend_linearity(decomp.trend)

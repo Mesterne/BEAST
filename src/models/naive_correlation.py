@@ -11,7 +11,7 @@ class CorrelationModel:
         """
         self.correlations = training_set.corr()
 
-    def infer(self, values):
+    def infer(self, values: pd.DataFrame):
         """
         Inference of the model is based on a naive correlation assumption.
         We change all other features except the one that is transformed.
@@ -19,7 +19,7 @@ class CorrelationModel:
         update each feature by adding this delta multiplied with the correlation factor between the features.
         """
         # We copy the inputted values to ensure the method does not change the structure inplace
-        updated_values = values.copy(deep=True)
+        updated_values = values.copy()
         predictions = pd.DataFrame()
 
         # We only keep the columns that are prefixed by 'original_' or 'delta_'

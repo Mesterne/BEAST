@@ -1,0 +1,69 @@
+experiment_results_dir: experiments/gridloss/results
+transformation_args:
+  mts_index: 636
+  init_transform_uts:
+    name: grid1-load
+    index: 0
+  manual_init_transform: False
+  auto_init_transform:
+    target_mts_index: 626
+    num_runs: 10
+    selection_strategy: random
+  trend_det_factor: 2.5
+  trend_slope_factor: -0.5
+  trend_lin_factor: 1.7
+  seasonal_det_factor: 0.8
+  mts_transformation_model: feature_space_feedforward
+dataset_args:
+  directory: data/gridloss
+  training_data: train.csv
+  test_data: test.csv
+  window_size: 168
+  step_size: 24
+  timeseries_to_use:
+  - grid1-load
+  - grid1-loss
+  - grid1-temp
+stl_args:
+  series_periodicity: 24
+genetic_algorithm_args:
+  num_runs: 1
+  num_generations: 100
+  num_parents_mating: 2
+  solutions_per_population: 10
+  init_range_low: -5
+  init_range_high: 5
+  parent_selection_type: "sss"
+  crossover_type: "single_point"
+  mutation_type: "random"
+  mutation_percent_genes: 25
+  legal_values:
+    trend_det_factor: [0.01, 10]
+    trend_slope_factor: [-1, 1]
+    trend_lin_factor: [0.01, 10]
+    seasonal_det_factor: [0.01, 10]
+feature_model_args:
+  hidden_network_size:
+    - 256
+    - 256
+    - 256
+    - 256
+    - 256
+  model_name: feedforward_feature_space
+  model_params_storage_dir: models/feedforward
+  model_params_storage_dir: .
+  epochs: 5
+  batch_size: 32
+  learning_rate: 0.001
+  early_stopping_patience: 25
+forecasting_model_args:
+  window_size: 168
+  network_size:
+    - 100
+    - 100
+  horizon_length: 24
+  model_name: feedforward_forecaster
+  model_params_storage_dir: models/feedforward
+  learning_rate: 0.001
+training_args:
+  log_to_wandb: True

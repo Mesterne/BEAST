@@ -138,3 +138,16 @@ def run_model_inference(
         predicted = outputs.cpu().numpy()
 
     return predicted.tolist()
+
+
+def load_model(file_path):
+    logging.info(f"Loading trained model from {file_path}...")
+    try:
+        model = torch.load(file_path)
+    except FileNotFoundError:
+        logging.warning("Could not find saved model...")
+        return None
+    except Exception as e:
+        logging.error(f"Issues with loading model: {e}")
+        return None
+    return model

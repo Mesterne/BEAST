@@ -11,6 +11,7 @@ import os
 
 
 class FeedForwardFeatureModel(nn.Module):
+
     def __init__(
         self,
         input_size,
