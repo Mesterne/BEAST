@@ -7,8 +7,6 @@ import random
 import torch
 import matplotlib.pyplot as plt
 
-plt.style.use("ggplot")
-
 
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
@@ -55,18 +53,27 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
-# Load the configuration file
-config = read_yaml(args["config_path"])
+# Set up plotting styles
+plt.style.use("ggplot")
 
-# Data loading parameters
+# Load the configuration file
+# TODO: Sort
+config = read_yaml(args["config_path"])
 data_dir = os.path.join(config["dataset_args"]["directory"], "train.csv")
 timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
 step_size = config["dataset_args"]["step_size"]
 context_length = config["dataset_args"]["window_size"]
 log_training_to_wandb = config["training_args"]["log_to_wandb"]
+seasonal_period = config["stl_args"]["series_periodicity"]
+num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
+model_type = config["model_args"]["model_type"]
+model_params = config["model_args"]
 
+# Set up directory where all outputs will be stored
+# This is an environment variable that can be set before running the program
 output_dir = os.getenv("OUTPUT_DIR", "")
 
+# Set up logging to wandb
 if log_training_to_wandb:
     job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
     wandb.init(
@@ -83,6 +90,7 @@ logger.info(
 )
 
 # Load data and generate dataset of multivariate time series context windows
+# TODO: Make return dataframe
 mts_dataset = get_mts_dataset(
     data_dir=data_dir,
     time_series_to_use=timeseries_to_use,
@@ -95,31 +103,30 @@ num_uts_in_mts = len(timeseries_to_use)
 logger.info("Successfully generated multivariate time series dataset")
 
 # Generate feature dataframe
-sp = config["stl_args"]["series_periodicity"]
 mts_feature_df = generate_feature_dataframe(
-    data=mts_dataset, series_periodicity=sp, dataset_size=dataset_size
+    data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
 
 logger.info("Successfully generated feature dataframe")
 
 # Generate decompositions dataset
+# TODO: Why do this, when we already have the features?
 mts_decomps, _ = decomp_and_features(
     data=mts_dataset,
-    series_periodicity=sp,
+    series_periodicity=seasonal_period,
     dataset_size=dataset_size,
     decomps_only=True,
 )
 
 logger.info("Successfully generated multivariate time series decompositions")
 
-# Generate MTS PCA space
-mts_pca_transformer = PCAWrapper()
-mts_pca_df = mts_pca_transformer.fit_transform(mts_feature_df)
-
-logger.info("Successfully generated MTS PCA space")
 
 # Generate train, vlaidation and test splits
 ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
+
+# Generate PCA space used to create train test splits
+mts_pca_df = PCAWrapper().fit_transform(mts_feature_df)
+logger.info("Successfully generated MTS PCA space")
 
 (
     X_train,
@@ -141,7 +148,9 @@ ORIGINAL_NAMES, TARGET_NAMES = get_col_names_original_target()
 )
 
 
-# FIXME: Currently only getting one RANDOM sample from test supervised dataset
+# FIXME: Currently only gets a random row from the validation set.
+# Should get the best, worst and average performing prediction
+
 # Get random model input
 df_model_input = validation_supervised_dataset.sample(1)
 # Original MTS
@@ -153,19 +162,6 @@ original_mts_features = mts_feature_df.iloc[original_mts_index]
 target_mts_index = df_model_input["target_index"].values[0].astype(int)
 target_mts = mts_dataset[target_mts_index]
 target_mts_features = mts_feature_df.iloc[target_mts_index]
-# UTS to transform
-num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
-init_uts_index = config["time_series_args"]["init_transform_uts"]["index"]
-init_uts_name = config["time_series_args"]["init_transform_uts"]["name"]
-init_uts = original_mts[init_uts_name]  # Series
-init_uts_decomp = original_mts_decomps[init_uts_index]
-# FIXME: Manual transformation is currently not supported
-# Whether or not the initial transformation is based on values from config file
-manual_init_transform = config["time_series_args"]["manual_init_transform"]
-
-# Model initialization
-model_type = config["model_args"]["model_type"]
-model_params = config["model_args"]
 
 feature_model = CorrelationModel()
 ga = GeneticAlgorithmWrapper(
@@ -176,7 +172,6 @@ ga = GeneticAlgorithmWrapper(
     mts_decomp=mts_decomps,
     num_uts_in_mts=num_uts_in_mts,
     num_features_per_uts=num_features_per_uts,
-    manual_init_transform=manual_init_transform,
 )
 logger.info(f"Successfully initialized the {model_type} model")
 

@@ -31,14 +31,12 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         mts_decomp: List[DecompResults],
         num_uts_in_mts: int,
         num_features_per_uts: int,
-        manual_init_transform: bool = False,
     ):
         super().__init__(
             model_type, model_params, mts_dataset, mts_features, mts_decomp
         )
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts
-        self.manual_init_transform = manual_init_transform
         self.data_set_size = len(mts_dataset)
 
     def fit(self) -> None:
@@ -194,6 +192,3 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         )
 
         return GA_runs_mts, GA_runs_features, GA_runs_factors
-
-    def manual_transform_uts(self, mts_index, uts_index):
-        pass
