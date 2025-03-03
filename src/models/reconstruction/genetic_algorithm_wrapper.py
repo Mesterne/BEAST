@@ -4,8 +4,6 @@ from typing import List, Tuple
 from tqdm import tqdm
 
 from src.models.reconstruction.genetic_algorithm import GeneticAlgorithm
-from src.models.timeseries_transformation_model import TimeSeriesTransformationModel
-from src.models.naive_correlation import CorrelationModel
 from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
 from src.utils.logging_config import logger
 
@@ -21,20 +19,20 @@ from src.utils.transformations import (
 )
 
 
-class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
+class GeneticAlgorithmWrapper:
     def __init__(
         self,
-        model_type: str,
-        model_params: dict,
+        ga_params: dict,
         mts_dataset: pd.DataFrame,
         mts_features: pd.DataFrame,
         mts_decomp: List[DecompResults],
         num_uts_in_mts: int,
         num_features_per_uts: int,
     ):
-        super().__init__(
-            model_type, model_params, mts_dataset, mts_features, mts_decomp
-        )
+        self.model_params = ga_params
+        self.mts_dataset = mts_dataset
+        self.mts_features = mts_features
+        self.mts_decomp = mts_decomp
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts
         self.data_set_size = len(mts_dataset)
@@ -62,48 +60,32 @@ class GeneticAlgorithmWrapper(TimeSeriesTransformationModel):
         predicted_features = predicted_features.copy()
 
         ####  Get Genetic Algorithm Parameters ##########
-        num_GA_runs = self.model_params["genetic_algorithm_args"]["num_runs"]
-        num_generations = self.model_params["genetic_algorithm_args"]["num_generations"]
-        num_parents_mating = self.model_params["genetic_algorithm_args"][
-            "num_parents_mating"
-        ]
-        solutions_per_pop = self.model_params["genetic_algorithm_args"][
-            "solutions_per_population"
-        ]
-        init_range_low = self.model_params["genetic_algorithm_args"]["init_range_low"]
-        init_range_high = self.model_params["genetic_algorithm_args"]["init_range_high"]
-        parent_selection_type = self.model_params["genetic_algorithm_args"][
-            "parent_selection_type"
-        ]
-        crossover_type = self.model_params["genetic_algorithm_args"]["crossover_type"]
-        mutation_type = self.model_params["genetic_algorithm_args"]["mutation_type"]
-        mutation_percent_genes = self.model_params["genetic_algorithm_args"][
-            "mutation_percent_genes"
-        ]
-        trend_det_factor_low = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_det_factor"][0]
-        trend_det_factor_high = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_det_factor"][1]
-        trend_slope_factor_low = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_slope_factor"][0]
-        trend_slope_factor_high = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_slope_factor"][1]
-        trend_lin_factor_low = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_lin_factor"][0]
-        trend_lin_factor_high = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["trend_lin_factor"][1]
-        seasonal_det_factor_low = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["seasonal_det_factor"][0]
-        seasonal_det_factor_high = self.model_params["genetic_algorithm_args"][
-            "legal_values"
-        ]["seasonal_det_factor"][1]
+        num_GA_runs = self.model_params["num_runs"]
+        num_generations = self.model_params["num_generations"]
+        num_parents_mating = self.model_params["num_parents_mating"]
+        solutions_per_pop = self.model_params["solutions_per_population"]
+        init_range_low = self.model_params["init_range_low"]
+        init_range_high = self.model_params["init_range_high"]
+        parent_selection_type = self.model_params["parent_selection_type"]
+        crossover_type = self.model_params["crossover_type"]
+        mutation_type = self.model_params["mutation_type"]
+        mutation_percent_genes = self.model_params["mutation_percent_genes"]
+        trend_det_factor_low = self.model_params["legal_values"]["trend_det_factor"][0]
+        trend_det_factor_high = self.model_params["legal_values"]["trend_det_factor"][1]
+        trend_slope_factor_low = self.model_params["legal_values"][
+            "trend_slope_factor"
+        ][0]
+        trend_slope_factor_high = self.model_params["legal_values"][
+            "trend_slope_factor"
+        ][1]
+        trend_lin_factor_low = self.model_params["legal_values"]["trend_lin_factor"][0]
+        trend_lin_factor_high = self.model_params["legal_values"]["trend_lin_factor"][1]
+        seasonal_det_factor_low = self.model_params["legal_values"][
+            "seasonal_det_factor"
+        ][0]
+        seasonal_det_factor_high = self.model_params["legal_values"][
+            "seasonal_det_factor"
+        ][1]
 
         num_genes = self.num_features_per_uts
 

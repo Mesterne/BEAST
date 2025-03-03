@@ -3,6 +3,8 @@ import numpy as np
 import logging
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.naive_correlation import CorrelationModel
+from src.models.feedforward import FeedForwardFeatureModel
+from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.generate_dataset import generate_windows_dataset
 from src.utils.transformations import (
     manipulate_seasonal_component,
@@ -79,11 +81,15 @@ def get_transformed_uts_with_features_and_decomps(
 
 def get_feature_model_by_type(
     model_type: str,
+    model_params: dict,
+    training_params: dict,
 ) -> FeatureTransformationModel:
-    if model_type == "correlation":
-        return CorrelationModel()
+    if model_type == "correlation_model":
+        return CorrelationModel(model_params)
     elif model_type == "feedforward_neural_network":
-        return FeedForwardFeatureModel()
+        nn = FeedForwardFeatureModel(model_params)
+        model = NeuralNetworkWrapper(nn, training_params=training_params)
+        return model
     else:
         raise ValueError(f"Model type {model_type} not supported")
 

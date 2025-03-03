@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List, Tuple
 import numpy as np
 
 
@@ -11,7 +12,7 @@ class FeatureTransformationModel(ABC):
         X_val: np.ndarray,
         y_val: np.ndarray,
         log_to_wandb=False,
-    ):
+    ) -> Tuple[List[float], List[float]]:
         pass
 
     @abstractmethod

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple, List
 from tqdm import tqdm
 from src.models.feature_transformation_model import FeatureTransformationModel
 
@@ -18,7 +19,7 @@ class CorrelationModel(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         log_to_wandb=False,
-    ):
+    ) -> Tuple[List[float], List[float]]:
         # The actual features (Omitting the delta values)
         features = X_train[
             :, : -self.number_of_features_in_each_uts * self.number_of_uts_in_mts
@@ -26,6 +27,7 @@ class CorrelationModel(FeatureTransformationModel):
 
         # We then calcualte the correlation matrix based on features
         self.correlation_matrix = np.corrcoef(features, rowvar=False)
+        return [], []
 
     def infer(self, X: np.ndarray) -> np.ndarray:
         delta_values = X[
