@@ -1,4 +1,6 @@
+import logging
 import os
+from re import X
 import sys
 import argparse
 import pandas as pd
@@ -6,6 +8,8 @@ import numpy as np
 import random
 import torch
 import matplotlib.pyplot as plt
+import seaborn as sns
+from tqdm import trange
 
 
 # Parse the configuration file path
@@ -19,10 +23,18 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
+from src.models import forecasting
+from src.models.forecasting.feedforward import FeedForwardForecaster
+from src.models.neural_network_wrapper import NeuralNetworkWrapper
+from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
+
 import wandb
 import uuid
 from src.utils.yaml_loader import read_yaml  # noqa: E402
-from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
+from src.utils.generate_dataset import (
+    create_training_windows,
+    generate_feature_dataframe,
+)  # noqa: E402
 from src.utils.pca import PCAWrapper  # noqa: E402
 from src.utils.experiment_helper import (  # noqa: E402
     get_feature_model_by_type,
@@ -79,6 +91,9 @@ num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
 feature_model_params = config["model_args"]["feature_model_args"]
 model_type = feature_model_params["model_name"]
 genetic_algorithm_params = config["model_args"]["genetic_algorithm_args"]
+
+forecasting_model_params = config["model_args"]["forecasting_model_args"]
+forecasting_model_training_params = forecasting_model_params["training_args"]
 training_params = feature_model_params["training_args"]
 
 # Set up directory where all outputs will be stored
@@ -104,7 +119,7 @@ logger.info(
 ############ DATA INITIALIZATION
 
 # Load data and generate dataset of multivariate time series context windows
-mts_dataset = get_mts_dataset(
+mts_raw_df, mts_dataset = get_mts_dataset(
     data_dir=data_dir,
     time_series_to_use=timeseries_to_use,
     context_length=context_length,
@@ -113,7 +128,9 @@ mts_dataset = get_mts_dataset(
 dataset_size = len(mts_dataset)
 num_uts_in_mts = len(timeseries_to_use)
 
-logger.info("Successfully generated multivariate time series dataset")
+logger.info(
+    f"Successfully generated multivariate time series dataset with shape: {mts_raw_df.shape}"
+)
 
 mts_feature_df, mts_decomps = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
@@ -130,15 +147,26 @@ mts_pca_df = PCAWrapper().fit_transform(mts_feature_df)
 logger.info("Successfully generated MTS PCA space")
 
 (
-    X_train,
-    y_train,
-    X_validation,
-    y_validation,
-    X_test,
-    y_test,
-    train_supervised_dataset,
-    validation_supervised_dataset,
-    test_supervised_dataset,
+    X_mts_train,
+    y_mts_train,
+) = create_training_windows(
+    df=mts_raw_df,
+    input_cols=["grid1-load", "grid1-loss", "grid1-temp"],
+    target_col="grid1-loss",
+    window_size=forecasting_model_params["window_size"],
+    forecast_horizon=forecasting_model_params["horizon_length"],
+)
+
+(
+    X_features_train,
+    y_features_train,
+    X_features_validation,
+    y_features_validation,
+    X_features_test,
+    y_features_test,
+    train_features_supervised_dataset,
+    validation_features_supervised_dataset,
+    test_features_supervised_dataset,
 ) = create_train_val_test_split(
     mts_pca_df,
     mts_feature_df,
@@ -161,6 +189,16 @@ feature_model = get_feature_model_by_type(
     training_params=training_params,
 )
 logger.info(f"Successfully initialized the {model_type} model")
+
+forecasting_model = FeedForwardForecaster(
+    model_params=forecasting_model_params,
+)
+
+forecasting_model_wrapper = NeuralNetworkWrapper(
+    model=forecasting_model, training_params=forecasting_model_training_params
+)
+logging.info("Successfully initialized the forecasting model")
+
 ga = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
     mts_dataset=mts_dataset,
@@ -175,28 +213,38 @@ logger.info("Successfully initialized the genetic algorithm")
 # Fit model to data
 logger.info("Training feature model...")
 feature_model.train(
-    X_train=X_train,
-    y_train=y_train,
-    X_val=X_validation,
-    y_val=y_validation,
+    X_train=X_features_train,
+    y_train=y_features_train,
+    X_val=X_features_validation,
+    y_val=y_features_validation,
     log_to_wandb=False,
 )
+
+logger.info("Training forecasting model...")
+forecasting_model_wrapper.train(
+    X_train=X_mts_train,
+    y_train=y_mts_train,
+    X_val=X_mts_train,
+    y_val=y_mts_train,
+    log_to_wandb=False,
+)
+
 ############ INFERENCE
 
 logger.info("Running inference on validation set...")
-validation_predicted_features = feature_model.infer(X_validation)
+validation_predicted_features = feature_model.infer(X_features_validation)
 validation_predicted_features = use_model_predictions_to_create_dataframe(
     validation_predicted_features,
     TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=validation_supervised_dataset,
+    target_dataframe=validation_features_supervised_dataset,
 )
 
 logger.info("Running inference on test set...")
-test_predicted_features = feature_model.infer(X_test)
+test_predicted_features = feature_model.infer(X_features_test)
 test_predicted_features = use_model_predictions_to_create_dataframe(
     test_predicted_features,
     TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=test_supervised_dataset,
+    target_dataframe=test_features_supervised_dataset,
 )
 logger.info("Successfully ran inference on validation and test sets")
 
@@ -205,7 +253,9 @@ sampled_predicted_features = validation_predicted_features.sample(1)
 sampled_prediction_index = (
     sampled_predicted_features["prediction_index"].astype(int).values[0]
 )
-sampled_row_in_validation = validation_supervised_dataset.iloc[sampled_prediction_index]
+sampled_row_in_validation = validation_features_supervised_dataset.iloc[
+    sampled_prediction_index
+]
 sampled_original_mts_index = int(sampled_row_in_validation["original_index"])
 sampled_target_mts_index = int(sampled_row_in_validation["target_index"])
 sampled_predicted_features = sampled_predicted_features.drop(
@@ -217,10 +267,11 @@ sampled_predicted_features = sampled_predicted_features.drop(
 logger.info("Evaluating all predictions")
 differences_df_validation = find_error_of_each_feature_for_each_sample(
     predictions=validation_predicted_features,
-    labelled_test_dataset=validation_supervised_dataset,
+    labelled_test_dataset=validation_features_supervised_dataset,
 )
 differences_df_test = find_error_of_each_feature_for_each_sample(
-    predictions=test_predicted_features, labelled_test_dataset=test_supervised_dataset
+    predictions=test_predicted_features,
+    labelled_test_dataset=test_features_supervised_dataset,
 )
 
 # Plot the feature wise errors of validation set
@@ -266,7 +317,7 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
 # For worst prediction
 analyze_and_visualize_prediction(
     prediction_index=int(worst_prediction_index),
-    validation_supervised_dataset=validation_supervised_dataset,
+    validation_supervised_dataset=validation_features_supervised_dataset,
     validation_predicted_features=validation_predicted_features,
     mts_dataset=mts_dataset,
     mts_decomps=mts_decomps,
@@ -280,7 +331,7 @@ analyze_and_visualize_prediction(
 # For best prediction
 analyze_and_visualize_prediction(
     prediction_index=int(best_prediction_index),
-    validation_supervised_dataset=validation_supervised_dataset,
+    validation_supervised_dataset=validation_features_supervised_dataset,
     validation_predicted_features=validation_predicted_features,
     mts_dataset=mts_dataset,
     mts_decomps=mts_decomps,
@@ -292,18 +343,67 @@ analyze_and_visualize_prediction(
 )
 
 # For random prediction
-random_index = np.random.randint(len(validation_supervised_dataset))
-analyze_and_visualize_prediction(
-    prediction_index=int(random_index),
-    validation_supervised_dataset=validation_supervised_dataset,
-    validation_predicted_features=validation_predicted_features,
-    mts_dataset=mts_dataset,
-    mts_decomps=mts_decomps,
-    mts_feature_df=mts_feature_df,
-    ga=ga,
-    uts_names=timeseries_to_use,
-    output_dir=output_dir,
-    plot_name_prefix="random_",
+random_index = np.random.randint(len(validation_features_supervised_dataset))
+original_mts, target_mts, transformed_mts, transformed_features = (
+    analyze_and_visualize_prediction(
+        prediction_index=int(random_index),
+        validation_supervised_dataset=validation_features_supervised_dataset,
+        validation_predicted_features=validation_predicted_features,
+        mts_dataset=mts_dataset,
+        mts_decomps=mts_decomps,
+        mts_feature_df=mts_feature_df,
+        ga=ga,
+        uts_names=timeseries_to_use,
+        output_dir=output_dir,
+        plot_name_prefix="random_",
+    )
 )
+logging.info(f"Original mts shape: {original_mts.shape}")
+logging.info(f"Target mts shape: {target_mts.shape}")
+logging.info(f"Transformed mts shape: {transformed_mts.shape}")
+logging.info(f"Transformed features shape: {transformed_features.shape}")
+
+
+(
+    X_mts_original,
+    y_mts_original,
+) = create_training_windows(
+    df=original_mts,
+    input_cols=["grid1-load", "grid1-loss", "grid1-temp"],
+    target_col="grid1-loss",
+    window_size=forecasting_model_params["window_size"],
+    forecast_horizon=forecasting_model_params["horizon_length"],
+)
+(
+    X_mts_transformed,
+    y_mts_transformed,
+) = create_training_windows(
+    df=transformed_mts,
+    input_cols=["grid1-load", "grid1-loss", "grid1-temp"],
+    target_col="grid1-loss",
+    window_size=forecasting_model_params["window_size"],
+    forecast_horizon=forecasting_model_params["horizon_length"],
+)
+
+inferred_original = forecasting_model_wrapper.infer(X=X_mts_original)
+inferred_transformed = forecasting_model_wrapper.infer(
+    X=X_mts_transformed,
+)
+
+logger.info(f"X_mts_original: {X_mts_original[0]}")
+logger.info(f"y_mts_original: {y_mts_original[0]}")
+
+forecast_plot = plot_timeseries_forecast_comparison(
+    X_original=X_mts_original[0],
+    X_transformed=X_mts_transformed[0],
+    y_original=y_mts_original[0],
+    y_transformed=y_mts_transformed[0],
+    inferred_original=inferred_original[0],
+    inferred_transformed=inferred_transformed[0],
+    feature_names=["grid1-load", "grid1-loss", "grid1-temp"],
+    target_name="grid1-loss",
+)
+forecast_plot.savefig(os.path.join(output_dir, f"random_forecast.png"))
+
 logger.info("Generated all plots...")
 logger.info("Finished running")

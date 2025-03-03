@@ -3,6 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 from src.utils.features import decomp_and_features
+from src.utils.logging_config import logger
 
 
 def generate_feature_dataframe(data, series_periodicity, dataset_size):
@@ -77,6 +78,7 @@ def create_training_windows(
     forecast_horizon: int,
 ):
     df = df.dropna().reset_index(drop=True)
+    logger.info(f"Generating training windows for forecasting...")
 
     num_samples = len(df) - window_size - forecast_horizon + 1
     if num_samples <= 0:
@@ -94,4 +96,11 @@ def create_training_windows(
         X.append(input_window)
         y.append(target_window)
 
-    return np.array(X), np.array(y)
+    X = np.array(X)
+    y = np.array(y)
+
+    logger.info(
+        f"Created forecasting time series. X shape: {X.shape}, y shape: {y.shape}"
+    )
+
+    return X, y

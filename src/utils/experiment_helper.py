@@ -28,13 +28,13 @@ def get_mts_dataset(
 ):
     df = pd.read_csv(data_dir, index_col=index_col)
     df.index = pd.to_datetime(df.index)
-    df = df[time_series_to_use]
+    raw_df = df[time_series_to_use]
     if backfill:
-        df = df.bfill()
+        raw_df = raw_df.bfill()
     mts_dataset = generate_windows_dataset(
-        df, context_length, step_size, time_series_to_use
+        raw_df, context_length, step_size, time_series_to_use
     )
-    return mts_dataset
+    return raw_df, mts_dataset
 
 
 def get_transformed_uts_with_features_and_decomps(
