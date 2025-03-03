@@ -1,37 +1,22 @@
-import torch
 import torch.nn.functional as F
-from torch import optim
 from torch import nn
 from torch import save, load
-from torch.utils.data import DataLoader, TensorDataset
-import numpy as np
-from tqdm import tqdm
 from src.utils.logging_config import logger
 import os
 
 
 class FeedForwardFeatureModel(nn.Module):
-
     def __init__(
         self,
-        input_size,
-        output_size,
-        hidden_network_sizes,
-        save_dir,
-        name="feedforward_feature",
-        load_model=False,
+        model_params,
     ):
         super(FeedForwardFeatureModel, self).__init__()
+        self._check_params(model_params)
         self.generate_network(
-            input_size=input_size,
-            output_size=output_size,
-            hidden_network_sizes=hidden_network_sizes,
+            input_size=model_params["input_size"],
+            output_size=model_params["output_size"],
+            hidden_network_sizes=model_params["hidden_network_sizes"],
         )
-        self.save_dir = os.path.join(save_dir, f"{name}.pth")
-        if load_model:
-            loaded_model = self.load_model()
-            if loaded_model is not None:
-                self = loaded_model
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
         logger.info(
@@ -51,18 +36,27 @@ class FeedForwardFeatureModel(nn.Module):
         x = self.layers[-1](x)
         return x
 
-    def save_model(self):
-        logger.info(f"Saving trained model to {self.save_dir}...")
-        save(self, self.save_dir)
-
-    def load_model(self):
-        logger.info(f"Loading trained model from {self.save_dir}...")
-        try:
-            model = load(self.save_dir)
-        except FileNotFoundError:
-            logger.warning("Could not find saved model...")
-            return None
-        except Exception as e:
-            logger.error(f"Issues with loading model: {e}")
-            return None
-        return model
+    def _check_params(self, model_params):
+        assert "input_size" in model_params, "input_size not in model_params"
+        assert "output_size" in model_params, "output_size not in model_params"
+        assert (
+            "hidden_network_sizes" in model_params
+        ), "hidden_network_sizes not in model_params"
+        assert isinstance(
+            model_params["input_size"], int
+        ), "input_size must be an integer"
+        assert isinstance(
+            model_params["output_size"], int
+        ), "output_size must be an integer"
+        assert isinstance(
+            model_params["hidden_network_sizes"], list
+        ), "hidden_network_sizes must be a list"
+        assert all(
+            isinstance(i, int) for i in model_params["hidden_network_sizes"]
+        ), "hidden_network_sizes must be a list of integers"
+        assert (
+            len(model_params["hidden_network_sizes"]) > 0
+        ), "hidden_network_sizes must have at least one element"
+        assert (
+            model_params["hidden_network_sizes"][0] > 0
+        ), "hidden_network_sizes must have at least one element"

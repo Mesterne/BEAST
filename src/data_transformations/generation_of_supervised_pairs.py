@@ -8,7 +8,7 @@ from scipy.stats import zscore
 
 
 def create_train_val_test_split(
-    pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED, output_dir
+    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED, output_dir
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -72,8 +72,14 @@ def create_train_val_test_split(
     logger.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
-        # Extract X and y as NumPy arrays (if needed by the model)
-        X = df.loc[:, FEATURES_NAMES].values
+        # Extract X as both original features and delta values
+        original_features = df.loc[:, FEATURES_NAMES].values
+        delta_features = df.loc[:, DELTA_NAMES].values
+
+        # Combine original features and delta features horizontally
+        X = np.hstack((original_features, delta_features))
+
+        # Extract y (targets) as usual
         y = df.loc[:, TARGET_NAMES].values
 
         return X, y
@@ -110,7 +116,7 @@ def create_train_val_test_split(
 
 
 def create_train_val_test_split_outliers(
-    pca_df, feature_df, FEATURES_NAMES, TARGET_NAMES, SEED, output_dir
+    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED, output_dir
 ):
     """
     Generate X and y lists for train, validation, and test supervised datasets.
@@ -174,8 +180,16 @@ def create_train_val_test_split_outliers(
     logger.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
-        X = df.loc[:, FEATURES_NAMES].values
+        # Extract X as both original features and delta values
+        original_features = df.loc[:, FEATURES_NAMES].values
+        delta_features = df.loc[:, DELTA_NAMES].values
+
+        # Combine original features and delta features horizontally
+        X = np.hstack((original_features, delta_features))
+
+        # Extract y (targets) as usual
         y = df.loc[:, TARGET_NAMES].values
+
         return X, y
 
     logger.info("Generating X, y pairs for training dataset...")
@@ -352,6 +366,21 @@ def get_col_names_original_target():
         "original_grid1-temp_seasonal-strength",
     ]
 
+    DELTA_NAMES = [
+        "delta_grid1-load_trend-strength",
+        "delta_grid1-load_trend-slope",
+        "delta_grid1-load_trend-linearity",
+        "delta_grid1-load_seasonal-strength",
+        "delta_grid1-loss_trend-strength",
+        "delta_grid1-loss_trend-slope",
+        "delta_grid1-loss_trend-linearity",
+        "delta_grid1-loss_seasonal-strength",
+        "delta_grid1-temp_trend-strength",
+        "delta_grid1-temp_trend-slope",
+        "delta_grid1-temp_trend-linearity",
+        "delta_grid1-temp_seasonal-strength",
+    ]
+
     TARGET_NAMES = [
         "target_grid1-load_trend-strength",
         "target_grid1-load_trend-slope",
@@ -367,4 +396,4 @@ def get_col_names_original_target():
         "target_grid1-temp_seasonal-strength",
     ]
 
-    return ORIGINAL_NAMES, TARGET_NAMES
+    return ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES

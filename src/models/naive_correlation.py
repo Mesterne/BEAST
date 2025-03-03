@@ -1,73 +1,56 @@
 import pandas as pd
 import numpy as np
+from typing import Tuple, List
 from tqdm import tqdm
+from src.models.feature_transformation_model import FeatureTransformationModel
+
+from src.utils.logging_config import logger
 
 
-class CorrelationModel:
-    def train(self, training_set):
-        """
-        To train the model, we calculate the correlations between the time series features
-        in the training set.
-        """
-        self.correlations = training_set.corr()
+class CorrelationModel(FeatureTransformationModel):
+    def __init__(self, params):
+        self.number_of_features_in_each_uts = params["number_of_features_in_each_uts"]
+        self.number_of_uts_in_mts = params["number_of_uts_in_mts"]
 
-    def infer(self, values: pd.DataFrame):
-        """
-        Inference of the model is based on a naive correlation assumption.
-        We change all other features except the one that is transformed.
-        To do this, we record the delta of the original transformation. We then
-        update each feature by adding this delta multiplied with the correlation factor between the features.
-        """
-        # We copy the inputted values to ensure the method does not change the structure inplace
-        updated_values = values.copy()
-        predictions = pd.DataFrame()
-
-        # We only keep the columns that are prefixed by 'original_' or 'delta_'
-        columns_to_keep = [
-            col
-            for col in updated_values.columns
-            if col.startswith("original_") or col.startswith("delta_")
+    def train(
+        self,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+        log_to_wandb=False,
+    ) -> Tuple[List[float], List[float]]:
+        # The actual features (Omitting the delta values)
+        features = X_train[
+            :, : -self.number_of_features_in_each_uts * self.number_of_uts_in_mts
         ]
-        updated_values = updated_values[columns_to_keep]
 
-        for idx, row in tqdm(updated_values.iterrows(), total=len(updated_values)):
-            # Find the delta column with the largest absolute value
-            delta_columns = [col for col in row.index if col.startswith("delta_")]
-            if not delta_columns:
-                continue
+        # We then calcualte the correlation matrix based on features
+        self.correlation_matrix = np.corrcoef(features, rowvar=False)
+        return [], []
 
-            # Find the column with the largest absolute delta
-            max_delta_col = max(delta_columns, key=lambda col: abs(row[col]))
-            max_delta = row[max_delta_col]
-            feature_name = max_delta_col[len("delta_") :]  # Extract feature name
+    def infer(self, X: np.ndarray) -> np.ndarray:
+        delta_values = X[
+            :, -self.number_of_features_in_each_uts * self.number_of_uts_in_mts :
+        ]
+        features = X[
+            :, : -self.number_of_features_in_each_uts * self.number_of_uts_in_mts
+        ]
 
-            # If a valid delta is found, make a prediction
-            if max_delta != 0 and feature_name:
-                row_with_originals = values.loc[
-                    idx,
-                    [
-                        col
-                        for col in values.columns
-                        if col.startswith("original_") and col != "original_index"
-                    ],
-                ]
-                row_with_originals.index = [
-                    col[len("original_") :] for col in row_with_originals.index
-                ]
+        logger.info(f"Delta values shape: {delta_values.shape}")
+        logger.info(f"feature values shape: {features.shape}")
+        logger.info(f"correlation matrix shape: {self.correlation_matrix.shape}")
+        logger.info(f"correlation matrix: {self.correlation_matrix}")
 
-                prediction = (
-                    row_with_originals + max_delta * self.correlations[feature_name]
-                )
+        # Iterate over each row in the features. Selecting the largest delta value
+        predicted_features = []
+        for idx, row in tqdm(enumerate(features), total=features.shape[0]):
+            # Find the index of the largest delta value
+            delta_vector = delta_values[idx]
+            max_delta_index = np.argmax(delta_vector)
+            correlation_vector = self.correlation_matrix[max_delta_index]
+            # Select the feature with the highest correlation
+            predicted_feature = row + np.dot(correlation_vector, delta_vector)
+            predicted_features.append(predicted_feature)
 
-                for col in prediction.index:
-                    if "trend-slope" in col:
-                        prediction[col] = prediction[col].clip(-1, 1)
-                    else:
-                        prediction[col] = prediction[col].clip(0, 1)
-
-                prediction["prediction_index"] = int(idx)
-                predictions = pd.concat(
-                    [predictions, prediction.to_frame().T], ignore_index=True
-                )
-
-        return predictions
+        return np.array(predicted_features)

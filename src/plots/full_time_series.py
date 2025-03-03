@@ -27,18 +27,25 @@ def plot_time_series_for_all_uts(
             x=original_mts.index, y=original_mts[uts_name], ax=axes[i, 0], color="red"
         )
         sns.lineplot(
-            x=target_mts.index, y=target_mts[uts_name], ax=axes[i, 1], color="green"
+            x=target_mts.index, y=target_mts[uts_name], ax=axes[i, 1], color="blue"
         )
         sns.lineplot(
             x=transformed_mts.index,
             y=transformed_mts[uts_name],
             ax=axes[i, 2],
-            color="blue",
+            color="purple",
         )
 
         axes[i, 0].set_title(f"{uts_name} - Original")
+        axes[i, 0].set_xticks([])
         axes[i, 1].set_title(f"{uts_name} - Target")
+        axes[i, 1].set_xticks([])
         axes[i, 2].set_title(f"{uts_name} - Transformed")
+        axes[i, 2].set_xticks([])
+
+        axes[i, 0].xaxis.set_visible(False)
+        axes[i, 1].xaxis.set_visible(False)
+        axes[i, 2].xaxis.set_visible(False)
 
         # Dictionary to store grouped feature values
         grouped_features = {}

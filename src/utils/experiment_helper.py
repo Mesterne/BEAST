@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
 import logging
-from tqdm import tqdm
-from typing import List, Tuple
-from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
-from abc import ABC, abstractmethod
-from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.models.feature_transformation_model import FeatureTransformationModel
+from src.models.naive_correlation import CorrelationModel
+from src.models.feedforward import FeedForwardFeatureModel
+from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.generate_dataset import generate_windows_dataset
 from src.utils.transformations import (
     manipulate_seasonal_component,
@@ -18,7 +17,6 @@ from src.utils.features import (
     seasonal_strength,
 )
 
-from src.models.timeseries_transformation_model import TimeSeriesTransformationModel
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -81,27 +79,17 @@ def get_transformed_uts_with_features_and_decomps(
     return transformed_uts, transformed_uts_features, transformed_uts_decomp
 
 
-def get_model_by_type(
+def get_feature_model_by_type(
     model_type: str,
     model_params: dict,
-    mts_dataset: pd.DataFrame,
-    mts_features: pd.DataFrame,
-    mts_decomp: List[DecompResults],
-    num_uts_in_mts: int,
-    num_features_per_uts: int,
-    manual_init_transform: bool,
-) -> TimeSeriesTransformationModel:
-    if model_type == "correlation_GA":
-        return GeneticAlgorithmWrapper(
-            model_type,
-            model_params,
-            mts_dataset,
-            mts_features,
-            mts_decomp,
-            num_uts_in_mts,
-            num_features_per_uts,
-            manual_init_transform,
-        )
+    training_params: dict,
+) -> FeatureTransformationModel:
+    if model_type == "correlation_model":
+        return CorrelationModel(model_params)
+    elif model_type == "feedforward_neural_network":
+        nn = FeedForwardFeatureModel(model_params)
+        model = NeuralNetworkWrapper(nn, training_params=training_params)
+        return model
     else:
         raise ValueError(f"Model type {model_type} not supported")
 
