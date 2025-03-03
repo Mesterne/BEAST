@@ -44,6 +44,7 @@ from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
     find_error_of_each_feature_for_each_sample,
 )
+from src.utils.ga_utils import analyze_and_visualize_prediction
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -100,8 +101,9 @@ logger.info(
     f"All outputs will be stored in: {output_dir} (Relative to where you ran the program from)"
 )
 
+############ DATA INITIALIZATION
+
 # Load data and generate dataset of multivariate time series context windows
-# TODO: Make return dataframe
 mts_dataset = get_mts_dataset(
     data_dir=data_dir,
     time_series_to_use=timeseries_to_use,
@@ -151,6 +153,7 @@ logger.info("Successfully generated MTS PCA space")
 feature_model_params["number_of_features_in_each_uts"] = num_features_per_uts
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
+########### MODEL INITIALIZATION
 
 feature_model = get_feature_model_by_type(
     model_type=model_type,
@@ -168,6 +171,7 @@ ga = GeneticAlgorithmWrapper(
 )
 logger.info("Successfully initialized the genetic algorithm")
 
+############ TRAINING
 # Fit model to data
 logger.info("Training feature model...")
 feature_model.train(
@@ -177,6 +181,7 @@ feature_model.train(
     y_val=y_validation,
     log_to_wandb=False,
 )
+############ INFERENCE
 
 logger.info("Running inference on validation set...")
 validation_predicted_features = feature_model.infer(X_validation)
@@ -241,67 +246,64 @@ logger.info(
     f"Overall MSE for model\nValidation: {overall_mse_validation}\nTest: {overall_mse_test}"
 )
 
-# TODO: Get worst prediction
-# TODO: Get best prediction
-# TODO: Get random prediction
+# Get the mean absolute error for each prediction
+row_wise_errors = np.abs(differences_df_validation.values).mean(axis=1)
+# Get the index of the worst prediction
+worst_row_index = np.argmax(row_wise_errors)
+# Get the prediction_index from that row
+worst_prediction_index = differences_df_validation.iloc[worst_row_index][
+    "prediction_index"
+]
 
-# Get random model input
-df_model_input = validation_supervised_dataset.sample(1)
-# Original MTS
-original_mts_index = df_model_input["original_index"].values[0].astype(int)
-original_mts = mts_dataset[original_mts_index]
-original_mts_decomps = mts_decomps[original_mts_index]
-original_mts_features = mts_feature_df.iloc[original_mts_index]
-# Target MTS
-target_mts_index = df_model_input["target_index"].values[0].astype(int)
-target_mts = mts_dataset[target_mts_index]
-target_mts_features = mts_feature_df.iloc[target_mts_index]
+# Get the index of the best prediction
+best_row_index = np.argmin(row_wise_errors)
+# Get the prediction_index from that row
+best_prediction_index = differences_df_validation.iloc[best_row_index][
+    "prediction_index"
+]
 
-(
-    transformed_mts_list,
-    transformed_features_list,
-    transformed_factors_list,
-) = ga.transform(
-    predicted_features=sampled_predicted_features,
-    original_mts_index=sampled_original_mts_index,
-    target_mts_index=sampled_target_mts_index,
+
+# For worst prediction
+analyze_and_visualize_prediction(
+    prediction_index=int(worst_prediction_index),
+    validation_supervised_dataset=validation_supervised_dataset,
+    validation_predicted_features=validation_predicted_features,
+    mts_dataset=mts_dataset,
+    mts_decomps=mts_decomps,
+    mts_feature_df=mts_feature_df,
+    ga=ga,
+    uts_names=timeseries_to_use,
+    output_dir=output_dir,
+    plot_name_prefix="worst_",
 )
 
-DEFAULT_RUN_INDEX = 0
-transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
-transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
-
-transformed_features = [item for sublist in transformed_features for item in sublist]
-
-transformed_features = pd.DataFrame(
-    [transformed_features], columns=sampled_predicted_features.columns
+# For best prediction
+analyze_and_visualize_prediction(
+    prediction_index=int(best_prediction_index),
+    validation_supervised_dataset=validation_supervised_dataset,
+    validation_predicted_features=validation_predicted_features,
+    mts_dataset=mts_dataset,
+    mts_decomps=mts_decomps,
+    mts_feature_df=mts_feature_df,
+    ga=ga,
+    uts_names=timeseries_to_use,
+    output_dir=output_dir,
+    plot_name_prefix="best_",
 )
 
-uts_names = timeseries_to_use
-
-uts_wise_pca_fig = plot_pca_for_each_uts_with_transformed(
-    mts_features_df=mts_feature_df,
-    predicted_features=sampled_predicted_features,
-    transformed_features=transformed_features,
-    original_index=sampled_original_mts_index,
-    target_index=sampled_target_mts_index,
-    uts_names=uts_names,
+# For random prediction
+random_index = np.random.randint(len(validation_supervised_dataset))
+analyze_and_visualize_prediction(
+    prediction_index=int(random_index),
+    validation_supervised_dataset=validation_supervised_dataset,
+    validation_predicted_features=validation_predicted_features,
+    mts_dataset=mts_dataset,
+    mts_decomps=mts_decomps,
+    mts_feature_df=mts_feature_df,
+    ga=ga,
+    uts_names=timeseries_to_use,
+    output_dir=output_dir,
+    plot_name_prefix="random_",
 )
-uts_wise_pca_fig.savefig(os.path.join(output_dir, "uts_wise_pca.png"))
-logger.info("Successfully generated PCA spaces")
-
-
-transformed_mts = pd.DataFrame(
-    {name: transformed_mts[i] for i, name in enumerate(original_mts.columns)}
-)
-
-full_time_series_fig = plot_time_series_for_all_uts(
-    original_mts=original_mts,
-    target_mts=target_mts,
-    transformed_mts=transformed_mts,
-    original_mts_features=original_mts_features,
-    target_mts_features=target_mts_features,
-    transformed_mts_features=transformed_features,
-)
-full_time_series_fig.savefig(os.path.join(output_dir, "full_time_series.png"))
-logger.info("Successfully generated full time series plots")
+logger.info("Generated all plots...")
+logger.info("Finished running")
