@@ -246,8 +246,8 @@ logger.info(
     f"Overall MSE for model\nValidation: {overall_mse_validation}\nTest: {overall_mse_test}"
 )
 
-# Get the mean absolute error for each prediction
-row_wise_errors = np.abs(differences_df_validation.values).mean(axis=1)
+# Get the mean absolute error for each prediction, ignoring index column
+row_wise_errors = np.abs(differences_df_validation.values[:, :-1]).mean(axis=1)
 # Get the index of the worst prediction
 worst_row_index = np.argmax(row_wise_errors)
 # Get the prediction_index from that row
