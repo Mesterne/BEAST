@@ -27,6 +27,7 @@ from src.models import forecasting
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
+from src.utils.forecasting_utils import compare_original_and_transformed_forecasting
 
 import wandb
 import uuid
@@ -315,7 +316,12 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
 
 
 # For worst prediction
-analyze_and_visualize_prediction(
+(
+    worst_original_mts,
+    worst_target_mts,
+    worst_transformed_mts,
+    worst_transformed_features,
+) = analyze_and_visualize_prediction(
     prediction_index=int(worst_prediction_index),
     validation_supervised_dataset=validation_features_supervised_dataset,
     validation_predicted_features=validation_predicted_features,
@@ -329,24 +335,9 @@ analyze_and_visualize_prediction(
 )
 
 # For best prediction
-analyze_and_visualize_prediction(
-    prediction_index=int(best_prediction_index),
-    validation_supervised_dataset=validation_features_supervised_dataset,
-    validation_predicted_features=validation_predicted_features,
-    mts_dataset=mts_dataset,
-    mts_decomps=mts_decomps,
-    mts_feature_df=mts_feature_df,
-    ga=ga,
-    uts_names=timeseries_to_use,
-    output_dir=output_dir,
-    plot_name_prefix="best_",
-)
-
-# For random prediction
-random_index = np.random.randint(len(validation_features_supervised_dataset))
-original_mts, target_mts, transformed_mts, transformed_features = (
+best_original_mts, best_target_mts, best_transformed_mts, best_transformed_features = (
     analyze_and_visualize_prediction(
-        prediction_index=int(random_index),
+        prediction_index=int(best_prediction_index),
         validation_supervised_dataset=validation_features_supervised_dataset,
         validation_predicted_features=validation_predicted_features,
         mts_dataset=mts_dataset,
@@ -355,55 +346,56 @@ original_mts, target_mts, transformed_mts, transformed_features = (
         ga=ga,
         uts_names=timeseries_to_use,
         output_dir=output_dir,
-        plot_name_prefix="random_",
+        plot_name_prefix="best_",
     )
 )
-logging.info(f"Original mts shape: {original_mts.shape}")
-logging.info(f"Target mts shape: {target_mts.shape}")
-logging.info(f"Transformed mts shape: {transformed_mts.shape}")
-logging.info(f"Transformed features shape: {transformed_features.shape}")
-
-
+# For random prediction
+random_index = np.random.randint(len(validation_features_supervised_dataset))
 (
-    X_mts_original,
-    y_mts_original,
-) = create_training_windows(
-    df=original_mts,
-    input_cols=["grid1-load", "grid1-loss", "grid1-temp"],
-    target_col="grid1-loss",
-    window_size=forecasting_model_params["window_size"],
-    forecast_horizon=forecasting_model_params["horizon_length"],
-)
-(
-    X_mts_transformed,
-    y_mts_transformed,
-) = create_training_windows(
-    df=transformed_mts,
-    input_cols=["grid1-load", "grid1-loss", "grid1-temp"],
-    target_col="grid1-loss",
-    window_size=forecasting_model_params["window_size"],
-    forecast_horizon=forecasting_model_params["horizon_length"],
+    random_original_mts,
+    random_target_mts,
+    random_transformed_mts,
+    random_transformed_features,
+) = analyze_and_visualize_prediction(
+    prediction_index=int(random_index),
+    validation_supervised_dataset=validation_features_supervised_dataset,
+    validation_predicted_features=validation_predicted_features,
+    mts_dataset=mts_dataset,
+    mts_decomps=mts_decomps,
+    mts_feature_df=mts_feature_df,
+    ga=ga,
+    uts_names=timeseries_to_use,
+    output_dir=output_dir,
+    plot_name_prefix="random_",
 )
 
-inferred_original = forecasting_model_wrapper.infer(X=X_mts_original)
-inferred_transformed = forecasting_model_wrapper.infer(
-    X=X_mts_transformed,
+worst_forecast_plot = compare_original_and_transformed_forecasting(
+    worst_original_mts,
+    worst_transformed_mts,
+    forecasting_model_wrapper,
+    forecasting_model_params,
 )
+worst_forecast_plot.savefig(os.path.join(output_dir, f"worst_transformed_forecast.png"))
 
-logger.info(f"X_mts_original: {X_mts_original[0]}")
-logger.info(f"y_mts_original: {y_mts_original[0]}")
 
-forecast_plot = plot_timeseries_forecast_comparison(
-    X_original=X_mts_original[0],
-    X_transformed=X_mts_transformed[0],
-    y_original=y_mts_original[0],
-    y_transformed=y_mts_transformed[0],
-    inferred_original=inferred_original[0],
-    inferred_transformed=inferred_transformed[0],
-    feature_names=["grid1-load", "grid1-loss", "grid1-temp"],
-    target_name="grid1-loss",
+best_forecast_plot = compare_original_and_transformed_forecasting(
+    best_original_mts,
+    best_transformed_mts,
+    forecasting_model_wrapper,
+    forecasting_model_params,
 )
-forecast_plot.savefig(os.path.join(output_dir, f"random_forecast.png"))
+best_forecast_plot.savefig(os.path.join(output_dir, f"best_transformed_forecast.png"))
+
+
+random_forecast_plot = compare_original_and_transformed_forecasting(
+    random_original_mts,
+    random_transformed_mts,
+    forecasting_model_wrapper,
+    forecasting_model_params,
+)
+random_forecast_plot.savefig(
+    os.path.join(output_dir, f"random_transformed_forecast.png")
+)
 
 logger.info("Generated all plots...")
 logger.info("Finished running")
