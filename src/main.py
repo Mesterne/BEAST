@@ -1,8 +1,11 @@
+from ast import GeneratorExp
 import logging
 import os
+from pickletools import genops
 from re import X
 import sys
 import argparse
+from typing import Generic
 import pandas as pd
 import numpy as np
 import random
@@ -34,6 +37,7 @@ import uuid
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 from src.utils.generate_dataset import (
     create_training_windows,
+    create_training_windows_from_mts,
     generate_feature_dataframe,
 )  # noqa: E402
 from src.utils.pca import PCAWrapper  # noqa: E402
@@ -57,7 +61,10 @@ from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
     find_error_of_each_feature_for_each_sample,
 )
-from src.utils.ga_utils import analyze_and_visualize_prediction
+from src.utils.ga_utils import (
+    analyze_and_visualize_prediction,
+    generate_new_time_series,
+)
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -146,6 +153,8 @@ ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES = get_col_names_original_target()
 # Generate PCA space used to create train test splits
 mts_pca_df = PCAWrapper().fit_transform(mts_feature_df)
 logger.info("Successfully generated MTS PCA space")
+
+logger.info(f"Shape of PCA datafram used to train original model: {mts_raw_df.shape}")
 
 (
     X_mts_train,
@@ -323,8 +332,8 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
     worst_transformed_features,
 ) = analyze_and_visualize_prediction(
     prediction_index=int(worst_prediction_index),
-    validation_supervised_dataset=validation_features_supervised_dataset,
-    validation_predicted_features=validation_predicted_features,
+    supervised_dataset=validation_features_supervised_dataset,
+    predicted_features=validation_predicted_features,
     mts_dataset=mts_dataset,
     mts_decomps=mts_decomps,
     mts_feature_df=mts_feature_df,
@@ -338,8 +347,8 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
 best_original_mts, best_target_mts, best_transformed_mts, best_transformed_features = (
     analyze_and_visualize_prediction(
         prediction_index=int(best_prediction_index),
-        validation_supervised_dataset=validation_features_supervised_dataset,
-        validation_predicted_features=validation_predicted_features,
+        supervised_dataset=validation_features_supervised_dataset,
+        predicted_features=validation_predicted_features,
         mts_dataset=mts_dataset,
         mts_decomps=mts_decomps,
         mts_feature_df=mts_feature_df,
@@ -358,8 +367,8 @@ random_index = np.random.randint(len(validation_features_supervised_dataset))
     random_transformed_features,
 ) = analyze_and_visualize_prediction(
     prediction_index=int(random_index),
-    validation_supervised_dataset=validation_features_supervised_dataset,
-    validation_predicted_features=validation_predicted_features,
+    supervised_dataset=validation_features_supervised_dataset,
+    predicted_features=validation_predicted_features,
     mts_dataset=mts_dataset,
     mts_decomps=mts_decomps,
     mts_feature_df=mts_feature_df,
@@ -398,4 +407,65 @@ random_forecast_plot.savefig(
 )
 
 logger.info("Generated all plots...")
+
+
+# Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
+# original time series, instead of multiple. This will limit the number of time series to generate to the size of
+# the train indices.
+sampled_test_features_supervised_dataset = test_features_supervised_dataset.sample(n=2)
+indices = sampled_test_features_supervised_dataset.index.tolist()
+
+sampled_test_predicted_features = test_predicted_features[
+    test_predicted_features["prediction_index"].isin(indices)
+]
+
+indices = set(indices)
+
+
+logger.info("Using generated features to generate new time series")
+generated_transformed_mts = generate_new_time_series(
+    supervised_dataset=sampled_test_features_supervised_dataset,
+    predicted_features=sampled_test_predicted_features,
+    ga=ga,
+)
+
+logger.info(
+    "Training forecasting model on previous training data and newly generated time series."
+)
+
+# Shape is (number of timeseries, number of uts, number of samples)
+logger.info(f"Before before transformed time series: {len(generated_transformed_mts)}")
+logger.info(f"Before transformed time series: {len(generated_transformed_mts[0])}")
+logger.info(
+    f"Next layer transformed time series: {len(generated_transformed_mts[0][0])}"
+)
+
+(
+    X_transformed,
+    y_transformed,
+) = create_training_windows_from_mts(
+    mts=generated_transformed_mts,
+    target_col_index=1,
+    window_size=forecasting_model_params["window_size"],
+    forecast_horizon=forecasting_model_params["horizon_length"],
+)
+
+X_new_train = np.vstack((X_mts_train, X_transformed))
+y_new_train = np.vstack((y_mts_train, y_transformed))
+
+logging.info(
+    "Training forecasting model on previous training data and newly generated time series."
+)
+forecasting_model_wrapper.train(
+    X_train=X_new_train,
+    y_train=y_new_train,
+    X_val=X_mts_train,
+    y_val=y_mts_train,
+    log_to_wandb=False,
+)
+
+logger.info(
+    "Comparing forecasting model trained on original and transformed time series"
+)
+
 logger.info("Finished running")

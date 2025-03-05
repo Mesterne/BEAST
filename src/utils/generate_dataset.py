@@ -1,5 +1,6 @@
 from typing import List
 import pandas as pd
+from pandas.core.window import Window
 from tqdm import tqdm
 import numpy as np
 from src.utils.features import decomp_and_features
@@ -87,7 +88,12 @@ def create_training_windows(
     X, y = [], []
 
     for i in range(num_samples):
-        input_window = df.loc[i : i + window_size - 1, input_cols].values.flatten()
+        # Get the window slice as before
+        input_window_df = df.loc[i : i + window_size - 1, input_cols]
+
+        # Instead of flattening row by row, reshape to organize by column first
+        # This stacks all values from first column, then all from second column, etc.
+        input_window = input_window_df.values.T.flatten()
 
         target_window = df.loc[
             i + window_size : i + window_size + forecast_horizon - 1, target_col
@@ -104,3 +110,65 @@ def create_training_windows(
     )
 
     return X, y
+
+
+def create_training_windows_from_mts(
+    mts: List[List[List[float]]],
+    target_col_index: int,
+    window_size: int,
+    forecast_horizon: int,
+):
+    """
+    Create training windows from multivariate time series data.
+
+    Args:
+        mts: List of time series, where each time series is a list of features,
+             and each feature is a list of values
+        target_col_index: Index of the target column to predict
+        window_size: Size of the input window
+        forecast_horizon: Number of future steps to predict
+
+    Returns:
+        X: Shape (number_of_training_windows, window_size*number_of_features)
+        Y: Shape (number_of_training_windows, forecast_horizon)
+    """
+    X, Y = [], []
+
+    # Iterate through each time series
+    for ts in mts:
+        # Get the length of this time series (assuming all features have same length)
+        ts_length = len(ts[0])
+        num_features = len(ts)
+
+        # Check if we have enough data to create at least one window
+        if ts_length < window_size + forecast_horizon:
+            logger.warning("Time series too short to create windows, skipping.")
+            continue
+
+        # Calculate how many windows we can create from this time series
+        num_windows = ts_length - window_size - forecast_horizon + 1
+
+        # Create windows
+        for i in range(num_windows):
+            # Create input window with all features
+            x_window = []
+            for feature_idx in range(num_features):
+                # Add all values for this feature in the window
+                x_window.extend(ts[feature_idx][i : i + window_size])
+
+            # Create target window (only from the target feature)
+            y_window = ts[target_col_index][
+                i + window_size : i + window_size + forecast_horizon
+            ]
+
+            X.append(x_window)
+            Y.append(y_window)
+
+    X = np.array(X)
+    Y = np.array(Y)
+
+    logger.info(
+        f"Created forecasting time series. X shape: {X.shape}, y shape: {Y.shape}"
+    )
+
+    return X, Y
