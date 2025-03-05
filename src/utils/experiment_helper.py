@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import numpy as np
 import logging
@@ -25,7 +26,7 @@ logging.basicConfig(level=logging.INFO)
 # DATA
 def get_mts_dataset(
     data_dir, time_series_to_use, context_length, step_size, backfill=True, index_col=0
-):
+) -> List[pd.DataFrame]:
     df = pd.read_csv(data_dir, index_col=index_col)
     df.index = pd.to_datetime(df.index)
     raw_df = df[time_series_to_use]
@@ -34,7 +35,7 @@ def get_mts_dataset(
     mts_dataset = generate_windows_dataset(
         raw_df, context_length, step_size, time_series_to_use
     )
-    return raw_df, mts_dataset
+    return mts_dataset
 
 
 def get_transformed_uts_with_features_and_decomps(
