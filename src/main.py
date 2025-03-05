@@ -134,6 +134,7 @@ logger.info(
 ############ DATA INITIALIZATION
 
 # Load data and generate dataset of multivariate time series context windows
+# TODO: Make mts_dataset into ndarray
 mts_dataset: List[pd.DataFrame] = get_mts_dataset(
     data_dir=data_dir,
     time_series_to_use=timeseries_to_use,
@@ -144,6 +145,7 @@ dataset_size = len(mts_dataset)
 num_uts_in_mts = len(timeseries_to_use)
 logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
+# TODO: mts_feature_df and mts_decomps should be ndarray
 mts_feature_df, mts_decomps = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
@@ -247,6 +249,7 @@ forecasting_model_wrapper = NeuralNetworkWrapper(
 )
 logging.info("Successfully initialized the forecasting model")
 
+# TODO: Inputs should be ndarray
 ga = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
     mts_dataset=mts_dataset,
@@ -299,6 +302,7 @@ logger.info("Successfully ran inference on validation and test sets")
 
 ############ EVALUATION OF PREDICTIONS ###########################
 # Evaluate all predictions
+# Differences could be numpy array
 logger.info("Evaluating all predictions")
 differences_df_validation = find_error_of_each_feature_for_each_sample(
     predictions=validation_predicted_features,
@@ -350,6 +354,7 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
 
 
 # For worst prediction
+# TODO: Inputs should be ndarray
 (
     worst_original_mts,
     worst_target_mts,
@@ -368,6 +373,7 @@ best_prediction_index = differences_df_validation.iloc[best_row_index][
     plot_name_prefix="worst_",
 )
 
+
 # For best prediction
 best_original_mts, best_target_mts, best_transformed_mts, best_transformed_features = (
     analyze_and_visualize_prediction(
@@ -383,6 +389,7 @@ best_original_mts, best_target_mts, best_transformed_mts, best_transformed_featu
         plot_name_prefix="best_",
     )
 )
+
 # For random prediction
 random_index = np.random.randint(len(validation_features_supervised_dataset))
 (
@@ -431,8 +438,6 @@ random_forecast_plot.savefig(
     os.path.join(output_dir, f"random_transformed_forecast.png")
 )
 
-logger.info("Generated all plots...")
-
 
 # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
 # original time series, instead of multiple. This will limit the number of time series to generate to the size of
@@ -440,9 +445,6 @@ logger.info("Generated all plots...")
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
 ]
-sampled_test_features_supervised_dataset = (
-    sampled_test_features_supervised_dataset.sample(n=2)
-)
 indices = sampled_test_features_supervised_dataset.index.tolist()
 
 sampled_test_predicted_features = test_predicted_features[
@@ -450,6 +452,7 @@ sampled_test_predicted_features = test_predicted_features[
 ]
 
 logger.info("Using generated features to generate new time series")
+# TODO: Input could be numpy array
 generated_transformed_mts = generate_new_time_series(
     supervised_dataset=sampled_test_features_supervised_dataset,
     predicted_features=sampled_test_predicted_features,
@@ -469,11 +472,6 @@ generated_transformed_mts = generate_new_time_series(
 X_new_train = np.vstack((X_mts_train, X_transformed))
 y_new_train = np.vstack((y_mts_train, y_transformed))
 
-logging.info(
-    "Training forecasting model on previous training data and newly generated time series. With shapes: X_new_train: {}, y_new_train: {}".format(
-        X_new_train.shape, y_new_train.shape
-    )
-)
 
 forecasting_model_new = FeedForwardForecaster(
     model_params=forecasting_model_params,
@@ -482,7 +480,6 @@ forecasting_model_new = FeedForwardForecaster(
 forecasting_model_wrapper_new = NeuralNetworkWrapper(
     model=forecasting_model_new, training_params=forecasting_model_training_params
 )
-logging.info("Successfully initialized the forecasting model")
 forecasting_model_wrapper_new.train(
     X_train=X_new_train,
     y_train=y_new_train,
@@ -491,9 +488,6 @@ forecasting_model_wrapper_new.train(
     log_to_wandb=False,
 )
 
-logger.info(
-    "Comparing forecasting model trained on original and transformed time series"
-)
 model_comparison_fig = compare_old_and_new_model(
     X_test=X_mts_test,
     y_test=y_mts_test,

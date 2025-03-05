@@ -1,6 +1,7 @@
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
 from src.utils.evaluation.forecaster_evaluation import mse_for_forecast
 from src.utils.generate_dataset import create_training_windows
+from src.utils.logging_config import logger
 
 import matplotlib.pyplot as plt
 import seaborn as sns

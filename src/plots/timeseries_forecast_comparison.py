@@ -47,13 +47,16 @@ def plot_timeseries_forecast_comparison(
     n_samples = len(X_original) // n_features
     forecast_length = len(y_original)
 
-    # Reshape the interleaved 1D arrays into 2D arrays where each column is a feature
+    # Reshape the contiguous blocks into 2D arrays where each column is a feature
     X_original_reshaped = np.zeros((n_samples, n_features))
     X_transformed_reshaped = np.zeros((n_samples, n_features))
 
     for i in range(n_features):
-        X_original_reshaped[:, i] = X_original[i::n_features]
-        X_transformed_reshaped[:, i] = X_transformed[i::n_features]
+        # Extract each feature from its contiguous block
+        start_idx = i * n_samples
+        end_idx = (i + 1) * n_samples
+        X_original_reshaped[:, i] = X_original[start_idx:end_idx]
+        X_transformed_reshaped[:, i] = X_transformed[start_idx:end_idx]
 
     # Find the index of the target feature
     try:

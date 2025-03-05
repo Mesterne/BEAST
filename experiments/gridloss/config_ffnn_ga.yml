@@ -53,7 +53,7 @@ model_args:
       - 256
       - 256
     training_args:
-      num_epochs: 2
+      num_epochs: 50
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
@@ -66,7 +66,7 @@ model_args:
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     training_args:
-      num_epochs: 2
+      num_epochs: 50
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
