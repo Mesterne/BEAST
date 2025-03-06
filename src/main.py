@@ -6,10 +6,11 @@ from pickletools import genops
 from re import X
 import sys
 import argparse
-from typing import Generic, List
+from typing import Generic, List, Tuple
 import pandas as pd
 import numpy as np
 import random
+from statsmodels.tsa.seasonal import DecomposeResult
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -87,7 +88,6 @@ torch.backends.cudnn.benchmark = False
 plt.style.use("ggplot")
 
 # Load the configuration file
-# TODO: Sort
 config = read_yaml(args["config_path"])
 
 data_dir = os.path.join(
@@ -96,12 +96,12 @@ data_dir = os.path.join(
 timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
 step_size = config["dataset_args"]["step_size"]
 context_length = config["dataset_args"]["window_size"]
+num_features_per_uts = config["dataset_args"]["num_features_per_uts"]
 
 log_training_to_wandb = config["training_args"]["log_to_wandb"]
 
 seasonal_period = config["stl_args"]["series_periodicity"]
 
-num_features_per_uts = config["dataset_args"]["num_features_per_uts"]
 
 feature_model_params = config["model_args"]["feature_model_args"]
 model_type = feature_model_params["model_name"]
@@ -337,7 +337,7 @@ logger.info(
 )
 
 # Get the mean absolute error for each prediction
-row_wise_errors = np.abs(differences_df_validation.values).mean(axis=1)
+row_wise_errors = np.abs(differences_df_validation.values[:, :-1]).mean(axis=1)
 # Get the index of the worst prediction
 worst_row_index = np.argmax(row_wise_errors)
 # Get the prediction_index from that row

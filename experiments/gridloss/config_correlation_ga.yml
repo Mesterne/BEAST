@@ -41,5 +41,6 @@ model_args:
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     learning_rate: 0.001
+    training_args:
 training_args:
   log_to_wandb: False
