@@ -3,28 +3,15 @@ dataset_args:
   directory: data/gridloss
   training_data: train.csv
   test_data: test.csv
-  window_size: 168
+  window_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
     - grid1-loss
     - grid1-temp
+  num_features_per_uts: 4
 stl_args:
   series_periodicity: 24
-time_series_args:
-  num_uts_in_mts: 3
-  num_features_per_uts: 4
-  original_mts_index: 636
-  init_transform_uts:
-    name: grid1-load
-    index: 0
-  target_mts_index: 626
-  manual_init_transform: False
-  manual_init_transfom_args:
-    trend_det_factor: 2.5
-    trend_slope_factor: -0.5
-    trend_lin_factor: 1.7
-    seasonal_det_factor: 0.8
 model_args:
   genetic_algorithm_args:
     num_runs: 1
@@ -45,14 +32,15 @@ model_args:
   feature_model_args:
     model_name: correlation_model
     training_args:
-forecasting_model_args:
-  window_size: 168
-  network_size:
-    - 100
-    - 100
-  horizon_length: 24
-  model_name: feedforward_forecaster
-  model_params_storage_dir: models/feedforward
-  learning_rate: 0.001
+  forecasting_model_args:
+    window_size: 168
+    network_size:
+      - 100
+      - 100
+    horizon_length: 24
+    model_name: feedforward_forecaster
+    model_params_storage_dir: models/feedforward
+    learning_rate: 0.001
+    training_args:
 training_args:
   log_to_wandb: False

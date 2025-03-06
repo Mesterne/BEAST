@@ -1,15 +1,17 @@
+from math import log
 import os
 from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )
 import pandas as pd
+from src.utils.logging_config import logger
 
 
 def analyze_and_visualize_prediction(
     prediction_index,
-    validation_supervised_dataset,
-    validation_predicted_features,
+    supervised_dataset,
+    predicted_features,
     mts_dataset,
     mts_decomps,
     mts_feature_df,
@@ -37,13 +39,13 @@ def analyze_and_visualize_prediction(
         tuple: (original_mts, target_mts, transformed_mts, transformed_features)
     """
     # Get the target row from the validation dataset
-    row_in_validation = validation_supervised_dataset.iloc[prediction_index]
+    row_in_validation = supervised_dataset.iloc[prediction_index]
     original_mts_index = int(row_in_validation["original_index"])
     target_mts_index = int(row_in_validation["target_index"])
 
     # Get the predicted features for this sample
-    predicted_features = validation_predicted_features[
-        validation_predicted_features["prediction_index"] == prediction_index
+    predicted_features = predicted_features[
+        predicted_features["prediction_index"] == prediction_index
     ].drop(["prediction_index"], axis=1)
 
     # Get original and target MTS
@@ -58,22 +60,23 @@ def analyze_and_visualize_prediction(
     (
         transformed_mts_list,
         transformed_features_list,
-        transformed_factors_list,
+        _,
+        _,
     ) = ga.transform(
         predicted_features=predicted_features,
-        original_mts_index=original_mts_index,
-        target_mts_index=target_mts_index,
+        original_mts_indices=[original_mts_index],
     )
 
     # Process the first transformation result
     DEFAULT_RUN_INDEX = 0
-    transformed_features = transformed_features_list[DEFAULT_RUN_INDEX]
-    transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
+    transformed_features = transformed_features_list[DEFAULT_RUN_INDEX][0]
+    transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX][0]
 
     # Flatten and format the transformed features
     transformed_features = [
         item for sublist in transformed_features for item in sublist
     ]
+
     transformed_features = pd.DataFrame(
         [transformed_features], columns=predicted_features.columns
     )
@@ -110,3 +113,48 @@ def analyze_and_visualize_prediction(
     )
 
     return original_mts, target_mts, transformed_mts, transformed_features
+
+
+def generate_new_time_series(
+    supervised_dataset,
+    predicted_features,
+    ga,
+):
+    """
+    Analyze a prediction, run the genetic algorithm on it, and create visualizations.
+
+    Args:
+        prediction_index: Index of the prediction to analyze
+        validation_supervised_dataset: DataFrame containing supervised dataset
+        validation_predicted_features: DataFrame containing model predictions
+        mts_dataset: Dataset containing multivariate time series
+        mts_decomps: Decompositions of the time series
+        mts_feature_df: DataFrame with features of the time series
+        ga: GeneticAlgorithmWrapper instance
+        uts_names: Names of the univariate time series in the MTS
+        output_dir: Directory to save plots
+        plot_name_prefix: Prefix to add to the plot filenames (e.g., "worst_", "best_")
+
+    Returns:
+        tuple: (original_mts, target_mts, transformed_mts, transformed_features)
+    """
+    # Get the target row from the validation dataset
+    original_mts_indices = supervised_dataset["original_index"].astype(int)
+    target_mts_indices = supervised_dataset["target_index"].astype(int)
+
+    # Run genetic algorithm transformation
+    (
+        transformed_mts_list,
+        transformed_features_list,
+        transformed_factors_list,
+        predicted_features_list,
+    ) = ga.transform(
+        predicted_features=predicted_features,
+        original_mts_indices=original_mts_indices,
+    )
+
+    # Process the first transformation result
+    DEFAULT_RUN_INDEX = 0
+    transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
+
+    return transformed_mts

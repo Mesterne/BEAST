@@ -1,6 +1,9 @@
 # Data dir
 data/*
 
+# Images
+*.png
+
 .flake8
 desktop.ini
 
