@@ -101,7 +101,7 @@ log_training_to_wandb = config["training_args"]["log_to_wandb"]
 
 seasonal_period = config["stl_args"]["series_periodicity"]
 
-num_features_per_uts = config["time_series_args"]["num_features_per_uts"]
+num_features_per_uts = config["dataset_args"]["num_features_per_uts"]
 
 feature_model_params = config["model_args"]["feature_model_args"]
 model_type = feature_model_params["model_name"]
