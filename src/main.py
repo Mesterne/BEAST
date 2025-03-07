@@ -1,12 +1,8 @@
-from ast import GeneratorExp
 import logging
-from math import log
 import os
-from pickletools import genops
-from re import X
 import sys
 import argparse
-from typing import Generic, List, Tuple
+from typing import List, Tuple
 import pandas as pd
 import numpy as np
 import random
@@ -14,7 +10,7 @@ from statsmodels.tsa.seasonal import DecomposeResult
 import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
-from tqdm import trange
+from tqdm import tqdm
 
 
 # Parse the configuration file path
@@ -60,6 +56,9 @@ from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithm
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )  # noqa: E402
+from src.plots.generated_vs_target_comparison import (
+    create_and_save_plots_of_model_performances,
+)
 from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 from src.utils.evaluation.mse import get_mse_for_features_and_overall
 from src.plots.full_time_series import plot_time_series_for_all_uts  # noqa: E402
@@ -301,153 +300,14 @@ test_predicted_features = use_model_predictions_to_create_dataframe(
 )
 logger.info("Successfully ran inference on validation and test sets")
 
-
-############ EVALUATION OF PREDICTIONS ###########################
-# Evaluate all predictions
-# Differences could be numpy array
-logger.info("Evaluating all predictions")
-differences_df_validation = find_error_of_each_feature_for_each_sample(
-    predictions=validation_predicted_features,
-    labelled_test_dataset=validation_features_supervised_dataset,
-)
-differences_df_test = find_error_of_each_feature_for_each_sample(
-    predictions=test_predicted_features,
-    labelled_test_dataset=test_features_supervised_dataset,
-)
-
-# Plot the feature wise errors of validation set
-logger.info("Plotting errors for each prediction on validation set")
-fig = plot_distribution_of_feature_wise_error(differences_df_validation)
-fig.savefig(os.path.join(output_dir, "dist_error_features.png"))
-
-# Calculate the MSE over feature space.
-logger.info(
-    f"Calculating overall MSE for predictions of validation set. There are {len(differences_df_validation)} predictions"
-)
-overall_mse_validation, mse_values_for_each_feature_validation = (
-    get_mse_for_features_and_overall(differences_df_validation)
-)
-logger.info(
-    f"Calculating overall MSE for predictions of test set. There are {len(differences_df_test)} predictions"
-)
-overall_mse_test, mse_values_for_each_feature_test = get_mse_for_features_and_overall(
-    differences_df_test
-)
-
-logger.info(
-    f"Overall MSE for model\nValidation: {overall_mse_validation}\nTest: {overall_mse_test}"
-)
-
-
-# Get the mean absolute error for each prediction, ignoring index column
-row_wise_errors = np.abs(differences_df_validation.values[:, :-1]).mean(axis=1)
-# Get the index of the worst prediction
-worst_row_index = np.argmax(row_wise_errors)
-# Get the prediction_index from that row
-worst_prediction_index = differences_df_validation.iloc[worst_row_index][
-    "prediction_index"
-]
-
-# Get the index of the best prediction
-best_row_index = np.argmin(row_wise_errors)
-# Get the prediction_index from that row
-best_prediction_index = differences_df_validation.iloc[best_row_index][
-    "prediction_index"
-]
-
-
-# For worst prediction
-# TODO: Inputs should be ndarray
-(
-    worst_original_mts,
-    worst_target_mts,
-    worst_transformed_mts,
-    worst_transformed_features,
-) = analyze_and_visualize_prediction(
-    prediction_index=int(worst_prediction_index),
-    supervised_dataset=validation_features_supervised_dataset,
-    predicted_features=validation_predicted_features,
-    mts_dataset=mts_dataset,
-    mts_decomps=mts_decomps,
-    mts_feature_df=mts_feature_df,
-    ga=ga,
-    uts_names=timeseries_to_use,
-    output_dir=output_dir,
-    plot_name_prefix="worst_",
-)
-
-
-# For best prediction
-best_original_mts, best_target_mts, best_transformed_mts, best_transformed_features = (
-    analyze_and_visualize_prediction(
-        prediction_index=int(best_prediction_index),
-        supervised_dataset=validation_features_supervised_dataset,
-        predicted_features=validation_predicted_features,
-        mts_dataset=mts_dataset,
-        mts_decomps=mts_decomps,
-        mts_feature_df=mts_feature_df,
-        ga=ga,
-        uts_names=timeseries_to_use,
-        output_dir=output_dir,
-        plot_name_prefix="best_",
-    )
-)
-
-# For random prediction
-random_index = np.random.randint(len(validation_features_supervised_dataset))
-(
-    random_original_mts,
-    random_target_mts,
-    random_transformed_mts,
-    random_transformed_features,
-) = analyze_and_visualize_prediction(
-    prediction_index=int(random_index),
-    supervised_dataset=validation_features_supervised_dataset,
-    predicted_features=validation_predicted_features,
-    mts_dataset=mts_dataset,
-    mts_decomps=mts_decomps,
-    mts_feature_df=mts_feature_df,
-    ga=ga,
-    uts_names=timeseries_to_use,
-    output_dir=output_dir,
-    plot_name_prefix="random_",
-)
-
-worst_forecast_plot = compare_original_and_transformed_forecasting(
-    worst_original_mts,
-    worst_transformed_mts,
-    forecasting_model_wrapper,
-    forecasting_model_params,
-)
-worst_forecast_plot.savefig(os.path.join(output_dir, f"worst_transformed_forecast.png"))
-
-
-best_forecast_plot = compare_original_and_transformed_forecasting(
-    best_original_mts,
-    best_transformed_mts,
-    forecasting_model_wrapper,
-    forecasting_model_params,
-)
-best_forecast_plot.savefig(os.path.join(output_dir, f"best_transformed_forecast.png"))
-
-
-random_forecast_plot = compare_original_and_transformed_forecasting(
-    random_original_mts,
-    random_transformed_mts,
-    forecasting_model_wrapper,
-    forecasting_model_params,
-)
-random_forecast_plot.savefig(
-    os.path.join(output_dir, f"random_transformed_forecast.png")
-)
-
+# Generation of new time series based on newly inferred features
 
 # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
 # original time series, instead of multiple. This will limit the number of time series to generate to the size of
 # the train indices.
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
-].sample(n=2)
+].sample(n=3)
 prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for = test_predicted_features[
@@ -477,6 +337,11 @@ mse_values_for_each_feature = calculate_mse_for_each_feature(
 
 total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
+)
+
+create_and_save_plots_of_model_performances(
+    total_mse_for_each_uts=total_mse_for_each_uts,
+    mse_per_feature=mse_values_for_each_feature,
 )
 
 
