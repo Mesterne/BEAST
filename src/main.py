@@ -337,7 +337,6 @@ logger.info(
 )
 
 
-
 # Get the mean absolute error for each prediction, ignoring index column
 row_wise_errors = np.abs(differences_df_validation.values[:, :-1]).mean(axis=1)
 # Get the index of the worst prediction
@@ -446,7 +445,7 @@ random_forecast_plot.savefig(
 # the train indices.
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
-]
+].sample(n=1)
 indices = sampled_test_features_supervised_dataset.index.tolist()
 
 sampled_test_predicted_features = test_predicted_features[
@@ -454,12 +453,12 @@ sampled_test_predicted_features = test_predicted_features[
 ]
 
 logger.info("Using generated features to generate new time series")
-# TODO: Input could be numpy array
-generated_transformed_mts = generate_new_time_series(
+generated_transformed_mts, features_of_new_mts = generate_new_time_series(
     supervised_dataset=sampled_test_features_supervised_dataset,
     predicted_features=sampled_test_predicted_features,
     ga=ga,
 )
+logger.info(f"Features of new mts: {features_of_new_mts}")
 
 (
     X_transformed,

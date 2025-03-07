@@ -1,5 +1,6 @@
 from math import log
 import os
+from typing import List, Tuple
 from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
@@ -119,7 +120,7 @@ def generate_new_time_series(
     supervised_dataset,
     predicted_features,
     ga,
-):
+) -> Tuple[List, List]:
     """
     Analyze a prediction, run the genetic algorithm on it, and create visualizations.
 
@@ -140,14 +141,13 @@ def generate_new_time_series(
     """
     # Get the target row from the validation dataset
     original_mts_indices = supervised_dataset["original_index"].astype(int)
-    target_mts_indices = supervised_dataset["target_index"].astype(int)
 
     # Run genetic algorithm transformation
     (
         transformed_mts_list,
         transformed_features_list,
-        transformed_factors_list,
-        predicted_features_list,
+        _,
+        _,
     ) = ga.transform(
         predicted_features=predicted_features,
         original_mts_indices=original_mts_indices,
@@ -157,4 +157,4 @@ def generate_new_time_series(
     DEFAULT_RUN_INDEX = 0
     transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
 
-    return transformed_mts
+    return transformed_mts, transformed_features_list
