@@ -446,19 +446,24 @@ random_forecast_plot.savefig(
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
 ].sample(n=1)
-indices = sampled_test_features_supervised_dataset.index.tolist()
+prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 
-sampled_test_predicted_features = test_predicted_features[
-    test_predicted_features["prediction_index"].isin(indices)
+predicted_features_to_generated_mts_for = test_predicted_features[
+    test_predicted_features["prediction_index"].isin(prediction_indices)
 ]
 
 logger.info("Using generated features to generate new time series")
 generated_transformed_mts, features_of_new_mts = generate_new_time_series(
     supervised_dataset=sampled_test_features_supervised_dataset,
-    predicted_features=sampled_test_predicted_features,
+    predicted_features=predicted_features_to_generated_mts_for,
     ga=ga,
 )
-logger.info(f"Features of new mts: {features_of_new_mts}")
+target_feature_values = sampled_test_features_supervised_dataset.drop(
+    columns=["original_index", "target_index"]
+)
+logger.info(f"Target feature values: {y_features_test[prediction_indices]}")
+logger.info(f"Target feature values: {target_feature_values.T}")
+logger.info(f"Features of new mts: {features_of_new_mts[0]}")
 
 (
     X_transformed,

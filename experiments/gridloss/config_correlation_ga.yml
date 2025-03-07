@@ -14,7 +14,6 @@ stl_args:
   series_periodicity: 24
 model_args:
   genetic_algorithm_args:
-    num_runs: 1
     num_generations: 100
     num_parents_mating: 2
     solutions_per_population: 10
