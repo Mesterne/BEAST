@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from random import sample
+from src.data.constants import OUTPUT_DIR
 from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
 from src.utils.logging_config import logger
 import os
@@ -8,7 +9,7 @@ from scipy.stats import zscore
 
 
 def create_train_val_test_split(
-    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED, output_dir
+    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -68,7 +69,7 @@ def create_train_val_test_split(
         drop=True
     )
     fig = pca_plot_train_test_pairing(pca_df, dataset_row)
-    fig.savefig(os.path.join(output_dir, "pca_train_test_pairing.png"))
+    fig.savefig(os.path.join(OUTPUT_DIR, "pca_train_test_pairing.png"))
     logger.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):
@@ -116,7 +117,7 @@ def create_train_val_test_split(
 
 
 def create_train_val_test_split_outliers(
-    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED, output_dir
+    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
 ):
     """
     Generate X and y lists for train, validation, and test supervised datasets.
@@ -176,7 +177,7 @@ def create_train_val_test_split_outliers(
         drop=True
     )
     fig = pca_plot_train_test_pairing(pca_df, dataset_row)
-    fig.savefig(os.path.join(output_dir, "pca_train_test_pairing.png"))
+    fig.savefig(os.path.join(OUTPUT_DIR, "pca_train_test_pairing.png"))
     logger.info("Generated PCA plot with target/test pairing")
 
     def generate_X_y_pairs_from_df(df):

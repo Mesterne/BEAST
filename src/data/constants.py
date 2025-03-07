@@ -1,3 +1,5 @@
+import os
+
 COLUMN_NAMES = [
     "grid1-load_trend-strength",
     "grid1-load_trend-slope",
@@ -12,3 +14,5 @@ COLUMN_NAMES = [
     "grid1-temp_trend-linearity",
     "grid1-temp_seasonal-strength",
 ]
+
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "")

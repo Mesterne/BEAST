@@ -24,8 +24,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-from src import training
-from src.models import forecasting
+from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
@@ -112,9 +111,6 @@ forecasting_model_params = config["model_args"]["forecasting_model_args"]
 forecasting_model_training_params = forecasting_model_params["training_args"]
 training_params = feature_model_params["training_args"]
 
-# Set up directory where all outputs will be stored
-# This is an environment variable that can be set before running the program
-output_dir = os.getenv("OUTPUT_DIR", "")
 
 # Set up logging to wandb
 if log_training_to_wandb:
@@ -129,7 +125,7 @@ if log_training_to_wandb:
 logger.info("Initialized system")
 logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
-    f"All outputs will be stored in: {output_dir} (Relative to where you ran the program from)"
+    f"All outputs will be stored in: {OUTPUT_DIR} (Relative to where you ran the program from)"
 )
 
 ############ DATA INITIALIZATION
@@ -178,7 +174,6 @@ logger.info("Successfully generated MTS PCA space")
     DELTA_NAMES,
     TARGET_NAMES,
     SEED,
-    output_dir=output_dir,
 )
 
 train_indices = (
@@ -386,7 +381,7 @@ model_comparison_fig = compare_old_and_new_model(
     forecasting_model_wrapper_new=forecasting_model_wrapper_new,
 )
 model_comparison_fig.savefig(
-    os.path.join(output_dir, "forecasting_model_comparison.png")
+    os.path.join(OUTPUT_DIR, "forecasting_model_comparison.png")
 )
 
 logger.info("Finished running")
