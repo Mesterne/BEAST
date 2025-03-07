@@ -1,4 +1,3 @@
-from math import log
 import os
 from typing import List, Tuple
 from src.plots.full_time_series import plot_time_series_for_all_uts
@@ -7,7 +6,6 @@ from src.plots.pca_for_each_uts_with_transformed import (
 )
 import pandas as pd
 import numpy as np
-from src.utils.logging_config import logger
 
 
 def analyze_and_visualize_prediction(

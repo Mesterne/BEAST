@@ -65,6 +65,8 @@ from src.utils.evaluation.mse import get_mse_for_features_and_overall
 from src.plots.full_time_series import plot_time_series_for_all_uts  # noqa: E402
 from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
+    calculate_mse_for_each_feature,
+    calculate_total_mse_for_each_mts,
     find_error_of_each_feature_for_each_sample,
 )
 from src.utils.ga_utils import (
@@ -445,7 +447,7 @@ random_forecast_plot.savefig(
 # the train indices.
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
-].sample(n=1)
+].sample(n=2)
 prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for = test_predicted_features[
@@ -453,18 +455,32 @@ predicted_features_to_generated_mts_for = test_predicted_features[
 ]
 
 logger.info("Using generated features to generate new time series")
-generated_transformed_mts, features_of_new_mts = generate_new_time_series(
-    supervised_dataset=sampled_test_features_supervised_dataset,
-    predicted_features=predicted_features_to_generated_mts_for,
-    ga=ga,
+generated_transformed_mts, features_of_genereated_timeseries_mts = (
+    generate_new_time_series(
+        supervised_dataset=sampled_test_features_supervised_dataset,
+        predicted_features=predicted_features_to_generated_mts_for,
+        ga=ga,
+    )
 )
-target_feature_values = sampled_test_features_supervised_dataset.drop(
-    columns=["original_index", "target_index"]
-)
-logger.info(f"Target feature values: {y_features_test[prediction_indices]}")
-logger.info(f"Target feature values: {target_feature_values.T}")
-logger.info(f"Features of new mts: {features_of_new_mts[0]}")
+target_features = y_features_test[prediction_indices]
 
+features_of_genereated_timeseries_mts = np.array(
+    features_of_genereated_timeseries_mts
+).reshape(-1, 12)
+
+
+## Evaluation of MTS generation
+mse_values_for_each_feature = calculate_mse_for_each_feature(
+    predicted_features=features_of_genereated_timeseries_mts,
+    target_features=target_features,
+)
+
+total_mse_for_each_uts = calculate_total_mse_for_each_mts(
+    mse_per_feature=mse_values_for_each_feature
+)
+
+
+# Retrain forecasting model on new timeseries.
 (
     X_transformed,
     y_transformed,
