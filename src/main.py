@@ -24,7 +24,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-from src.data.constants import OUTPUT_DIR
+from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
@@ -308,6 +308,15 @@ prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 predicted_features_to_generated_mts_for = test_predicted_features[
     test_predicted_features["prediction_index"].isin(prediction_indices)
 ]
+original_timeseries_indices_transformed_from = (
+    sampled_test_features_supervised_dataset["original_index"].astype(int).tolist()
+)
+original_timeseries = mts_array[original_timeseries_indices_transformed_from]
+target_timeseries_indices_transformed_to = (
+    sampled_test_features_supervised_dataset["target_index"].astype(int).tolist()
+)
+target_timeseries = mts_array[target_timeseries_indices_transformed_to]
+
 
 logger.info("Using generated features to generate new time series")
 generated_transformed_mts, features_of_genereated_timeseries_mts = (
@@ -317,6 +326,8 @@ generated_transformed_mts, features_of_genereated_timeseries_mts = (
         ga=ga,
     )
 )
+# We have to remove the delta values
+original_features = X_features_test[prediction_indices, : len(COLUMN_NAMES)]
 target_features = y_features_test[prediction_indices]
 
 features_of_genereated_timeseries_mts = np.array(
@@ -337,6 +348,12 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
 create_and_save_plots_of_model_performances(
     total_mse_for_each_uts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
+    original_mts=original_timeseries,
+    target_mts=target_timeseries,
+    generated_mts=generated_transformed_mts,
+    original_mts_features=original_features,
+    transformed_mts_features=features_of_genereated_timeseries_mts,
+    target_mts_features=target_features,
 )
 
 

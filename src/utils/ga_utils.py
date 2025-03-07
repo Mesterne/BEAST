@@ -146,4 +146,4 @@ def generate_new_time_series(
         original_mts_indices=original_mts_indices,
     )
 
-    return transformed_mts, transformed_features
+    return np.array(transformed_mts), transformed_features

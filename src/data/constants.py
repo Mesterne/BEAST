@@ -15,4 +15,10 @@ COLUMN_NAMES = [
     "grid1-temp_seasonal-strength",
 ]
 
+UTS_NAMES = [
+    "grid1-load",
+    "grid1-loss",
+    "grid1-temp",
+]
+
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "")

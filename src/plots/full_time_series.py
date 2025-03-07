@@ -1,111 +1,121 @@
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from src.data.constants import COLUMN_NAMES, UTS_NAMES
 from src.utils.logging_config import logger
-import pandas as pd
 
 
 def plot_time_series_for_all_uts(
-    original_mts,
-    target_mts,
-    transformed_mts,
-    original_mts_features,
-    target_mts_features,
-    transformed_mts_features,
-):
-    # Original, target and transformed MTS have columns which corresponds to one uts. The index is time.
-    # Use seaborn to plot each uts as a row in the figure where the columns are original, target and transformed MTS.
+    original_mts: np.array,  # Shape: (num_uts, num_time_steps)
+    target_mts: np.array,
+    transformed_mts: np.array,
+    original_mts_features: np.array,  # Shape: (num_uts*num_features)
+    target_mts_features: np.array,
+    transformed_mts_features: np.array,
+) -> plt.Figure:
+    """
+    Plots each UTS as a row where columns represent original, target, and transformed MTS.
+    Also plots feature distributions.
 
-    num_uts = len(original_mts.columns)
+    Parameters:
+    - original_mts, target_mts, transformed_mts: NumPy arrays (num_uts, num_time_steps)
+    - original_mts_features, target_mts_features, transformed_mts_features: NumPy arrays (num_uts, num_features)
+    - uts_names: List of UTS names (same length as num_uts)
+    - feature_names: List of feature names (same length as num_features)
+
+    Returns:
+    - fig (matplotlib.figure.Figure): The generated plot.
+    """
+
+    num_uts = original_mts.shape[0]
+    num_features = len(COLUMN_NAMES) // num_uts
+    num_time_steps = original_mts.shape[1]
+
     fig, axes = plt.subplots(nrows=num_uts, ncols=4, figsize=(30, 5 * num_uts))
-    uts_names = original_mts.columns
 
     transformed_mts_features = transformed_mts_features.squeeze()
+    time_index = np.arange(num_time_steps)  # Time steps for x-axis
 
-    for i, uts_name in enumerate(uts_names):
-        # Plot the time series
+    original_mts_features = original_mts_features.reshape((num_uts, num_features))
+    target_mts_features = target_mts_features.reshape((num_uts, num_features))
+    transformed_mts_features = transformed_mts_features.reshape((num_uts, num_features))
+
+    for i, uts_name in enumerate(UTS_NAMES):
+        # Plot time series
+        sns.lineplot(x=time_index, y=original_mts[i, :], ax=axes[i, 0], color="red")
+        sns.lineplot(x=time_index, y=target_mts[i, :], ax=axes[i, 1], color="blue")
         sns.lineplot(
-            x=original_mts.index, y=original_mts[uts_name], ax=axes[i, 0], color="red"
-        )
-        sns.lineplot(
-            x=target_mts.index, y=target_mts[uts_name], ax=axes[i, 1], color="blue"
-        )
-        sns.lineplot(
-            x=transformed_mts.index,
-            y=transformed_mts[uts_name],
-            ax=axes[i, 2],
-            color="purple",
+            x=time_index, y=transformed_mts[i, :], ax=axes[i, 2], color="purple"
         )
 
         axes[i, 0].set_title(f"{uts_name} - Original")
-        axes[i, 0].set_xticks([])
         axes[i, 1].set_title(f"{uts_name} - Target")
-        axes[i, 1].set_xticks([])
         axes[i, 2].set_title(f"{uts_name} - Transformed")
-        axes[i, 2].set_xticks([])
 
-        axes[i, 0].xaxis.set_visible(False)
-        axes[i, 1].xaxis.set_visible(False)
-        axes[i, 2].xaxis.set_visible(False)
+        # Hide x-axis labels
+        for j in range(3):
+            axes[i, j].set_xticks([])
+            axes[i, j].xaxis.set_visible(False)
 
-        # Dictionary to store grouped feature values
+        # Extract relevant features for the current UTS
         grouped_features = {}
 
-        possible_features = original_mts_features.index[
-            original_mts_features.index.str.contains(uts_name)
-        ]
+        # Loop over the available number of features (i.e., num_features)
+        for j, feature_name in enumerate(
+            COLUMN_NAMES
+        ):  # j should not exceed the number of features
 
-        for feature_name in possible_features:
-            # Extract base feature name (everything after first '_')
-            base_name = "_".join(feature_name.split("_")[1:])
+            if uts_name in feature_name:
+                base_name = "_".join(
+                    feature_name.split("_")[1:]
+                )  # Extract base feature name
 
-            # Initialize if not already present
-            if base_name not in grouped_features:
-                grouped_features[base_name] = {
-                    "original": [],
-                    "target": [],
-                    "transformed": [],
-                }
+                if base_name not in grouped_features:
+                    grouped_features[base_name] = {
+                        "original": [],
+                        "target": [],
+                        "transformed": [],
+                    }
 
-            # Append feature values
-            grouped_features[base_name]["original"].append(
-                original_mts_features.loc[feature_name]
-            )
-            grouped_features[base_name]["target"].append(
-                target_mts_features.loc[feature_name]
-            )
-            grouped_features[base_name]["transformed"].append(
-                transformed_mts_features.loc[feature_name]
-            )
+                grouped_features[base_name]["original"] = original_mts_features[i][
+                    j % num_features
+                ]
+                grouped_features[base_name]["target"] = target_mts_features[i][
+                    j % num_features
+                ]
+                grouped_features[base_name]["transformed"] = transformed_mts_features[
+                    i
+                ][j % num_features]
 
-        # Convert to a format suitable for seaborn
+        # Prepare DataFrame for seaborn bar plot
         data = []
         for base_name, values in grouped_features.items():
             data.append(
-                {
-                    "Feature": base_name,
-                    "Type": "original",
-                    "Value": sum(values["original"]),
-                }
+                {"Feature": base_name, "Type": "original", "Value": values["original"]}
             )
             data.append(
-                {"Feature": base_name, "Type": "target", "Value": sum(values["target"])}
+                {"Feature": base_name, "Type": "target", "Value": values["target"]}
             )
             data.append(
                 {
                     "Feature": base_name,
                     "Type": "transformed",
-                    "Value": sum(values["transformed"]),
+                    "Value": values["transformed"],
                 }
             )
 
-        df = pd.DataFrame(data)
+        # Create DataFrame only if there is data to plot
+        if data:
+            df = pd.DataFrame(data)
 
-        # Plot
-        sns.barplot(x="Feature", y="Value", hue="Type", data=df, ax=axes[i, 3])
-        plt.xticks(rotation=45)  # Rotate labels for better visibility
-        plt.title("Grouped Feature Values")
-
-        axes[i, 3].set_title(f"{uts_name} - Features")
+            # Plot feature values
+            sns.barplot(x="Feature", y="Value", hue="Type", data=df, ax=axes[i, 3])
+            axes[i, 3].set_title(f"{uts_name} - Features")
+            axes[i, 3].set_xticklabels(axes[i, 3].get_xticklabels(), rotation=45)
+        else:
+            logger.warning(f"No features found for {uts_name}, skipping feature plot.")
 
     plt.tight_layout()
     return fig
