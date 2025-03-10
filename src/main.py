@@ -296,7 +296,7 @@ logger.info("Successfully ran inference on validation and test sets")
 sampled_test_features_supervised_dataset: pd.DataFrame = (
     test_features_supervised_dataset[
         ~test_features_supervised_dataset["original_index"].duplicated()
-    ].sample(n=5)
+    ]
 )
 prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
