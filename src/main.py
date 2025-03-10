@@ -291,7 +291,7 @@ logger.info("Successfully ran inference on validation and test sets")
 # the train indices.
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
-].sample(n=3)
+]
 prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for = test_predicted_features[
