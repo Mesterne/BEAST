@@ -2,10 +2,11 @@ import logging
 import os
 import sys
 import argparse
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 import pandas as pd
 import numpy as np
 import random
+from src.models.feature_transformation_model import FeatureTransformationModel
 from statsmodels.tsa.seasonal import DecomposeResult
 import torch
 import matplotlib.pyplot as plt
@@ -77,33 +78,37 @@ torch.backends.cudnn.benchmark = False
 plt.style.use("ggplot")
 
 # Load the configuration file
-config = read_yaml(args["config_path"])
+config: Dict[str, Any] = read_yaml(args["config_path"])
 
-data_dir = os.path.join(
+data_dir: str = os.path.join(
     config["dataset_args"]["directory"], config["dataset_args"]["training_data"]
 )
-timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
-step_size = config["dataset_args"]["step_size"]
-context_length = config["dataset_args"]["window_size"]
-num_features_per_uts = config["dataset_args"]["num_features_per_uts"]
+timeseries_to_use: List[str] = config["dataset_args"]["timeseries_to_use"]
+step_size: int = config["dataset_args"]["step_size"]
+context_length: int = config["dataset_args"]["window_size"]
+num_features_per_uts: int = config["dataset_args"]["num_features_per_uts"]
 
-log_training_to_wandb = config["training_args"]["log_to_wandb"]
+log_training_to_wandb: bool = config["training_args"]["log_to_wandb"]
 
-seasonal_period = config["stl_args"]["series_periodicity"]
+seasonal_period: int = config["stl_args"]["series_periodicity"]
 
+feature_model_params: Dict[str, Any] = config["model_args"]["feature_model_args"]
+model_type: str = feature_model_params["model_name"]
+genetic_algorithm_params: Dict[str, Any] = config["model_args"][
+    "genetic_algorithm_args"
+]
 
-feature_model_params = config["model_args"]["feature_model_args"]
-model_type = feature_model_params["model_name"]
-genetic_algorithm_params = config["model_args"]["genetic_algorithm_args"]
-
-forecasting_model_params = config["model_args"]["forecasting_model_args"]
-forecasting_model_training_params = forecasting_model_params["training_args"]
-training_params = feature_model_params["training_args"]
-
+forecasting_model_params: Dict[str, Any] = config["model_args"][
+    "forecasting_model_args"
+]
+forecasting_model_training_params: Dict[str, Any] = forecasting_model_params[
+    "training_args"
+]
+training_params: Dict[str, Any] = feature_model_params["training_args"]
 
 # Set up logging to wandb
 if log_training_to_wandb:
-    job_name = os.environ.get("JOB_NAME", str(uuid.uuid4()))
+    job_name: str = os.environ.get("JOB_NAME", str(uuid.uuid4()))
     wandb.init(
         project="MTS-BEAST",
         name=job_name,
@@ -111,7 +116,6 @@ if log_training_to_wandb:
     )
 
 
-logger.info("Initialized system")
 logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
     f"All outputs will be stored in: {OUTPUT_DIR} (Relative to where you ran the program from)"
@@ -127,8 +131,8 @@ mts_dataset: List[pd.DataFrame] = get_mts_dataset(
     context_length=context_length,
     step_size=step_size,
 )
-dataset_size = len(mts_dataset)
-num_uts_in_mts = len(timeseries_to_use)
+dataset_size: int = len(mts_dataset)
+num_uts_in_mts: int = len(timeseries_to_use)
 logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
 # TODO: mts_feature_df and mts_decomps should be ndarray
@@ -143,7 +147,7 @@ logger.info("Successfully generated feature dataframe")
 ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES = get_col_names_original_target()
 
 # Generate PCA space used to create train test splits
-mts_pca_df = PCAWrapper().fit_transform(mts_feature_df)
+mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_feature_df)
 logger.info("Successfully generated MTS PCA space")
 
 (
@@ -157,7 +161,7 @@ logger.info("Successfully generated MTS PCA space")
     validation_features_supervised_dataset,
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
-    mts_pca_df,
+    mts_pca_array,
     mts_feature_df,
     ORIGINAL_NAMES,
     DELTA_NAMES,
@@ -165,22 +169,22 @@ logger.info("Successfully generated MTS PCA space")
     SEED,
 )
 
-train_indices = (
+train_indices: List[int] = (
     train_features_supervised_dataset["original_index"].astype(int).unique().tolist()
 )
-validation_indices = (
+validation_indices: List[int] = (
     validation_features_supervised_dataset["target_index"].astype(int).unique().tolist()
 )
-test_indices = (
+test_indices: List[int] = (
     test_features_supervised_dataset["target_index"].astype(int).unique().tolist()
 )
 
-mts_array = np.array([df.values.T for df in mts_dataset])
+mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
 logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
-train_mts_array = [mts_array[i] for i in train_indices]
-validation_mts_array = [mts_array[i] for i in validation_indices]
-test_mts_array = [mts_array[i] for i in test_indices]
+train_mts_array: np.ndarray = [mts_array[i] for i in train_indices]
+validation_mts_array: np.ndarray = [mts_array[i] for i in validation_indices]
+test_mts_array: np.ndarray = [mts_array[i] for i in test_indices]
 
 (
     X_mts_train,
@@ -218,24 +222,24 @@ feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
 ########### MODEL INITIALIZATION
 
-feature_model = get_feature_model_by_type(
+feature_model: FeatureTransformationModel = get_feature_model_by_type(
     model_type=model_type,
     model_params=feature_model_params,
     training_params=training_params,
 )
 logger.info(f"Successfully initialized the {model_type} model")
 
-forecasting_model = FeedForwardForecaster(
+forecasting_model: FeedForwardForecaster = FeedForwardForecaster(
     model_params=forecasting_model_params,
 )
 
-forecasting_model_wrapper = NeuralNetworkWrapper(
+forecasting_model_wrapper: NeuralNetworkWrapper = NeuralNetworkWrapper(
     model=forecasting_model, training_params=forecasting_model_training_params
 )
 logging.info("Successfully initialized the forecasting model")
 
 # TODO: Inputs should be ndarray
-ga = GeneticAlgorithmWrapper(
+ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
     mts_dataset=mts_dataset,
     mts_features=mts_feature_df,
@@ -268,16 +272,16 @@ forecasting_model_wrapper.train(
 ############ INFERENCE
 
 logger.info("Running inference on validation set...")
-validation_predicted_features = feature_model.infer(X_features_validation)
-validation_predicted_features = use_model_predictions_to_create_dataframe(
+validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
+validation_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
     validation_predicted_features,
     TARGET_NAMES=TARGET_NAMES,
     target_dataframe=validation_features_supervised_dataset,
 )
 
 logger.info("Running inference on test set...")
-test_predicted_features = feature_model.infer(X_features_test)
-test_predicted_features = use_model_predictions_to_create_dataframe(
+test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
+test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
     test_predicted_features,
     TARGET_NAMES=TARGET_NAMES,
     target_dataframe=test_features_supervised_dataset,
@@ -289,22 +293,26 @@ logger.info("Successfully ran inference on validation and test sets")
 # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
 # original time series, instead of multiple. This will limit the number of time series to generate to the size of
 # the train indices.
-sampled_test_features_supervised_dataset = test_features_supervised_dataset[
-    ~test_features_supervised_dataset["original_index"].duplicated()
-]
-prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
+sampled_test_features_supervised_dataset: pd.DataFrame = (
+    test_features_supervised_dataset[
+        ~test_features_supervised_dataset["original_index"].duplicated()
+    ]
+)
+prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
-predicted_features_to_generated_mts_for = test_predicted_features[
+predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features[
     test_predicted_features["prediction_index"].isin(prediction_indices)
 ]
-original_timeseries_indices_transformed_from = (
+original_timeseries_indices_transformed_from: List[int] = (
     sampled_test_features_supervised_dataset["original_index"].astype(int).tolist()
 )
-original_timeseries = mts_array[original_timeseries_indices_transformed_from]
-target_timeseries_indices_transformed_to = (
+original_timeseries: np.ndarray = mts_array[
+    original_timeseries_indices_transformed_from
+]
+target_timeseries_indices_transformed_to: List[int] = (
     sampled_test_features_supervised_dataset["target_index"].astype(int).tolist()
 )
-target_timeseries = mts_array[target_timeseries_indices_transformed_to]
+target_timeseries: np.ndarray = mts_array[target_timeseries_indices_transformed_to]
 
 
 logger.info("Using generated features to generate new time series")
@@ -316,10 +324,10 @@ generated_transformed_mts, features_of_genereated_timeseries_mts = (
     )
 )
 # We have to remove the delta values
-original_features = X_features_test[prediction_indices, : len(COLUMN_NAMES)]
-target_features = y_features_test[prediction_indices]
+original_features: np.ndarray = X_features_test[prediction_indices, : len(COLUMN_NAMES)]
+target_features: np.ndarray = y_features_test[prediction_indices]
 
-features_of_genereated_timeseries_mts = np.array(
+features_of_genereated_timeseries_mts: np.ndarray = np.array(
     features_of_genereated_timeseries_mts
 ).reshape(-1, 12)
 
@@ -361,15 +369,15 @@ create_and_save_plots_of_model_performances(
     forecast_horizon=forecasting_model_params["horizon_length"],
 )
 
-X_new_train = np.vstack((X_mts_train, X_transformed))
-y_new_train = np.vstack((y_mts_train, y_transformed))
+X_new_train: np.ndarray = np.vstack((X_mts_train, X_transformed))
+y_new_train: np.ndarray = np.vstack((y_mts_train, y_transformed))
 
 
-forecasting_model_new = FeedForwardForecaster(
+forecasting_model_new: FeedForwardForecaster = FeedForwardForecaster(
     model_params=forecasting_model_params,
 )
 
-forecasting_model_wrapper_new = NeuralNetworkWrapper(
+forecasting_model_wrapper_new: NeuralNetworkWrapper = NeuralNetworkWrapper(
     model=forecasting_model_new, training_params=forecasting_model_training_params
 )
 forecasting_model_wrapper_new.train(
