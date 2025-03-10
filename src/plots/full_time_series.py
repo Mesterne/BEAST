@@ -113,6 +113,7 @@ def plot_time_series_for_all_uts(
             # Plot feature values
             sns.barplot(x="Feature", y="Value", hue="Type", data=df, ax=axes[i, 3])
             axes[i, 3].set_title(f"{uts_name} - Features")
+            axes[i, 3].set_xticks(axes[i, 3].get_xticks())
             axes[i, 3].set_xticklabels(axes[i, 3].get_xticklabels(), rotation=45)
         else:
             logger.warning(f"No features found for {uts_name}, skipping feature plot.")
