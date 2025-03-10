@@ -1,3 +1,4 @@
+from typing import List
 import pandas as pd
 import numpy as np
 from random import sample
@@ -9,7 +10,12 @@ from scipy.stats import zscore
 
 
 def create_train_val_test_split(
-    pca_df: np.ndarray, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
+    pca_array: np.ndarray,
+    feature_df: pd.DataFrame,
+    FEATURES_NAMES: List[str],
+    DELTA_NAMES: List[str],
+    TARGET_NAMES: List[str],
+    SEED: int,
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -32,22 +38,20 @@ def create_train_val_test_split(
     )
 
     # Convert the numpy array to a pandas DataFrame
-    pca_df_converted = pd.DataFrame(
-        pca_df, columns=["pca1", "pca2"]  # Assuming these are the columns in the array
-    )
+    pca_df_converted = pd.DataFrame(pca_array, columns=["pca1", "pca2"])
 
     # Add a sequential index column from 0 to len(pca_df)-1
     pca_df_converted["index"] = np.arange(len(pca_df_converted))
 
-    # Now use the converted DataFrame for the filtering operations
     validation_indices = pca_df_converted[
+        (pca_df_converted["pca1"] > 0.8) & (pca_df_converted["pca2"] > 0)
+    ]["index"].values
+
+    # Now use the converted DataFrame for the filtering operations
+    test_indices = pca_df_converted[
         (pca_df_converted["pca1"] > 0.0)
         & (pca_df_converted["pca1"] < 0.2)
         & (pca_df_converted["pca2"] > 0.4)
-    ]["index"].values
-
-    test_indices = pca_df_converted[
-        (pca_df_converted["pca1"] > 0.8) & (pca_df_converted["pca2"] > 0)
     ]["index"].values
 
     train_indices = pca_df_converted["index"][
