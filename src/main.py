@@ -297,7 +297,7 @@ sampled_test_features_supervised_dataset: pd.DataFrame = (
     test_features_supervised_dataset[
         ~test_features_supervised_dataset["original_index"].duplicated()
     ]
-)
+).sample(n=5)
 prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features[
@@ -346,7 +346,7 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
 
 # NOTE: We pass y for features, as these will contain all series
 create_and_save_plots_of_model_performances(
-    total_mse_for_each_uts=total_mse_for_each_uts,
+    total_mse_for_each_mts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
     mts_features_train=y_features_train,
     mts_features_validation=y_features_validation,
