@@ -37,8 +37,12 @@ def plot_pca_for_each_uts_with_transformed(
     validation_pca: np.ndarray = pca_transformer.transform(mts_features_validation)
     test_pca: np.ndarray = pca_transformer.transform(mts_features_test)
 
+    print(f"Train pca shape: {train_pca.shape}")
+    print(f"Validation pca shape: {validation_pca.shape}")
+    print(f"Test pca shape: {test_pca.shape}")
     # We add all data points to one array
     mts_all_pca: np.ndarray = np.vstack([train_pca, validation_pca, test_pca])
+    print(f"All pca shape: {mts_all_pca.shape}")
 
     original_pca: np.ndarray = pca_transformer.transform(original_mts_features)
     target_pca: np.ndarray = pca_transformer.transform(target_mts_features)
@@ -52,6 +56,13 @@ def plot_pca_for_each_uts_with_transformed(
         color="grey",
         s=50,
         ax=ax,
+    )
+    ax.scatter(
+        x=validation_pca[:, 0],
+        y=validation_pca[:, 1],
+        label="Target (Validation set)",
+        color="red",
+        s=50,
     )
 
     ax.scatter(*original_pca.T, color="blue", s=150, label="Original MTS")
@@ -109,6 +120,13 @@ def plot_pca_for_each_uts_with_transformed(
             color="grey",
             s=50,
             ax=ax,
+        )
+        ax.scatter(
+            x=uts_validation_pca[:, 0],
+            y=uts_validation_pca[:, 1],
+            label="Target (Validation set)",
+            color="red",
+            s=50,
         )
 
         ax.scatter(*uts_original_pca.T, color="blue", s=150, label="Original")

@@ -22,6 +22,11 @@ def create_and_save_plots_of_model_performances(
     transformed_mts_features: np.array,
     target_mts_features: np.array,
 ):
+    # Make sure that we are not plotting duplicates
+    mts_features_train = np.unique(mts_features_train, axis=0)
+    mts_features_validation = np.unique(mts_features_validation, axis=0)
+    mts_features_test = np.unique(mts_features_test, axis=0)
+
     feature_wise_errror_plot = plot_distribution_of_feature_wise_error(
         mse_per_feature=mse_per_feature
     )

@@ -291,7 +291,7 @@ logger.info("Successfully ran inference on validation and test sets")
 # the train indices.
 sampled_test_features_supervised_dataset = test_features_supervised_dataset[
     ~test_features_supervised_dataset["original_index"].duplicated()
-]
+].sample(n=5)
 prediction_indices = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for = test_predicted_features[
@@ -334,12 +334,13 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
 )
 
+# NOTE: We pass y for features, as these will contain all series
 create_and_save_plots_of_model_performances(
     total_mse_for_each_uts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
-    mts_features_train=X_features_train[:, : len(COLUMN_NAMES)],
-    mts_features_validation=X_features_validation[:, : len(COLUMN_NAMES)],
-    mts_features_test=X_features_test[:, : len(COLUMN_NAMES)],
+    mts_features_train=y_features_train,
+    mts_features_validation=y_features_validation,
+    mts_features_test=y_features_test,
     original_mts=original_timeseries,
     target_mts=target_timeseries,
     generated_mts=generated_transformed_mts,
