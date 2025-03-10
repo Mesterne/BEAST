@@ -324,8 +324,10 @@ generated_transformed_mts, features_of_genereated_timeseries_mts = (
     )
 )
 # We have to remove the delta values
-original_features: np.ndarray = X_features_test[prediction_indices, : len(COLUMN_NAMES)]
-target_features: np.ndarray = y_features_test[prediction_indices]
+original_features: np.ndarray = X_features_validation[
+    prediction_indices, : len(COLUMN_NAMES)
+]
+target_features: np.ndarray = y_features_validation[prediction_indices]
 
 features_of_genereated_timeseries_mts: np.ndarray = np.array(
     features_of_genereated_timeseries_mts
