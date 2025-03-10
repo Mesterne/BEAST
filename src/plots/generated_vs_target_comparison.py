@@ -6,7 +6,7 @@ from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )
-from src.utils.logging_config import logger
+from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 
 
 def create_and_save_plots_of_model_performances(
@@ -101,3 +101,11 @@ def create_and_save_plots_of_model_performances(
     pca_plot_of_random_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "random_timeseries_generated_mts_pca.png")
     )
+
+    pca_total_plot = plot_pca_for_all_generated_mts(
+        mts_features_train=mts_features_train,
+        mts_features_validation=mts_features_validation,
+        mts_features_test=mts_features_test,
+        mts_generated_features=transformed_mts_features,
+    )
+    pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))
