@@ -39,9 +39,6 @@ def plot_distribution_of_feature_wise_error(mse_per_feature: np.array) -> Figure
         axes[i].set_xlabel("Error")
         axes[i].set_ylabel("Frequency")
 
-        # Set consistent x-axis limits
-        axes[i].set_xlim(global_min, global_max)
-
     # Hide unused subplots
     for j in range(num_features, len(axes)):
         axes[j].axis("off")
