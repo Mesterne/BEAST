@@ -43,16 +43,13 @@ class GeneticAlgorithmWrapper:
     def transform(
         self,
         predicted_features: pd.DataFrame,
-        original_mts_index: int,
-        target_mts_index: int,
+        original_mts_indices: List[int],
     ) -> Tuple[List, List, List, np.ndarray]:
         """Transform MTS using genetic algorithm.
 
         Args:
-            model_input (_type_): Dataframe containing model input for a singe MTS
-            original_mts_index (_type_): Index of the MTS that is to be transformed
-            target_mts_index (_type_): Index of the transformation target MTS
-            init_uts_index (_type_): Index of the UTS in the original MTS that we base the transformation on
+            predicted_features: Dataframe containing predicted features for multiple MTS
+            original_mts_indices: List of indices for the original MTS
 
         Returns:
             Tuple[List, List, List, np.ndarray]: List of transformed MTS, List of transformed MTS features, List of factors used for transformation, Predicted features
@@ -89,7 +86,7 @@ class GeneticAlgorithmWrapper:
 
         num_genes = self.num_features_per_uts
 
-        # Contstraint on GA solutions
+        # Constraint on GA solutions
         legal_factor_values = [
             np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
             np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
@@ -100,7 +97,14 @@ class GeneticAlgorithmWrapper:
         # Get predicted feature values in right shape
         is_index_column = predicted_features.columns.str.contains("index")
         predicted_features = predicted_features.loc[:, ~is_index_column].to_numpy()
-        predicted_features_reshape = predicted_features.reshape(3, 4)
+
+        # Calculate the number of MTS we need to process
+        num_mts = len(original_mts_indices)
+        # Reshape predicted features to have the right shape for each MTS
+        # (num_mts, num_uts_in_mts, num_features_per_uts)
+        predicted_features_reshape = predicted_features.reshape(
+            num_mts, self.num_uts_in_mts, self.num_features_per_uts
+        )
 
         # NOTE May want to drop support for multiple GA runs?
         # Run genetic algorithm
@@ -109,68 +113,92 @@ class GeneticAlgorithmWrapper:
         GA_runs_factors = []
 
         logger.info("Starting genetic algorithm runs...")
-        for _ in tqdm(range(num_GA_runs)):
-            transformed_mts = []
-            transformed_mts_features = []
-            transformed_mts_factors = []
+        for _ in range(num_GA_runs):
+            all_mts_transformed = []
+            all_mts_transformed_features = []
+            all_mts_transformed_factors = []
 
-            for i in range(self.num_uts_in_mts):
-                original_mts_decomp = self.mts_decomp[original_mts_index]
-                univariate_decomps = original_mts_decomp[i]
-                univariate_target_features = predicted_features_reshape[i]
+            # For each original MTS index and its corresponding predicted features
+            for mts_idx, original_mts_index in tqdm(
+                enumerate(original_mts_indices), total=len(original_mts_indices)
+            ):
+                transformed_mts = []
+                transformed_mts_features = []
+                transformed_mts_factors = []
 
-                ga_instance = GeneticAlgorithm(
-                    original_time_series_decomp=univariate_decomps,
-                    target_features=univariate_target_features,
-                    num_generations=num_generations,
-                    num_parents_mating=num_parents_mating,
-                    sol_per_pop=solutions_per_pop,
-                    num_genes=num_genes,
-                    gene_space=legal_factor_values,
-                    init_range_low=init_range_low,
-                    init_range_high=init_range_high,
-                    parent_selection_type=parent_selection_type,
-                    crossover_type=crossover_type,
-                    mutation_type=mutation_type,
-                    mutation_percent_genes=mutation_percent_genes,
-                )
+                # Process each univariate time series within the MTS
+                for i in range(self.num_uts_in_mts):
+                    original_mts_decomp = self.mts_decomp[original_mts_index]
+                    univariate_decomps = original_mts_decomp[i]
+                    univariate_target_features = predicted_features_reshape[mts_idx][i]
 
-                ga_instance.run_genetic_algorithm()
+                    ga_instance = GeneticAlgorithm(
+                        original_time_series_decomp=univariate_decomps,
+                        target_features=univariate_target_features,
+                        num_generations=num_generations,
+                        num_parents_mating=num_parents_mating,
+                        sol_per_pop=solutions_per_pop,
+                        num_genes=num_genes,
+                        gene_space=legal_factor_values,
+                        init_range_low=init_range_low,
+                        init_range_high=init_range_high,
+                        parent_selection_type=parent_selection_type,
+                        crossover_type=crossover_type,
+                        mutation_type=mutation_type,
+                        mutation_percent_genes=mutation_percent_genes,
+                    )
 
-                # Use GA solution to modify the trend and seasonal components
-                factors, _, _ = ga_instance.get_best_solution()
+                    ga_instance.run_genetic_algorithm()
 
-                transformed_trend = manipulate_trend_component(
-                    univariate_decomps.trend, factors[0], factors[1], factors[2], m=0
-                )
-                transformed_seasonal = manipulate_seasonal_component(
-                    univariate_decomps.seasonal, factors[3]
-                )
-                # Reconstruct the transformed time series
-                transformed_ts = (
-                    transformed_trend + transformed_seasonal + univariate_decomps.resid
-                )
-                transformed_mts.append(transformed_ts)
-                # Calculate features for the transformed time series
-                transformed_mts_features.append(
-                    [
-                        trend_strength(transformed_trend, univariate_decomps.resid),
-                        trend_slope(transformed_trend),
-                        trend_linearity(transformed_trend),
-                        seasonal_strength(
-                            transformed_seasonal, univariate_decomps.resid
-                        ),
-                    ]
-                )
+                    # Use GA solution to modify the trend and seasonal components
+                    factors, _, _ = ga_instance.get_best_solution()
 
-                transformed_mts_factors.append(factors)
+                    transformed_trend = manipulate_trend_component(
+                        univariate_decomps.trend,
+                        factors[0],
+                        factors[1],
+                        factors[2],
+                        m=0,
+                    )
+                    transformed_seasonal = manipulate_seasonal_component(
+                        univariate_decomps.seasonal, factors[3]
+                    )
+                    # Reconstruct the transformed time series
+                    transformed_ts = (
+                        transformed_trend
+                        + transformed_seasonal
+                        + univariate_decomps.resid
+                    )
+                    transformed_mts.append(transformed_ts)
+                    # Calculate features for the transformed time series
+                    transformed_mts_features.append(
+                        [
+                            trend_strength(transformed_trend, univariate_decomps.resid),
+                            trend_slope(transformed_trend),
+                            trend_linearity(transformed_trend),
+                            seasonal_strength(
+                                transformed_seasonal, univariate_decomps.resid
+                            ),
+                        ]
+                    )
 
-            GA_runs_mts.append(transformed_mts)
-            GA_runs_features.append(transformed_mts_features)
-            GA_runs_factors.append(transformed_mts_factors)
+                    transformed_mts_factors.append(factors)
+
+                all_mts_transformed.append(transformed_mts)
+                all_mts_transformed_features.append(transformed_mts_features)
+                all_mts_transformed_factors.append(transformed_mts_factors)
+
+            GA_runs_mts.append(all_mts_transformed)
+            GA_runs_features.append(all_mts_transformed_features)
+            GA_runs_factors.append(all_mts_transformed_factors)
 
         logger.info(
-            f"Successfully transformed the other univariate time series in the MTS. {num_GA_runs} genetic algorithm runs completed."
+            f"Successfully transformed {num_mts} multivariate time series. {num_GA_runs} genetic algorithm runs completed."
         )
 
-        return GA_runs_mts, GA_runs_features, GA_runs_factors
+        return (
+            GA_runs_mts,
+            GA_runs_features,
+            GA_runs_factors,
+            predicted_features_reshape,
+        )
