@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 import numpy as np
 import random
-from src.models.feature_transformation_model import FeatureTransformationModel
 from statsmodels.tsa.seasonal import DecomposeResult
 import torch
 import matplotlib.pyplot as plt
@@ -25,6 +24,7 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
+from src.models.feature_transformation_model import FeatureTransformationModel
 from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
@@ -296,7 +296,7 @@ logger.info("Successfully ran inference on validation and test sets")
 sampled_test_features_supervised_dataset: pd.DataFrame = (
     test_features_supervised_dataset[
         ~test_features_supervised_dataset["original_index"].duplicated()
-    ]
+    ].sample(n=5)
 )
 prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
