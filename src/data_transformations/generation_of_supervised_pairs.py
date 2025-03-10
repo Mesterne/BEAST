@@ -9,14 +9,15 @@ from scipy.stats import zscore
 
 
 def create_train_val_test_split(
-    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
+    pca_df: np.ndarray, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
     It does this by selecting certain regions in the PCA space which is looked at as
     out of distribution.
     Args:
-        feature_df (pd.DataFrame): The feature dataframe, haing the features of all MTSs in the dataset!
+        pca_df (np.ndarray): The PCA data as a numpy array, with columns for pca1 and pca2
+        feature_df (pd.DataFrame): The feature dataframe, having the features of all MTSs in the dataset!
     Returns:
         X_train
         y_train
@@ -30,18 +31,40 @@ def create_train_val_test_split(
         f"Generating X,y pairs of feature space for train, validation and test sets..."
     )
 
-    validation_indices = pca_df[
-        (pca_df["pca1"] > 0.0) & (pca_df["pca1"] < 0.2) & (pca_df["pca2"] > 0.4)
+    # Convert the numpy array to a pandas DataFrame
+    pca_df_converted = pd.DataFrame(
+        pca_df, columns=["pca1", "pca2"]  # Assuming these are the columns in the array
+    )
+
+    # Add a sequential index column from 0 to len(pca_df)-1
+    pca_df_converted["index"] = np.arange(len(pca_df_converted))
+
+    # Now use the converted DataFrame for the filtering operations
+    validation_indices = pca_df_converted[
+        (pca_df_converted["pca1"] > 0.0)
+        & (pca_df_converted["pca1"] < 0.2)
+        & (pca_df_converted["pca2"] > 0.4)
     ]["index"].values
-    test_indices = pca_df[(pca_df["pca1"] > 0.8) & (pca_df["pca2"] > 0)]["index"].values
-    train_indices = pca_df["index"][
-        ~(pca_df["index"].isin(test_indices) | pca_df["index"].isin(validation_indices))
+
+    test_indices = pca_df_converted[
+        (pca_df_converted["pca1"] > 0.8) & (pca_df_converted["pca2"] > 0)
+    ]["index"].values
+
+    train_indices = pca_df_converted["index"][
+        ~(
+            pca_df_converted["index"].isin(test_indices)
+            | pca_df_converted["index"].isin(validation_indices)
+        )
     ].values
 
-    pca_df["isTrain"] = pca_df["index"].isin(train_indices)
-    pca_df["isValidation"] = pca_df["index"].isin(validation_indices)
-    pca_df["isTest"] = pca_df["index"].isin(test_indices)
+    # Add the train/validation/test indicators to the DataFrame
+    pca_df_converted["isTrain"] = pca_df_converted["index"].isin(train_indices)
+    pca_df_converted["isValidation"] = pca_df_converted["index"].isin(
+        validation_indices
+    )
+    pca_df_converted["isTest"] = pca_df_converted["index"].isin(test_indices)
 
+    # Continue with the rest of the function using the converted DataFrame
     train_features = feature_df[feature_df.index.isin(train_indices)]
     validation_features = feature_df[feature_df.index.isin(validation_indices)]
     test_features = feature_df[feature_df.index.isin(test_indices)]
@@ -54,12 +77,14 @@ def create_train_val_test_split(
             train_features, train_features
         )
     )
+
     logger.info(f"Generating supervised validation dataset...")
     validation_supervised_dataset = (
         generate_supervised_dataset_from_original_and_target_dist(
             train_features, validation_features
         )
     )
+
     logger.info(f"Generating supervised test dataset...")
     test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
         train_features, test_features
@@ -68,7 +93,9 @@ def create_train_val_test_split(
     dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
         drop=True
     )
-    fig = pca_plot_train_test_pairing(pca_df, dataset_row)
+
+    # Pass the converted DataFrame to the plotting function
+    fig = pca_plot_train_test_pairing(pca_df_converted, dataset_row)
     fig.savefig(os.path.join(OUTPUT_DIR, "pca_train_test_pairing.png"))
     logger.info("Generated PCA plot with target/test pairing")
 

@@ -27,17 +27,14 @@ if project_root not in sys.path:
 from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
 from src.utils.forecasting_utils import (
     compare_old_and_new_model,
-    compare_original_and_transformed_forecasting,
 )
 
 import wandb
 import uuid
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 from src.utils.generate_dataset import (
-    create_training_windows,
     create_training_windows_from_mts,
     generate_feature_dataframe,
 )  # noqa: E402
@@ -52,23 +49,15 @@ from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E
 )
 from src.utils.logging_config import logger  # noqa: E402
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
-from src.plots.pca_for_each_uts_with_transformed import (
-    plot_pca_for_each_uts_with_transformed,
-)  # noqa: E402
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
 )
-from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
-from src.utils.evaluation.mse import get_mse_for_features_and_overall
-from src.plots.full_time_series import plot_time_series_for_all_uts  # noqa: E402
 from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
-    find_error_of_each_feature_for_each_sample,
 )
 from src.utils.ga_utils import (
-    analyze_and_visualize_prediction,
     generate_new_time_series,
 )
 
@@ -348,6 +337,9 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
 create_and_save_plots_of_model_performances(
     total_mse_for_each_uts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
+    mts_features_train=X_features_train[:, : len(COLUMN_NAMES)],
+    mts_features_validation=X_features_validation[:, : len(COLUMN_NAMES)],
+    mts_features_test=X_features_test[:, : len(COLUMN_NAMES)],
     original_mts=original_timeseries,
     target_mts=target_timeseries,
     generated_mts=generated_transformed_mts,
