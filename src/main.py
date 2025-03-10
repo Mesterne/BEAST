@@ -297,7 +297,7 @@ sampled_test_features_supervised_dataset: pd.DataFrame = (
     test_features_supervised_dataset[
         ~test_features_supervised_dataset["original_index"].duplicated()
     ]
-).sample(n=5)
+)
 prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
 predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features[
