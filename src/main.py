@@ -2,15 +2,14 @@ import logging
 import os
 import sys
 import argparse
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 import pandas as pd
 import numpy as np
 import random
-from statsmodels.tsa.seasonal import DecomposeResult
 import torch
 import matplotlib.pyplot as plt
-import seaborn as sns
-from tqdm import tqdm
+
+from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 
 
 # Parse the configuration file path
@@ -46,7 +45,6 @@ from src.utils.experiment_helper import (  # noqa: E402
 )
 from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
-    get_col_names_original_target,
 )
 from src.utils.logging_config import logger  # noqa: E402
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
@@ -143,9 +141,6 @@ mts_feature_df, mts_decomps = generate_feature_dataframe(
 
 logger.info("Successfully generated feature dataframe")
 
-# Generate train, vlaidation and test splits
-ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES = get_col_names_original_target()
-
 # Generate PCA space used to create train test splits
 mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_feature_df)
 logger.info("Successfully generated MTS PCA space")
@@ -163,10 +158,6 @@ logger.info("Successfully generated MTS PCA space")
 ) = create_train_val_test_split(
     mts_pca_array,
     mts_feature_df,
-    ORIGINAL_NAMES,
-    DELTA_NAMES,
-    TARGET_NAMES,
-    SEED,
 )
 
 train_indices: List[int] = (
@@ -182,11 +173,10 @@ test_indices: List[int] = (
 mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
 logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
-train_mts_array: np.ndarray = np.ndarray([mts_array[i] for i in train_indices])
-validation_mts_array: np.ndarray = np.ndarray(
-    [mts_array[i] for i in validation_indices]
-)
-test_mts_array: np.ndarray = np.ndarray([mts_array[i] for i in test_indices])
+
+train_mts_array: np.ndarray = np.array([mts_array[i] for i in train_indices])
+validation_mts_array: np.ndarray = np.array([mts_array[i] for i in validation_indices])
+test_mts_array: np.ndarray = np.array([mts_array[i] for i in test_indices])
 
 (
     X_mts_train,
@@ -251,6 +241,8 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 )
 logger.info("Successfully initialized the genetic algorithm")
 
+print(X_features_train.shape)
+
 ############ TRAINING
 # Fit model to data
 logger.info("Training feature model...")
@@ -272,18 +264,22 @@ forecasting_model_wrapper.train(
 )
 
 ############ INFERENCE
+TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 
 logger.info("Running inference on validation set...")
 validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
-validation_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    validation_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=validation_features_supervised_dataset,
+# TODO: Remove this
+validation_predicted_features_df: pd.DataFrame = (
+    use_model_predictions_to_create_dataframe(
+        validation_predicted_features,
+        TARGET_NAMES=TARGET_NAMES,
+        target_dataframe=validation_features_supervised_dataset,
+    )
 )
 
 logger.info("Running inference on test set...")
 test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
+test_predicted_features_df: pd.DataFrame = use_model_predictions_to_create_dataframe(
     test_predicted_features,
     TARGET_NAMES=TARGET_NAMES,
     target_dataframe=test_features_supervised_dataset,
@@ -302,8 +298,8 @@ sampled_test_features_supervised_dataset: pd.DataFrame = (
 )
 prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
 
-predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features[
-    test_predicted_features["prediction_index"].isin(prediction_indices)
+predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features_df[
+    test_predicted_features_df["prediction_index"].isin(prediction_indices)
 ]
 original_timeseries_indices_transformed_from: List[int] = (
     sampled_test_features_supervised_dataset["original_index"].astype(int).tolist()
@@ -325,6 +321,8 @@ generated_transformed_mts, features_of_genereated_timeseries_mts = (
         ga=ga,
     )
 )
+
+
 # We have to remove the delta values
 original_features: np.ndarray = X_features_validation[
     prediction_indices, : len(COLUMN_NAMES)
@@ -333,7 +331,7 @@ target_features: np.ndarray = y_features_validation[prediction_indices]
 
 features_of_genereated_timeseries_mts: np.ndarray = np.array(
     features_of_genereated_timeseries_mts
-).reshape(-1, 12)
+).reshape(-1, num_features_per_uts * num_uts_in_mts)
 
 
 ## Evaluation of MTS generation

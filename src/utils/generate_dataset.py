@@ -44,7 +44,12 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
 
     # Extract time series names and their features
     ts_names = df["ts_name"].unique()
-    features = ["trend-strength", "trend-slope", "trend-linearity", "seasonal-strength"]
+    features = [
+        "trend-strength",
+        "trend-slope",
+        # "trend-linearity",  # We ignore trend trend-linearity
+        "seasonal-strength",
+    ]
 
     # Create the ordered column list
     ordered_columns = [f"{ts}_{feature}" for ts in ts_names for feature in features]

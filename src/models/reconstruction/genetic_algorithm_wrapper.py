@@ -74,8 +74,8 @@ class GeneticAlgorithmWrapper:
         trend_slope_factor_high = self.model_params["legal_values"][
             "trend_slope_factor"
         ][1]
-        trend_lin_factor_low = self.model_params["legal_values"]["trend_lin_factor"][0]
-        trend_lin_factor_high = self.model_params["legal_values"]["trend_lin_factor"][1]
+        # trend_lin_factor_low = self.model_params["legal_values"]["trend_lin_factor"][0]
+        # trend_lin_factor_high = self.model_params["legal_values"]["trend_lin_factor"][1]
         seasonal_det_factor_low = self.model_params["legal_values"][
             "seasonal_det_factor"
         ][0]
@@ -89,7 +89,7 @@ class GeneticAlgorithmWrapper:
         legal_factor_values = [
             np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
             np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
-            np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
+            # np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
             np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
         ]
 
@@ -152,7 +152,7 @@ class GeneticAlgorithmWrapper:
                     m=0,
                 )
                 transformed_seasonal = manipulate_seasonal_component(
-                    univariate_decomps.seasonal, factors[3]
+                    univariate_decomps.seasonal, factors[2]
                 )
                 # Reconstruct the transformed time series
                 transformed_ts = (
@@ -164,7 +164,7 @@ class GeneticAlgorithmWrapper:
                     [
                         trend_strength(transformed_trend, univariate_decomps.resid),
                         trend_slope(transformed_trend),
-                        trend_linearity(transformed_trend),
+                        # trend_linearity(transformed_trend),
                         seasonal_strength(
                             transformed_seasonal, univariate_decomps.resid
                         ),
