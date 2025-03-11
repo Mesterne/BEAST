@@ -9,8 +9,6 @@ import random
 import torch
 import matplotlib.pyplot as plt
 
-from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
-
 
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
@@ -134,15 +132,17 @@ num_uts_in_mts: int = len(timeseries_to_use)
 logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
 # TODO: mts_feature_df and mts_decomps should be ndarray
-mts_feature_df, mts_decomps = generate_feature_dataframe(
+mts_feature_df, mts_decomps, mts_features_array = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
 
 
 logger.info("Successfully generated feature dataframe")
+# Shape: (number of mts, number of uts in mts, number of features in uts)
+print(mts_features_array.shape)
 
 # Generate PCA space used to create train test splits
-mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_feature_df)
+mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
 logger.info("Successfully generated MTS PCA space")
 
 (

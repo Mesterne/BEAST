@@ -51,9 +51,8 @@ def decomp_and_features(
     if dataset_size is not None:
         data = data[:dataset_size]
 
-    # NOTE: Check out series_periodicity in STL
     decomps = []
-    features = np.empty((len(data), len(data[0].columns), 4))
+    features = np.empty((len(data), len(data[0].columns), 3))
     for i, df in tqdm(enumerate(data), total=len(data)):
         mts_decomp = []
         for j, col in enumerate(df.columns):
@@ -64,8 +63,7 @@ def decomp_and_features(
                 continue
             features[i, j, 0] = trend_strength(decomp.trend, decomp.resid)
             features[i, j, 1] = trend_slope(decomp.trend)
-            features[i, j, 2] = trend_linearity(decomp.trend)
-            features[i, j, 3] = (
+            features[i, j, 2] = (
                 seasonal_strength(decomp.seasonal, decomp.resid)
                 if series_periodicity > 1
                 else 0

@@ -22,8 +22,7 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
                 "ts_name": ts_indices_to_names[ts_idx],
                 "trend-strength": features[idx, ts_idx, 0],
                 "trend-slope": features[idx, ts_idx, 1],
-                "trend-linearity": features[idx, ts_idx, 2],
-                "seasonal-strength": features[idx, ts_idx, 3],
+                "seasonal-strength": features[idx, ts_idx, 2],
             }
             data.append(row)
 
@@ -35,7 +34,6 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
         values=[
             "trend-strength",
             "trend-slope",
-            "trend-linearity",
             "seasonal-strength",
         ],
     )
@@ -44,19 +42,24 @@ def generate_feature_dataframe(data, series_periodicity, dataset_size):
 
     # Extract time series names and their features
     ts_names = df["ts_name"].unique()
-    features = [
+    features_to_keep = [
         "trend-strength",
         "trend-slope",
-        # "trend-linearity",  # We ignore trend trend-linearity
         "seasonal-strength",
     ]
 
     # Create the ordered column list
-    ordered_columns = [f"{ts}_{feature}" for ts in ts_names for feature in features]
+    ordered_columns = [
+        f"{ts}_{feature}" for ts in ts_names for feature in features_to_keep
+    ]
 
     # Reorder columns based on the ordered list
     feature_df = feature_df[ordered_columns]
-    return feature_df, decomps
+
+    features = features.reshape(
+        features.shape[0], features.shape[1] * features.shape[2]
+    )
+    return feature_df, decomps, features
 
 
 def generate_windows_dataset(
