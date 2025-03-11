@@ -337,7 +337,6 @@ logger.info(
 )
 
 
-
 # Get the mean absolute error for each prediction, ignoring index column
 row_wise_errors = np.abs(differences_df_validation.values[:, :-1]).mean(axis=1)
 # Get the index of the worst prediction

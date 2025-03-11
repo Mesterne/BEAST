@@ -6,6 +6,8 @@ from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.naive_correlation import CorrelationModel
 from src.models.feedforward import FeedForwardFeatureModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
+from src.models.cvae_wrapper import CVAEWrapper
+from src.models.cvae import MTSCVAE
 from src.utils.generate_dataset import generate_windows_dataset
 from src.utils.transformations import (
     manipulate_seasonal_component,
@@ -91,6 +93,9 @@ def get_feature_model_by_type(
         nn = FeedForwardFeatureModel(model_params)
         model = NeuralNetworkWrapper(nn, training_params=training_params)
         return model
+    elif model_type == "mts_cvae":
+        cvae = MTSCVAE(model_params)
+        model = CVAEWrapper(cvae, training_params=training_params)
     else:
         raise ValueError(f"Model type {model_type} not supported")
 
