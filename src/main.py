@@ -182,9 +182,11 @@ test_indices: List[int] = (
 mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
 logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
-train_mts_array: np.ndarray = [mts_array[i] for i in train_indices]
-validation_mts_array: np.ndarray = [mts_array[i] for i in validation_indices]
-test_mts_array: np.ndarray = [mts_array[i] for i in test_indices]
+train_mts_array: np.ndarray = np.ndarray([mts_array[i] for i in train_indices])
+validation_mts_array: np.ndarray = np.ndarray(
+    [mts_array[i] for i in validation_indices]
+)
+test_mts_array: np.ndarray = np.ndarray([mts_array[i] for i in test_indices])
 
 (
     X_mts_train,
