@@ -8,8 +8,8 @@ from scipy.stats import zscore
 
 
 def create_train_val_test_split(
-    pca_array: np.ndarray,
-    feature_df: pd.DataFrame,
+    pca_array: np.ndarray,  # Shape (number of mts, 2)
+    mts_feature_array: np.ndarray,  # Shape (number of mts, number of uts * number of features in uts)
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -31,7 +31,7 @@ def create_train_val_test_split(
         f"Generating X,y pairs of feature space for train, validation and test sets..."
     )
 
-    # Convert the numpy array to a pandas DataFrame
+    feature_df: pd.DataFrame = pd.DataFrame(mts_feature_array, columns=COLUMN_NAMES)
     pca_df_converted = pd.DataFrame(pca_array, columns=["pca1", "pca2"])
 
     # Add a sequential index column from 0 to len(pca_df)-1

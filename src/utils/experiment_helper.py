@@ -29,6 +29,7 @@ def get_mts_dataset(
 ) -> List[pd.DataFrame]:
     df = pd.read_csv(data_dir, index_col=index_col)
     df.index = pd.to_datetime(df.index)
+
     raw_df = df[time_series_to_use]
     if backfill:
         raw_df = raw_df.bfill()

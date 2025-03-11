@@ -1,65 +1,23 @@
-from typing import List
+from typing import List, Tuple
 import pandas as pd
-from pandas.core.window import Window
+from statsmodels.tsa.seasonal import DecomposeResult
 from tqdm import tqdm
 import numpy as np
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
 
-def generate_feature_dataframe(data, series_periodicity, dataset_size):
+def generate_feature_dataframe(
+    data: List[pd.DataFrame], series_periodicity: int, dataset_size: int
+) -> Tuple[np.ndarray, List[DecomposeResult]]:
     decomps, features = decomp_and_features(
         data, series_periodicity=series_periodicity, dataset_size=dataset_size
     )
 
-    ts_indices_to_names = {0: "grid1-load", 1: "grid1-loss", 2: "grid1-temp"}
-
-    data = []
-    for idx in range(features.shape[0]):
-        for ts_idx in range(features.shape[1]):
-            row = {
-                "index": idx,
-                "ts_name": ts_indices_to_names[ts_idx],
-                "trend-strength": features[idx, ts_idx, 0],
-                "trend-slope": features[idx, ts_idx, 1],
-                "seasonal-strength": features[idx, ts_idx, 2],
-            }
-            data.append(row)
-
-    df = pd.DataFrame(data)
-
-    feature_df = df.pivot_table(
-        index="index",
-        columns="ts_name",
-        values=[
-            "trend-strength",
-            "trend-slope",
-            "seasonal-strength",
-        ],
-    )
-
-    feature_df.columns = [f"{ts}_{feature}" for feature, ts in feature_df.columns]
-
-    # Extract time series names and their features
-    ts_names = df["ts_name"].unique()
-    features_to_keep = [
-        "trend-strength",
-        "trend-slope",
-        "seasonal-strength",
-    ]
-
-    # Create the ordered column list
-    ordered_columns = [
-        f"{ts}_{feature}" for ts in ts_names for feature in features_to_keep
-    ]
-
-    # Reorder columns based on the ordered list
-    feature_df = feature_df[ordered_columns]
-
     features = features.reshape(
         features.shape[0], features.shape[1] * features.shape[2]
     )
-    return feature_df, decomps, features
+    return features, decomps
 
 
 def generate_windows_dataset(

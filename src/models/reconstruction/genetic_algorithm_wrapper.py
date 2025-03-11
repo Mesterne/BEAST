@@ -10,7 +10,6 @@ from src.utils.logging_config import logger
 from src.utils.features import (
     trend_strength,
     trend_slope,
-    trend_linearity,
     seasonal_strength,
 )
 from src.utils.transformations import (
@@ -24,14 +23,12 @@ class GeneticAlgorithmWrapper:
         self,
         ga_params: dict,
         mts_dataset: pd.DataFrame,
-        mts_features: pd.DataFrame,
         mts_decomp: List[DecompResults],
         num_uts_in_mts: int,
         num_features_per_uts: int,
     ):
         self.model_params = ga_params
         self.mts_dataset = mts_dataset
-        self.mts_features = mts_features
         self.mts_decomp = mts_decomp
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts

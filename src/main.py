@@ -131,8 +131,7 @@ dataset_size: int = len(mts_dataset)
 num_uts_in_mts: int = len(timeseries_to_use)
 logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
-# TODO: mts_feature_df and mts_decomps should be ndarray
-mts_feature_df, mts_decomps, mts_features_array = generate_feature_dataframe(
+mts_features_array, mts_decomps = generate_feature_dataframe(
     data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
 )
 
@@ -157,7 +156,7 @@ logger.info("Successfully generated MTS PCA space")
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
     mts_pca_array,
-    mts_feature_df,
+    mts_features_array,
 )
 
 train_indices: List[int] = (
@@ -234,7 +233,6 @@ logging.info("Successfully initialized the forecasting model")
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
     mts_dataset=mts_dataset,
-    mts_features=mts_feature_df,
     mts_decomp=mts_decomps,
     num_uts_in_mts=num_uts_in_mts,
     num_features_per_uts=num_features_per_uts,
