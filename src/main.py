@@ -137,8 +137,6 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
 
 
 logger.info("Successfully generated feature dataframe")
-# Shape: (number of mts, number of uts in mts, number of features in uts)
-print(mts_features_array.shape)
 
 # Generate PCA space used to create train test splits
 mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
@@ -232,7 +230,7 @@ logging.info("Successfully initialized the forecasting model")
 # TODO: Inputs should be ndarray
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
-    mts_dataset=mts_dataset,
+    mts_dataset=mts_array,
     mts_decomp=mts_decomps,
     num_uts_in_mts=num_uts_in_mts,
     num_features_per_uts=num_features_per_uts,

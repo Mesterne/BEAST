@@ -22,7 +22,7 @@ class GeneticAlgorithmWrapper:
     def __init__(
         self,
         ga_params: dict,
-        mts_dataset: pd.DataFrame,
+        mts_dataset: np.ndarray,
         mts_decomp: List[DecompResults],
         num_uts_in_mts: int,
         num_features_per_uts: int,
