@@ -9,7 +9,7 @@ dataset_args:
     - grid1-load
     - grid1-loss
     - grid1-temp
-  num_features_per_uts: 4
+  num_features_per_uts: 3
 stl_args:
   series_periodicity: 24
 model_args:
