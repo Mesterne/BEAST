@@ -9,8 +9,6 @@ Welcome to **BEAST**! This powerful tool leverages a database of existing multiv
 - **Realistic Distribution Shifts:** Generate time series data that mimic real-world changes.
 - **Multivariate Support:** Handle complex datasets with multiple variables.
 - **Scenario Simulation:** Test forecasting models against hypothetical shifts.
-- **User-Friendly Interface:** Simple setup and intuitive workflow for data scientists.
-
 ---
 
 ## 📦 Installation
@@ -63,19 +61,7 @@ Ensure code consistency by running:
 black .
 ```
 
-We welcome contributions from the community! Feel free to open issues and submit pull requests.
-
 ---
 
-## 📄 License
 
-BEAST is licensed under the MIT License. See the `LICENSE` file for more details.
-
----
-
-## 📧 Contact
-
-For questions, support, or collaborations, reach out to us at [your-email@example.com](mailto:your-email@example.com).
-
-Happy forecasting! 📈🌍
 
