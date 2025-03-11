@@ -39,7 +39,10 @@ model_args:
     horizon_length: 24
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
-    learning_rate: 0.001
     training_args:
+      num_epochs: 50
+      batch_size: 128
+      learning_rate: 0.001
+      early_stopping_patience: 25
 training_args:
   log_to_wandb: False
