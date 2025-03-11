@@ -1,11 +1,11 @@
-from math import log
 import os
+from typing import List, Tuple
 from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )
 import pandas as pd
-from src.utils.logging_config import logger
+import numpy as np
 
 
 def analyze_and_visualize_prediction(
@@ -58,8 +58,8 @@ def analyze_and_visualize_prediction(
 
     # Run genetic algorithm transformation
     (
-        transformed_mts_list,
-        transformed_features_list,
+        transformed_mts,
+        transformed_features,
         _,
         _,
     ) = ga.transform(
@@ -67,18 +67,11 @@ def analyze_and_visualize_prediction(
         original_mts_indices=[original_mts_index],
     )
 
-    # Process the first transformation result
-    DEFAULT_RUN_INDEX = 0
-    transformed_features = transformed_features_list[DEFAULT_RUN_INDEX][0]
-    transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX][0]
-
     # Flatten and format the transformed features
-    transformed_features = [
-        item for sublist in transformed_features for item in sublist
-    ]
+    transformed_features = np.array(transformed_features).reshape(-1, 12)
 
     transformed_features = pd.DataFrame(
-        [transformed_features], columns=predicted_features.columns
+        transformed_features, columns=predicted_features.columns
     )
 
     # Create PCA visualization
@@ -96,7 +89,8 @@ def analyze_and_visualize_prediction(
 
     # Format transformed MTS
     transformed_mts = pd.DataFrame(
-        {name: transformed_mts[i] for i, name in enumerate(original_mts.columns)}
+        # We index 0, since it only creates 1 time series in this case
+        {name: transformed_mts[0][i] for i, name in enumerate(original_mts.columns)}
     )
 
     # Create time series visualization
@@ -119,7 +113,7 @@ def generate_new_time_series(
     supervised_dataset,
     predicted_features,
     ga,
-):
+) -> Tuple[List, List]:
     """
     Analyze a prediction, run the genetic algorithm on it, and create visualizations.
 
@@ -140,21 +134,16 @@ def generate_new_time_series(
     """
     # Get the target row from the validation dataset
     original_mts_indices = supervised_dataset["original_index"].astype(int)
-    target_mts_indices = supervised_dataset["target_index"].astype(int)
 
     # Run genetic algorithm transformation
     (
-        transformed_mts_list,
-        transformed_features_list,
-        transformed_factors_list,
-        predicted_features_list,
+        transformed_mts,
+        transformed_features,
+        _,
+        _,
     ) = ga.transform(
         predicted_features=predicted_features,
         original_mts_indices=original_mts_indices,
     )
 
-    # Process the first transformation result
-    DEFAULT_RUN_INDEX = 0
-    transformed_mts = transformed_mts_list[DEFAULT_RUN_INDEX]
-
-    return transformed_mts
+    return np.array(transformed_mts), transformed_features

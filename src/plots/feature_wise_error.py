@@ -1,21 +1,30 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-import pandas as pd
+from matplotlib.figure import Figure
+import numpy as np
 import math
 
+from src.data.constants import COLUMN_NAMES
 
-def plot_distribution_of_feature_wise_error(differences_df: pd.DataFrame):
+
+def plot_distribution_of_feature_wise_error(mse_per_feature: np.array) -> Figure:
     """
     A plot to show the distribution of error over each distinct time series feature
     in an MTS.
 
     Parameters:
-    differences_df (pd.DataFrame): DataFrame containing feature-wise errors.
+    mse_per_feature (np.array): A numpy array of shape (num_timeseries, 12),
+                                where each column represents the MSE of a specific feature.
+    column_names (list[str]): A list of feature names corresponding to each column.
 
     Returns:
     fig (matplotlib.figure.Figure): Matplotlib figure containing the plot.
     """
-    num_features = len(differences_df.columns)
+    num_features = mse_per_feature.shape[1]
+
+    # Determine global min and max for x-axis
+    global_min = mse_per_feature.min()
+    global_max = mse_per_feature.max()
 
     # Determine grid size for the subplots
     grid_size = math.ceil(math.sqrt(num_features))
@@ -24,14 +33,14 @@ def plot_distribution_of_feature_wise_error(differences_df: pd.DataFrame):
     )
     axes = axes.flatten()
 
-    for i, col in enumerate(differences_df.columns):
-        sns.histplot(data=differences_df[col], kde=True, color="blue", ax=axes[i])
-        axes[i].set_title(f"Distribution of {col}")
+    for i in range(num_features):
+        sns.histplot(data=mse_per_feature[:, i], kde=True, color="blue", ax=axes[i])
+        axes[i].set_title(f"Distribution of {COLUMN_NAMES[i]}")
         axes[i].set_xlabel("Error")
         axes[i].set_ylabel("Frequency")
 
     # Hide unused subplots
-    for j in range(i + 1, len(axes)):
+    for j in range(num_features, len(axes)):
         axes[j].axis("off")
 
     fig.suptitle("Distribution of Differences for Prediction Features", fontsize=16)
