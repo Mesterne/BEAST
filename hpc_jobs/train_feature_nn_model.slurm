@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --account=ie-idi
+#SBATCH --account=share-ie-idi
 #SBATCH --job-name=train_feed_forward_feature_model
 #SBATCH --time=0-23:00:00
 
