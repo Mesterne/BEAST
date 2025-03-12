@@ -8,15 +8,17 @@ from src.utils.logging_config import logger
 
 
 def generate_feature_dataframe(
-    data: List[pd.DataFrame], series_periodicity: int, dataset_size: int
+    data: np.ndarray,  # Shape (num_mts, num_uts_in_mts, num timesteps)
+    series_periodicity: int,
+    num_features_per_uts: int,
 ) -> Tuple[np.ndarray, List[DecomposeResult]]:
+    print(f"mts_array shape: f{data.shape}")
     decomps, features = decomp_and_features(
-        data, series_periodicity=series_periodicity, dataset_size=dataset_size
+        data,
+        series_periodicity=series_periodicity,
+        num_features_per_uts=num_features_per_uts,
     )
 
-    features = features.reshape(
-        features.shape[0], features.shape[1] * features.shape[2]
-    )
     return features, decomps
 
 
@@ -24,11 +26,11 @@ def generate_windows_dataset(
     data: pd.DataFrame,
     window_size: int,
     step_size: int,
-    include_columns: List[str] = None,
+    include_columns: List[str] = [],
 ) -> List[pd.DataFrame]:
     dataset = []
 
-    if include_columns is not None:
+    if len(include_columns) > 0:
         data = data[include_columns]
 
     for i in tqdm(range(0, len(data) - window_size + 1, step_size)):

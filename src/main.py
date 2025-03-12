@@ -127,12 +127,18 @@ mts_dataset: List[pd.DataFrame] = get_mts_dataset(
     context_length=context_length,
     step_size=step_size,
 )
+
+mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
+logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
+
 dataset_size: int = len(mts_dataset)
 num_uts_in_mts: int = len(timeseries_to_use)
 logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
 mts_features_array, mts_decomps = generate_feature_dataframe(
-    data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
+    data=mts_array,
+    series_periodicity=seasonal_period,
+    num_features_per_uts=num_features_per_uts,
 )
 
 
@@ -166,9 +172,6 @@ validation_indices: List[int] = (
 test_indices: List[int] = (
     test_features_supervised_dataset["target_index"].astype(int).unique().tolist()
 )
-
-mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
-logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
 
 train_mts_array: np.ndarray = np.array([mts_array[i] for i in train_indices])
