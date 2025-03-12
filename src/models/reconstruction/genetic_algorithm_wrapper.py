@@ -39,8 +39,8 @@ class GeneticAlgorithmWrapper:
 
     def transform(
         self,
-        predicted_features: pd.DataFrame,
-        original_mts_indices: List[int],
+        predicted_features: np.ndarray,
+        original_mts_indices: np.ndarray,
     ) -> Tuple[List, List, List, np.ndarray]:
         """Transform MTS using genetic algorithm.
 
@@ -89,10 +89,6 @@ class GeneticAlgorithmWrapper:
             # np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
             np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
         ]
-
-        # Get predicted feature values in right shape
-        is_index_column = predicted_features.columns.str.contains("index")
-        predicted_features = predicted_features.loc[:, ~is_index_column].to_numpy()
 
         # Calculate the number of MTS we need to process
         num_mts = len(original_mts_indices)

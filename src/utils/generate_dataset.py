@@ -12,7 +12,6 @@ def generate_feature_dataframe(
     series_periodicity: int,
     num_features_per_uts: int,
 ) -> Tuple[np.ndarray, List[DecomposeResult]]:
-    print(f"mts_array shape: f{data.shape}")
     decomps, features = decomp_and_features(
         data,
         series_periodicity=series_periodicity,
@@ -81,7 +80,7 @@ def create_training_windows(
 
 
 def create_training_windows_from_mts(
-    mts: List[List[List[float]]],
+    mts: np.ndarray,
     target_col_index: int,
     window_size: int,
     forecast_horizon: int,
