@@ -290,24 +290,30 @@ logger.info("Successfully ran inference on validation and test sets")
 # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
 # original time series, instead of multiple. This will limit the number of time series to generate to the size of
 # the train indices.
-sampled_test_features_supervised_dataset: pd.DataFrame = (
-    test_features_supervised_dataset[
-        ~test_features_supervised_dataset["original_index"].duplicated()
+sampled_validation_features_supervised_dataset: pd.DataFrame = (
+    validation_features_supervised_dataset[
+        ~validation_features_supervised_dataset["original_index"].duplicated()
     ]
 )
-prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
+prediction_indices: List[int] = (
+    sampled_validation_features_supervised_dataset.index.tolist()
+)
 
-predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features_df[
-    test_predicted_features_df["prediction_index"].isin(prediction_indices)
-]
+predicted_features_to_generated_mts_for: pd.DataFrame = (
+    validation_predicted_features_df[
+        validation_predicted_features_df["prediction_index"].isin(prediction_indices)
+    ]
+)
 original_timeseries_indices_transformed_from: List[int] = (
-    sampled_test_features_supervised_dataset["original_index"].astype(int).tolist()
+    sampled_validation_features_supervised_dataset["original_index"]
+    .astype(int)
+    .tolist()
 )
 original_timeseries: np.ndarray = mts_array[
     original_timeseries_indices_transformed_from
 ]
 target_timeseries_indices_transformed_to: List[int] = (
-    sampled_test_features_supervised_dataset["target_index"].astype(int).tolist()
+    sampled_validation_features_supervised_dataset["target_index"].astype(int).tolist()
 )
 target_timeseries: np.ndarray = mts_array[target_timeseries_indices_transformed_to]
 
@@ -315,7 +321,7 @@ target_timeseries: np.ndarray = mts_array[target_timeseries_indices_transformed_
 logger.info("Using generated features to generate new time series")
 generated_transformed_mts, features_of_genereated_timeseries_mts = (
     generate_new_time_series(
-        supervised_dataset=sampled_test_features_supervised_dataset,
+        supervised_dataset=sampled_validation_features_supervised_dataset,
         predicted_features=predicted_features_to_generated_mts_for,
         ga=ga,
     )
