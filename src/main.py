@@ -266,15 +266,10 @@ TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 
 logger.info("Running inference on validation set...")
 validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
-# TODO: Remove this
 
 logger.info("Running inference on test set...")
 test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-test_predicted_features_df: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    test_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=test_features_supervised_dataset,
-)
+
 logger.info("Successfully ran inference on validation and test sets")
 
 # Generation of new time series based on newly inferred features
