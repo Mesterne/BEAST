@@ -3,7 +3,6 @@ import os
 import sys
 import argparse
 from typing import Any, Dict, List
-import pandas as pd
 import numpy as np
 import random
 import torch
@@ -49,7 +48,6 @@ from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithm
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
 )
-from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
