@@ -61,6 +61,7 @@ from src.utils.evaluation.feature_space_evaluation import (
 from src.utils.ga_utils import (
     generate_new_time_series,
 )
+from src.utils.features import numpy_decomp_and_features
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -183,6 +184,7 @@ mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
 logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
 train_mts_array: np.ndarray = [mts_array[i] for i in train_indices]
+# train_mts_array: np.ndarray = mts_array[train_indices]
 validation_mts_array: np.ndarray = [mts_array[i] for i in validation_indices]
 test_mts_array: np.ndarray = [mts_array[i] for i in test_indices]
 
@@ -222,6 +224,7 @@ feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
 ########### MODEL INITIALIZATION
 
+# TODO: Create a third category of models to which CVAE model belongs
 feature_model: FeatureTransformationModel = get_feature_model_by_type(
     model_type=model_type,
     model_params=feature_model_params,
@@ -249,16 +252,60 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 )
 logger.info("Successfully initialized the genetic algorithm")
 
+if model_type == "mts_cvae":
+    logger.info("Using CVAE model, setting up CVAE training")
+    # Train input and target for CVAE
+    full_mts_array: np.ndarray = np.asarray(mts_array)
+    full_mts_array: np.ndarray = full_mts_array.reshape(
+        full_mts_array.shape[0], full_mts_array.shape[1] * full_mts_array.shape[2]
+    )
+    cvae_train_mts_array: np.ndarray = full_mts_array[train_indices]
+    cvae_train_features_array: np.ndarray = X_features_train[train_indices]
+    X_cvae_train: np.ndarray = np.hstack(
+        (cvae_train_mts_array, cvae_train_features_array)
+    )
+    y_cvae_train: np.ndarray = cvae_train_mts_array.copy()
+
+    # Validation input and target for CVAE
+    cvae_validation_mts_array: np.ndarray = np.take(
+        X_mts_validation, validation_indices
+    )
+    cvae_validation_mts_array: np.ndarray = full_mts_array[validation_indices]
+    cvae_validation_features_array: np.ndarray = X_features_validation[
+        validation_indices
+    ]
+    X_cvae_validation: np.ndarray = np.hstack(
+        (cvae_validation_mts_array, cvae_validation_features_array)
+    )
+    y_cvae_validation: np.ndarray = cvae_validation_mts_array.copy()
+
+    # Test input and target for CVAE
+    cvae_test_mts_array: np.ndarray = full_mts_array[test_indices]
+    cvae_test_features_array: np.ndarray = X_features_test[test_indices]
+    X_cvae_test: np.ndarray = cvae_test_features_array.copy()
+    y_cvae_test: np.ndarray = cvae_test_mts_array.copy()
+
+
 ############ TRAINING
 # Fit model to data
-logger.info("Training feature model...")
-feature_model.train(
-    X_train=X_features_train,
-    y_train=y_features_train,
-    X_val=X_features_validation,
-    y_val=y_features_validation,
-    log_to_wandb=False,
-)
+if model_type == "mts_cvae":
+    logger.info("Training CVAE model...")
+    feature_model.train(
+        X_train=X_cvae_train,
+        y_train=y_cvae_train,
+        X_val=X_cvae_validation,
+        y_val=y_cvae_validation,
+        log_to_wandb=False,
+    )
+else:
+    logger.info("Training feature model...")
+    feature_model.train(
+        X_train=X_features_train,
+        y_train=y_features_train,
+        X_val=X_features_validation,
+        y_val=y_features_validation,
+        log_to_wandb=False,
+    )
 
 logger.info("Training forecasting model...")
 forecasting_model_wrapper.train(
@@ -270,22 +317,49 @@ forecasting_model_wrapper.train(
 )
 
 ############ INFERENCE
+if model_type == "mts_cvae":
+    logger.info("Running inference with CVAE on validation set...")
+    print("INFER INPUT", cvae_validation_features_array.shape)
+    use_delta = int(feature_model_params["use_feature_deltas"])
+    num_mts_features = num_uts_in_mts * num_features_per_uts
+    infer_input_array: np.ndarray = (
+        cvae_validation_features_array[:, num_mts_features : num_mts_features * 2]
+        if use_delta
+        else cvae_validation_features_array[:, :num_mts_features]
+    )
+    validation_predicted_mts: np.ndarray = feature_model.infer(infer_input_array)
+    # FIXME: Rename later
+    _, validation_predicted_features = numpy_decomp_and_features(
+        validation_predicted_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
+    )
+    validation_predicted_features: pd.DataFrame = (
+        use_model_predictions_to_create_dataframe(
+            validation_predicted_features,
+            TARGET_NAMES=TARGET_NAMES,
+            target_dataframe=validation_features_supervised_dataset,
+        )
+    )
 
-logger.info("Running inference on validation set...")
-validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
-validation_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    validation_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=validation_features_supervised_dataset,
-)
+else:
+    logger.info("Running inference on validation set...")
+    validation_predicted_features: np.ndarray = feature_model.infer(
+        X_features_validation
+    )
+    validation_predicted_features: pd.DataFrame = (
+        use_model_predictions_to_create_dataframe(
+            validation_predicted_features,
+            TARGET_NAMES=TARGET_NAMES,
+            target_dataframe=validation_features_supervised_dataset,
+        )
+    )
 
-logger.info("Running inference on test set...")
-test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    test_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=test_features_supervised_dataset,
-)
+    logger.info("Running inference on test set...")
+    test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
+    test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
+        test_predicted_features,
+        TARGET_NAMES=TARGET_NAMES,
+        target_dataframe=test_features_supervised_dataset,
+    )
 logger.info("Successfully ran inference on validation and test sets")
 
 # Generation of new time series based on newly inferred features

@@ -96,6 +96,7 @@ def get_feature_model_by_type(
     elif model_type == "mts_cvae":
         cvae = MTSCVAE(model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
+        return model
     else:
         raise ValueError(f"Model type {model_type} not supported")
 

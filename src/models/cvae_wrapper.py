@@ -1,5 +1,5 @@
-from cvae import MTSCVAE
-from feature_transformation_model import FeatureTransformationModel
+from src.models.cvae import MTSCVAE
+from src.models.feature_transformation_model import FeatureTransformationModel
 import torch
 import numpy as np
 from typing import Tuple, List
@@ -20,16 +20,20 @@ class CVAEWrapper(FeatureTransformationModel):
 
     def loss_function(self, input, output, mean, log_var):
         kl_divergence = self.KL_divergence(mean, log_var)
-        # FIXME: The other part of the loss??
+        reconstruction_loss = self.reconstruction_loss(input, output)
+        return kl_divergence + reconstruction_loss
 
     def KL_divergence(self, mean, log_var):
         """Based on (Kingma and Welling, 2013) Appendix B"""
-        return -0.5 * np.sum(1 + log_var - mean**2 - np.exp(log_var))
+        return -0.5 * torch.sum(1 + log_var - mean**2 - torch.exp(log_var))
+
+    def reconstruction_loss(self, input, output):
+        return torch.mean((input - output) ** 2)
 
     def train(
         self,
         X_train: np.ndarray,
-        y_train: np.ndarray,  # Reminder of what y_train is in this context
+        y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
         log_to_wandb=False,
@@ -38,15 +42,16 @@ class CVAEWrapper(FeatureTransformationModel):
         logger.info(f"Training model with device: {device}")
         self.model.to(device)
 
-        loss_function = self.loss_function()
+        loss_function = self.loss_function
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
-        # NOTE: In case of autoencoder, y_train = X_train
+        print(X_train.shape, y_train.shape)
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
         y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
         X_validation_tensor = torch.tensor(X_val, dtype=torch.float32).to(device)
         y_validation_tensor = torch.tensor(y_val, dtype=torch.float32).to(device)
 
+        print(X_train_tensor.shape, y_train_tensor.shape)
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         train_dataloader = DataLoader(
             train_dataset, batch_size=self.batch_size, shuffle=True
@@ -68,8 +73,8 @@ class CVAEWrapper(FeatureTransformationModel):
 
             for inputs, targets in train_dataloader:
                 optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = loss_function(outputs, targets)
+                outputs, latent_means, latent_logvars = self.model(inputs)
+                loss = loss_function(outputs, targets, latent_means, latent_logvars)
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item() * inputs.size(0)
@@ -82,8 +87,8 @@ class CVAEWrapper(FeatureTransformationModel):
             running_val_loss = 0.0
             with torch.no_grad():
                 for inputs, targets in validation_dataloader:
-                    outputs = self.model(inputs)
-                    loss = loss_function(outputs, targets)
+                    outputs, latent_means, latent_logvars = self.model(inputs)
+                    loss = loss_function(outputs, targets, latent_means, latent_logvars)
                     running_val_loss += loss.item() * inputs.size(0)
 
             val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
@@ -112,5 +117,5 @@ class CVAEWrapper(FeatureTransformationModel):
 
     def infer(self, X):
         # Run generate_mts for each row in X
-        generated_mts: np.ndarray = np.vectorize(self.model.generate_mts)(X)
+        generated_mts: np.ndarray = self.model.generate_mts(X)
         return generated_mts

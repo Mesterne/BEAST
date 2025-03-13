@@ -1,4 +1,5 @@
-from torch import nn, cat, Tensor, randn_like, exp
+from torch import nn, cat, Tensor, randn_like, exp, randn
+import torch
 from src.utils.logging_config import logger
 import numpy as np
 from typing import Tuple
@@ -23,9 +24,19 @@ class MTSCVAE(nn.Module):
         self.mts_size = model_params["mts_size"]
         self.num_features = model_params["num_features"]
         self.latent_size = model_params["latent_size"]
-
-        self.encoder = Encoder(self.mts_size, self.num_features, self.latent_size)
-        self.decoder = Decoder(self.mts_size, self.num_features, self.latent_size)
+        self.use_feature_deltas = model_params["use_feature_deltas"]
+        self.encoder = Encoder(
+            self.mts_size,
+            self.num_features,
+            self.latent_size,
+            model_params["hidden_layers"],
+        )
+        self.decoder = Decoder(
+            self.mts_size,
+            self.num_features,
+            self.latent_size,
+            model_params["hidden_layers"],
+        )
 
     def forward(self, input: np.ndarray) -> np.ndarray:
         """
@@ -37,12 +48,23 @@ class MTSCVAE(nn.Module):
 
         # First mts_size elements are the MTS, the rest is feature info
         assert (
-            input.shape[1] == self.mts_size + self.num_features
-        ), f"Input size mismatch. Expected {self.mts_size + self.num_features}, got {input.shape[1]}"
+            input.shape[1] == self.mts_size + self.num_features * 2
+        ), f"Input size mismatch. Expected {self.mts_size + self.num_features*2}, got {input.shape[1]}"
 
         mts: np.ndarray = input[:, : self.mts_size]
-        # NOTE: Feature info may be both feature values or delta values
-        feature_info: np.ndarray = input[:, self.mts_size :]
+        # NOTE: Feature info may be both feature values (first 12) or delta values (last 12)
+        feature_info: np.ndarray = (
+            input[:, self.mts_size + self.num_features :]
+            if self.use_feature_deltas
+            else input[:, self.mts_size : self.mts_size + self.num_features]
+        )
+
+        assert (
+            mts.shape[1] == self.mts_size
+        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
+        assert (
+            feature_info.shape[1] == self.num_features
+        ), f"Feature size mismatch. Expected {self.num_features}, got {feature_info.shape[1]}"
 
         # Encoding step
         latent_mean, latent_log_var = self.encoder(mts, feature_info)
@@ -59,35 +81,63 @@ class MTSCVAE(nn.Module):
         # Decoding step
         output = self.decoder(feature_info, latent_vector)
 
-        return output
+        return output, latent_mean, latent_log_var
 
     def generate_mts(self, feature_info: np.ndarray) -> np.ndarray:
         """Generate MTS data given feature info as condition."""
-        latent_vector = randn_like((1, self.latent_size))
-        return self.decoder(feature_info, latent_vector)
+        print("FEATURE INFO", feature_info.shape)
+        tensor_feature_info = torch.tensor(feature_info, dtype=torch.float32)
+        latent_vector = randn(feature_info.shape[0], self.latent_size)
+        return self.decoder(tensor_feature_info, latent_vector).detach().numpy()
 
 
 class Encoder(nn.Module):
-    def __init__(self, mts_size: int, num_features: int, latent_size: int) -> None:
+
+    def __init__(
+        self, mts_size: int, num_features: int, latent_size: int, hidden_layers: dict
+    ) -> None:
         super(Encoder, self).__init__()
-        self.mts = mts_size
+        self.mts_size = mts_size
         self.num_features = num_features
         self.latent_size = latent_size
 
         self.input_size = mts_size + num_features
+        final_hidden_layer_size = int(hidden_layers[-1][0])
 
-        # FIXME: Hardcoded feedforward network. Change to config file.
-        self.feedforward = nn.Sequential(
-            nn.Linear(self.input_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
+        self.input_layer = nn.Sequential(
+            nn.Linear(self.input_size, hidden_layers[0][0]), nn.ReLU()
         )
 
-        self.mean = nn.Linear(128, self.latent_size)
-        self.log_var = nn.Linear(128, self.latent_size)
+        self.generate_hidden_layers(hidden_layers)
+
+        self.mean = nn.Linear(final_hidden_layer_size, self.latent_size)
+        self.log_var = nn.Linear(final_hidden_layer_size, self.latent_size)
+
+    def generate_hidden_layers(self, hidden_layers: dict):
+        hidden_layer_sizes = np.asarray(hidden_layers)[:, 0].astype(int)
+        hidden_layer_types = np.asarray(hidden_layers)[:, 1]
+        hidden_layer_activations = np.asarray(hidden_layers)[:, 2]
+        logger.info(
+            f"Building encoder with hidden layer sizes: {hidden_layer_sizes}; types: {hidden_layer_types}; and activations: {hidden_layer_activations}"
+        )
+
+        self.hidden_layers = nn.ModuleList()
+        for i in range(len(hidden_layer_sizes) - 1):
+            if hidden_layer_types[i] == "linear":
+                self.hidden_layers.append(
+                    nn.Linear(
+                        hidden_layer_sizes[i],
+                        hidden_layer_sizes[i + 1],
+                    )
+                )
+            else:
+                raise ValueError(f"Unknown hidden layer type: {hidden_layer_types[i]}")
+            if hidden_layer_activations[i] == "relu":
+                self.hidden_layers.append(nn.ReLU())
+            else:
+                raise ValueError(
+                    f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
+                )
 
     def forward(
         self, mts: np.ndarray, feature_info: np.ndarray
@@ -102,35 +152,66 @@ class Encoder(nn.Module):
         ), f"Feature size mismatch. Expected {self.num_features}, got {feature_info.shape[1]}"
 
         input = cat((mts, feature_info), dim=1)
-        encoded_input = self.feedforward(input)
+        hidden_layer_input = self.input_layer(input)
+        for i in range(len(self.hidden_layers)):
+            if i == 0:
+                encoded_input = self.hidden_layers[i](hidden_layer_input)
+            else:
+                encoded_input = self.hidden_layers[i](encoded_input)
         latent_mean: Tensor = self.mean(encoded_input)
         latent_log_var: Tensor = self.log_var(encoded_input)
         return latent_mean, latent_log_var
 
 
 class Decoder(nn.Module):
-    def __init__(self, latent_size: int, num_features: int, mts_size: int) -> None:
+
+    def __init__(
+        self, mts_size: int, num_features: int, latent_size: int, hidden_layers: dict
+    ) -> None:
         super(Decoder, self).__init__()
         self.latent_size = latent_size
         self.num_features = num_features
         self.mts_size = mts_size
 
         self.input_size = latent_size + num_features
+        final_hidden_layer_size = int(hidden_layers[0][0])
 
-        # FIXME: Hardcoded feedforward network. Change to config file
-        # FIXME: Feedforward may not be the best choice for MTS data.
-        self.feedforward = nn.Sequential(
-            nn.Linear(self.input_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, 256),
-            nn.ReLU(),
-            nn.Linear(256, 512),
-            nn.ReLU(),
+        self.input_layer = nn.Sequential(
+            nn.Linear(self.input_size, hidden_layers[-1][0]), nn.ReLU()
         )
 
-        self.output: Tensor = nn.Linear(512, mts_size)
+        self.generate_hidden_layers(hidden_layers)
 
-    def forward(self, feature_info: np.ndarray, latent: Tensor) -> np.ndarray:
+        self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
+
+    def generate_hidden_layers(self, hidden_layers: dict):
+        reversed_hidden_layers = hidden_layers[::-1]
+        hidden_layer_sizes = np.asarray(reversed_hidden_layers)[:, 0].astype(int)
+        hidden_layer_types = np.asarray(reversed_hidden_layers)[:, 1]
+        hidden_layer_activations = np.asarray(reversed_hidden_layers)[:, 2]
+        logger.info(
+            f"Building decoder with hidden layer sizes: {hidden_layer_sizes}; types: {hidden_layer_types}; and activations: {hidden_layer_activations}"
+        )
+
+        self.hidden_layers = nn.ModuleList()
+        for i in range(len(hidden_layer_sizes) - 1):
+            if hidden_layer_types[i] == "linear":
+                self.hidden_layers.append(
+                    nn.Linear(
+                        hidden_layer_sizes[i],
+                        hidden_layer_sizes[i + 1],
+                    )
+                )
+            else:
+                raise ValueError(f"Unknown hidden layer type: {hidden_layer_types[i]}")
+            if hidden_layer_activations[i] == "relu":
+                self.hidden_layers.append(nn.ReLU())
+            else:
+                raise ValueError(
+                    f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
+                )
+
+    def forward(self, feature_info: np.ndarray, latent: Tensor) -> Tensor:
         assert (
             feature_info.shape[1] == self.num_features
         ), f"Feature size mismatch. Expected {self.num_features}, got {feature_info.shape[1]}"
@@ -139,6 +220,11 @@ class Decoder(nn.Module):
         ), f"Latent size mismatch. Expected {self.latent_size}, got {latent.shape[1]}"
 
         input = cat((latent, feature_info), dim=1)
-        decoded_input = self.feedforward(input)
+        hidden_layer_input = self.input_layer(input)
+        for i in range(len(self.hidden_layers)):
+            if i == 0:
+                decoded_input = self.hidden_layers[i](hidden_layer_input)
+            else:
+                decoded_input = self.hidden_layers[i](decoded_input)
         output = self.output(decoded_input)
-        return output.numpy()
+        return output
