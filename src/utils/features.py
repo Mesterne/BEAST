@@ -62,8 +62,7 @@ def decomp_and_features(
             features[i, j * num_features_per_uts] = trend_strength(
                 decomp.trend, decomp.resid
             )
-            features[i, j * num_features_per_uts + 0] = trend_slope(decomp.trend)
-            features[i, j * num_features_per_uts + 1] = trend_linearity(decomp.trend)
+            features[i, j * num_features_per_uts + 1] = trend_slope(decomp.trend)
             features[i, j * num_features_per_uts + 2] = (
                 seasonal_strength(decomp.seasonal, decomp.resid)
                 if series_periodicity > 1
