@@ -30,17 +30,13 @@ model_args:
       trend_lin_factor: [0.01, 10]
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
-    model_name: mts_cvae
-    mts_size: 576
-    latent_size: 64
-    num_features: 12
-    use_feature_deltas: False
-    hidden_layers:
-      - [512, linear, relu]
-      - [256, linear, relu]
-      - [128, linear, relu]
+    model_name: feedforward_neural_network
+    input_size: 24
+    output_size: 12
+    hidden_network_sizes:
+      - 256
     training_args:
-      num_epochs: 50
+      num_epochs: 1
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
@@ -52,6 +48,21 @@ model_args:
     horizon_length: 24
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
+    training_args:
+      num_epochs: 50
+      batch_size: 128
+      learning_rate: 0.001
+      early_stopping_patience: 25
+  conditional_gen_model_args:
+    model_name: mts_cvae
+    mts_size: 576
+    latent_size: 64
+    num_features: 12
+    use_feature_deltas: False
+    hidden_layers:
+      - [512, linear, relu]
+      - [256, linear, relu]
+      - [128, linear, relu]
     training_args:
       num_epochs: 50
       batch_size: 128

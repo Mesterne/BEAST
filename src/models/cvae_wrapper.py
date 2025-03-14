@@ -119,3 +119,57 @@ class CVAEWrapper(FeatureTransformationModel):
         # Run generate_mts for each row in X
         generated_mts: np.ndarray = self.model.generate_mts(X)
         return generated_mts
+
+
+def prepare_cvae_data(
+    mts_array: list,
+    X_features_train: np.ndarray,
+    train_indices: np.ndarray,
+    X_features_validation: np.ndarray,
+    validation_indices: np.ndarray,
+    X_features_test: np.ndarray,
+    test_indices: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    # Starting out by flattening each MTS
+    full_mts_array: np.ndarray = np.asarray(mts_array)
+    full_mts_array: np.ndarray = full_mts_array.reshape(
+        full_mts_array.shape[0], full_mts_array.shape[1] * full_mts_array.shape[2]
+    )
+    # Use train indices to get the training MTS
+    cvae_train_mts_array: np.ndarray = full_mts_array[train_indices]
+    # The train features are the features of each training MTS
+    # FIXME: This is not currently done. X_features_train contains all pairings of training features and validation features.
+    # This is more than 80k rows, and the code is currently only getting the first 180 rows, which most likely all belong to the same MTS.
+    print(X_features_train.shape)
+    cvae_train_features_array: np.ndarray = X_features_train[train_indices]
+    X_cvae_train: np.ndarray = np.hstack(
+        (cvae_train_mts_array, cvae_train_features_array)
+    )
+    y_cvae_train: np.ndarray = cvae_train_mts_array.copy()
+
+    # Validation input and target for CVAE
+    # FIXME: Getting validation indice from X_feature_validation seems unnecessary
+    cvae_validation_mts_array: np.ndarray = full_mts_array[validation_indices]
+    cvae_validation_features_array: np.ndarray = X_features_validation[
+        validation_indices
+    ]
+    X_cvae_validation: np.ndarray = np.hstack(
+        (cvae_validation_mts_array, cvae_validation_features_array)
+    )
+    y_cvae_validation: np.ndarray = cvae_validation_mts_array.copy()
+
+    # Test input and target for CVAE
+    # FIXME: Getting validation indice from X_feature_test seems unnecessary
+    cvae_test_mts_array: np.ndarray = full_mts_array[test_indices]
+    cvae_test_features_array: np.ndarray = X_features_test[test_indices]
+    X_cvae_test: np.ndarray = cvae_test_features_array.copy()
+    y_cvae_test: np.ndarray = cvae_test_mts_array.copy()
+
+    return (
+        X_cvae_train,
+        y_cvae_train,
+        X_cvae_validation,
+        y_cvae_validation,
+        X_cvae_test,
+        y_cvae_test,
+    )

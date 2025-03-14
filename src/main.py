@@ -62,6 +62,7 @@ from src.utils.ga_utils import (
     generate_new_time_series,
 )
 from src.utils.features import numpy_decomp_and_features
+from src.models.cvae_wrapper import prepare_cvae_data
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -92,13 +93,13 @@ num_features_per_uts: int = config["dataset_args"]["num_features_per_uts"]
 log_training_to_wandb: bool = config["training_args"]["log_to_wandb"]
 
 seasonal_period: int = config["stl_args"]["series_periodicity"]
-
+# FEATURE MODEL
 feature_model_params: Dict[str, Any] = config["model_args"]["feature_model_args"]
 model_type: str = feature_model_params["model_name"]
 genetic_algorithm_params: Dict[str, Any] = config["model_args"][
     "genetic_algorithm_args"
 ]
-
+# FORECAST MODEL
 forecasting_model_params: Dict[str, Any] = config["model_args"][
     "forecasting_model_args"
 ]
@@ -106,6 +107,14 @@ forecasting_model_training_params: Dict[str, Any] = forecasting_model_params[
     "training_args"
 ]
 training_params: Dict[str, Any] = feature_model_params["training_args"]
+# CONDITIONAL GENERATIVE MODEL
+conditional_gen_model_params: Dict[str, Any] = config["model_args"][
+    "conditional_gen_model_args"
+]
+codnitional_gen_model_name: str = conditional_gen_model_params["model_name"]
+conditional_gen_model_training_params: Dict[str, Any] = conditional_gen_model_params[
+    "training_args"
+]
 
 # Set up logging to wandb
 if log_training_to_wandb:
@@ -170,6 +179,14 @@ logger.info("Successfully generated MTS PCA space")
     SEED,
 )
 
+print(validation_features_supervised_dataset.head(10))
+# Print all distinct values of the original index
+print(
+    "ORIGINAL INDICES",
+    validation_features_supervised_dataset["original_index"].unique(),
+)
+print("TARGET INDICES", validation_features_supervised_dataset["target_index"].unique())
+
 train_indices: List[int] = (
     train_features_supervised_dataset["original_index"].astype(int).unique().tolist()
 )
@@ -224,7 +241,6 @@ feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
 ########### MODEL INITIALIZATION
 
-# TODO: Create a third category of models to which CVAE model belongs
 feature_model: FeatureTransformationModel = get_feature_model_by_type(
     model_type=model_type,
     model_params=feature_model_params,
@@ -241,6 +257,13 @@ forecasting_model_wrapper: NeuralNetworkWrapper = NeuralNetworkWrapper(
 )
 logging.info("Successfully initialized the forecasting model")
 
+conditional_gen_model: FeatureTransformationModel = get_feature_model_by_type(
+    model_type=codnitional_gen_model_name,
+    model_params=conditional_gen_model_params,
+    training_params=conditional_gen_model_training_params,
+)
+logger.info("Successfully initialized the conditional generative model model")
+
 # TODO: Inputs should be ndarray
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
@@ -252,60 +275,18 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 )
 logger.info("Successfully initialized the genetic algorithm")
 
-if model_type == "mts_cvae":
-    logger.info("Using CVAE model, setting up CVAE training")
-    # Train input and target for CVAE
-    full_mts_array: np.ndarray = np.asarray(mts_array)
-    full_mts_array: np.ndarray = full_mts_array.reshape(
-        full_mts_array.shape[0], full_mts_array.shape[1] * full_mts_array.shape[2]
-    )
-    cvae_train_mts_array: np.ndarray = full_mts_array[train_indices]
-    cvae_train_features_array: np.ndarray = X_features_train[train_indices]
-    X_cvae_train: np.ndarray = np.hstack(
-        (cvae_train_mts_array, cvae_train_features_array)
-    )
-    y_cvae_train: np.ndarray = cvae_train_mts_array.copy()
-
-    # Validation input and target for CVAE
-    cvae_validation_mts_array: np.ndarray = np.take(
-        X_mts_validation, validation_indices
-    )
-    cvae_validation_mts_array: np.ndarray = full_mts_array[validation_indices]
-    cvae_validation_features_array: np.ndarray = X_features_validation[
-        validation_indices
-    ]
-    X_cvae_validation: np.ndarray = np.hstack(
-        (cvae_validation_mts_array, cvae_validation_features_array)
-    )
-    y_cvae_validation: np.ndarray = cvae_validation_mts_array.copy()
-
-    # Test input and target for CVAE
-    cvae_test_mts_array: np.ndarray = full_mts_array[test_indices]
-    cvae_test_features_array: np.ndarray = X_features_test[test_indices]
-    X_cvae_test: np.ndarray = cvae_test_features_array.copy()
-    y_cvae_test: np.ndarray = cvae_test_mts_array.copy()
-
 
 ############ TRAINING
 # Fit model to data
-if model_type == "mts_cvae":
-    logger.info("Training CVAE model...")
-    feature_model.train(
-        X_train=X_cvae_train,
-        y_train=y_cvae_train,
-        X_val=X_cvae_validation,
-        y_val=y_cvae_validation,
-        log_to_wandb=False,
-    )
-else:
-    logger.info("Training feature model...")
-    feature_model.train(
-        X_train=X_features_train,
-        y_train=y_features_train,
-        X_val=X_features_validation,
-        y_val=y_features_validation,
-        log_to_wandb=False,
-    )
+
+logger.info("Training feature model...")
+feature_model.train(
+    X_train=X_features_train,
+    y_train=y_features_train,
+    X_val=X_features_validation,
+    y_val=y_features_validation,
+    log_to_wandb=False,
+)
 
 logger.info("Training forecasting model...")
 forecasting_model_wrapper.train(
@@ -316,51 +297,74 @@ forecasting_model_wrapper.train(
     log_to_wandb=False,
 )
 
+logger.info("Preparing data for conditional generative model...")
+(
+    X_cvae_train,
+    y_cvae_train,
+    X_cvae_validation,
+    y_cvae_validation,
+    X_cvae_test,
+    y_cvae_test,
+) = prepare_cvae_data(
+    mts_array=mts_array,
+    X_features_train=X_features_train,
+    train_indices=train_indices,
+    X_features_validation=X_features_validation,
+    validation_indices=validation_indices,
+    X_features_test=X_features_test,
+    test_indices=test_indices,
+)
+
+logger.info("Training conditional generative model...")
+conditional_gen_model.train(
+    X_train=X_cvae_train,
+    y_train=y_cvae_train,
+    X_val=X_cvae_validation,
+    y_val=y_cvae_validation,
+    log_to_wandb=False,
+)
+
 ############ INFERENCE
-if model_type == "mts_cvae":
-    logger.info("Running inference with CVAE on validation set...")
-    print("INFER INPUT", cvae_validation_features_array.shape)
-    use_delta = int(feature_model_params["use_feature_deltas"])
-    num_mts_features = num_uts_in_mts * num_features_per_uts
-    infer_input_array: np.ndarray = (
-        cvae_validation_features_array[:, num_mts_features : num_mts_features * 2]
-        if use_delta
-        else cvae_validation_features_array[:, :num_mts_features]
-    )
-    validation_predicted_mts: np.ndarray = feature_model.infer(infer_input_array)
-    # FIXME: Rename later
-    _, validation_predicted_features = numpy_decomp_and_features(
-        validation_predicted_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
-    )
-    validation_predicted_features: pd.DataFrame = (
-        use_model_predictions_to_create_dataframe(
-            validation_predicted_features,
-            TARGET_NAMES=TARGET_NAMES,
-            target_dataframe=validation_features_supervised_dataset,
-        )
-    )
+logger.info("Running inference on validation set...")
+validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
+validation_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
+    validation_predicted_features,
+    TARGET_NAMES=TARGET_NAMES,
+    target_dataframe=validation_features_supervised_dataset,
+)
 
-else:
-    logger.info("Running inference on validation set...")
-    validation_predicted_features: np.ndarray = feature_model.infer(
-        X_features_validation
-    )
-    validation_predicted_features: pd.DataFrame = (
-        use_model_predictions_to_create_dataframe(
-            validation_predicted_features,
-            TARGET_NAMES=TARGET_NAMES,
-            target_dataframe=validation_features_supervised_dataset,
-        )
-    )
-
-    logger.info("Running inference on test set...")
-    test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-    test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-        test_predicted_features,
-        TARGET_NAMES=TARGET_NAMES,
-        target_dataframe=test_features_supervised_dataset,
-    )
+logger.info("Running inference on test set...")
+test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
+test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
+    test_predicted_features,
+    TARGET_NAMES=TARGET_NAMES,
+    target_dataframe=test_features_supervised_dataset,
+)
 logger.info("Successfully ran inference on validation and test sets")
+
+logger.info("Running inference with CVAE on validation set...")
+use_delta = int(conditional_gen_model_params["use_feature_deltas"])
+num_mts_features = num_uts_in_mts * num_features_per_uts
+print("X FEATURES VALIDATION", X_features_validation.shape)
+print(X_features_validation[0])
+print("Y FEATURES VALIDATION", y_features_validation.shape)
+print(y_features_validation[0])
+validation_features = X_features_validation[validation_indices]
+print("VALIDATION FEATURES", validation_features.shape)
+print(validation_features[0])
+cvae_infer_input_array: np.ndarray = (
+    validation_features[:, num_mts_features : num_mts_features * 2]
+    if use_delta
+    else validation_features[:, :num_mts_features]
+)
+# FIXME: CVAE SHOULD INFER ON Y FEATURES VALIDATION, WITH DIRECT FEATURES, NOT DELTA, AS CONDITIONS
+# FIXME: SHOULD REMOVE DELTA OPTION FROM CVAE
+cvae_validation_predicted_mts: np.ndarray = conditional_gen_model.infer(
+    cvae_infer_input_array
+)
+_, cvae_validation_predicted_features = numpy_decomp_and_features(
+    cvae_validation_predicted_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
+)
 
 # Generation of new time series based on newly inferred features
 
@@ -477,5 +481,13 @@ model_comparison_fig = compare_old_and_new_model(
 model_comparison_fig.savefig(
     os.path.join(OUTPUT_DIR, "forecasting_model_comparison.png")
 )
+
+# FIXME: Add visualizations of generated time sereis. Retrain model. Compare old and new model.
+# Calculate MSE for conditional generative model. Using validation
+cond_gen_mse_values_for_each_feature = calculate_mse_for_each_feature(
+    predicted_features=cvae_validation_predicted_features,
+    target_features=cvae_infer_input_array,
+)
+
 
 logger.info("Finished running")
