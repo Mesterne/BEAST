@@ -6,7 +6,12 @@ from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
 from tqdm import tqdm
 
 from src.models.reconstruction.genetic_algorithm import GeneticAlgorithm
-from src.utils.features import seasonal_strength, trend_slope, trend_strength
+from src.utils.features import (
+    seasonal_strength,
+    trend_linearity,
+    trend_slope,
+    trend_strength,
+)
 from src.utils.logging_config import logger
 from src.utils.transformations import (
     manipulate_seasonal_component,
