@@ -1,17 +1,16 @@
 import numpy as np
 from pygad import GA
-
 from statsmodels.tsa.seasonal import DecomposeResult  # For type hinting
 
+from src.utils.features import (
+    seasonal_strength,
+    trend_linearity,
+    trend_slope,
+    trend_strength,
+)
 from src.utils.transformations import (
     manipulate_seasonal_component,
     manipulate_trend_component,
-)
-from src.utils.features import (
-    trend_strength,
-    trend_slope,
-    trend_linearity,
-    seasonal_strength,
 )
 
 
@@ -67,17 +66,17 @@ class GeneticAlgorithm:
             # It caused some issues when included.
             # FIXME: The trend trend_linearity component is excluded for now (h=0)
             solution_trend = manipulate_trend_component(
-                original_trend, solution[0], solution[1], h=1, m=0
+                original_trend, solution[0], solution[1], h=solution[2], m=0
             )
             solution_seasonal = manipulate_seasonal_component(
-                original_seasonal, solution[2]
+                original_seasonal, solution[3]
             )
 
             solution_features = np.array(
                 [
                     trend_strength(solution_trend, original_residual),
                     trend_slope(solution_trend),
-                    # trend_linearity(solution_trend),
+                    trend_linearity(solution_trend),
                     seasonal_strength(solution_seasonal, original_residual),
                 ]
             )

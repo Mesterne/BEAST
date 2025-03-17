@@ -1,9 +1,10 @@
+from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 from tqdm import tqdm
-from typing import List, Tuple
 
 
 def trend_strength(trend_comp: pd.Series, resid_comp: pd.Series) -> float:
@@ -63,7 +64,8 @@ def decomp_and_features(
                 decomp.trend, decomp.resid
             )
             features[i, j * num_features_per_uts + 1] = trend_slope(decomp.trend)
-            features[i, j * num_features_per_uts + 2] = (
+            features[i, j * num_features_per_uts + 2] = trend_linearity(decomp.trend)
+            features[i, j * num_features_per_uts + 3] = (
                 seasonal_strength(decomp.seasonal, decomp.resid)
                 if series_periodicity > 1
                 else 0
