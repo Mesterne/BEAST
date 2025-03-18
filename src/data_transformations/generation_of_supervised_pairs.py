@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import zscore
 
-from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
+from src.data.constants import COLUMN_NAMES, FEATURE_NAMES, OUTPUT_DIR, UTS_NAMES
 from src.utils.logging_config import logger
 
 
@@ -315,8 +315,8 @@ def generate_supervised_dataset_from_original_and_target_dist(
     grouped_columns = [load_columns, loss_columns, temp_columns]
 
     # Create rows by activating each group separately
-    expanded_rows = []
-    for index, row in dataset.iterrows():
+    expanded_rows: List = []
+    for _, row in dataset.iterrows():
         for group in grouped_columns:
             new_row = row.copy()
             # Set all delta columns to 0
@@ -325,6 +325,9 @@ def generate_supervised_dataset_from_original_and_target_dist(
             # Activate all columns in the current group
             for col in group:
                 new_row[col] = row[col]
+            for uts_name in UTS_NAMES:
+                # TODO:
+                row[f"{uts_name}_is_delta"] = 1
             expanded_rows.append(new_row)
 
     # Create a new DataFrame from the expanded rows
