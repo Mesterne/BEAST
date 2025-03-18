@@ -1,8 +1,10 @@
-from torch import nn, cat, Tensor, randn_like, exp, randn
-import torch
-from src.utils.logging_config import logger
-import numpy as np
 from typing import Tuple
+
+import numpy as np
+import torch
+from torch import Tensor, cat, exp, nn, randn, randn_like
+
+from src.utils.logging_config import logger
 
 
 class MTSCVAE(nn.Module):

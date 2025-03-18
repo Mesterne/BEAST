@@ -1,13 +1,15 @@
+import copy
+from typing import List, Tuple
+
+import numpy as np
+import torch
+import wandb
+from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
+
 from src.models.cvae import MTSCVAE
 from src.models.feature_transformation_model import FeatureTransformationModel
-import torch
-import numpy as np
-from typing import Tuple, List
 from src.utils.logging_config import logger
-from torch.utils.data import TensorDataset, DataLoader
-import copy
-from tqdm import tqdm
-import wandb
 
 
 class CVAEWrapper(FeatureTransformationModel):
