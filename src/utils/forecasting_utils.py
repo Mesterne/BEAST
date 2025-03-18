@@ -112,15 +112,4 @@ def compare_old_and_new_model(
 
     plt.tight_layout()
 
-    # Print summary of results
-    print(
-        f"Train MSE - Old: {mse_old_train:.4f}, New: {mse_new_train:.4f}, Diff: {mse_old_train - mse_new_train:.4f}"
-    )
-    print(
-        f"Validation MSE - Old: {mse_old_val:.4f}, New: {mse_new_val:.4f}, Diff: {mse_old_val - mse_new_val:.4f}"
-    )
-    print(
-        f"Test MSE - Old: {mse_old_test:.4f}, New: {mse_new_test:.4f}, Diff: {mse_old_test - mse_new_test:.4f}"
-    )
-
     return fig

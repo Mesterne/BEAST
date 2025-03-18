@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     step_size = 24
     num_ts = len(grid1_columns)
 
-    print("Generating windows dataset")
+    logging.info("Generating windows dataset")
     data = generate_windows_dataset(df, window_size, step_size, grid1_columns)
 
     decomps, features = decomp_and_features(data, series_periodicity=24)

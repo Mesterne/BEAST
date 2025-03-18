@@ -1,68 +1,35 @@
-from typing import List
+from typing import List, Tuple
 import pandas as pd
-from pandas.core.window import Window
+from statsmodels.tsa.seasonal import DecomposeResult
 from tqdm import tqdm
 import numpy as np
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
 
-def generate_feature_dataframe(data, series_periodicity, dataset_size):
+def generate_feature_dataframe(
+    data: np.ndarray,  # Shape (num_mts, num_uts_in_mts, num timesteps)
+    series_periodicity: int,
+    num_features_per_uts: int,
+) -> Tuple[np.ndarray, List[DecomposeResult]]:
     decomps, features = decomp_and_features(
-        data, series_periodicity=series_periodicity, dataset_size=dataset_size
+        data,
+        series_periodicity=series_periodicity,
+        num_features_per_uts=num_features_per_uts,
     )
 
-    ts_indices_to_names = {0: "grid1-load", 1: "grid1-loss", 2: "grid1-temp"}
-
-    data = []
-    for idx in range(features.shape[0]):
-        for ts_idx in range(features.shape[1]):
-            row = {
-                "index": idx,
-                "ts_name": ts_indices_to_names[ts_idx],
-                "trend-strength": features[idx, ts_idx, 0],
-                "trend-slope": features[idx, ts_idx, 1],
-                "trend-linearity": features[idx, ts_idx, 2],
-                "seasonal-strength": features[idx, ts_idx, 3],
-            }
-            data.append(row)
-
-    df = pd.DataFrame(data)
-
-    feature_df = df.pivot_table(
-        index="index",
-        columns="ts_name",
-        values=[
-            "trend-strength",
-            "trend-slope",
-            "trend-linearity",
-            "seasonal-strength",
-        ],
-    )
-
-    feature_df.columns = [f"{ts}_{feature}" for feature, ts in feature_df.columns]
-
-    # Extract time series names and their features
-    ts_names = df["ts_name"].unique()
-    features = ["trend-strength", "trend-slope", "trend-linearity", "seasonal-strength"]
-
-    # Create the ordered column list
-    ordered_columns = [f"{ts}_{feature}" for ts in ts_names for feature in features]
-
-    # Reorder columns based on the ordered list
-    feature_df = feature_df[ordered_columns]
-    return feature_df, decomps
+    return features, decomps
 
 
 def generate_windows_dataset(
     data: pd.DataFrame,
     window_size: int,
     step_size: int,
-    include_columns: List[str] = None,
+    include_columns: List[str] = [],
 ) -> List[pd.DataFrame]:
     dataset = []
 
-    if include_columns is not None:
+    if len(include_columns) > 0:
         data = data[include_columns]
 
     for i in tqdm(range(0, len(data) - window_size + 1, step_size)):
@@ -113,7 +80,7 @@ def create_training_windows(
 
 
 def create_training_windows_from_mts(
-    mts: List[List[List[float]]],
+    mts: np.ndarray,
     target_col_index: int,
     window_size: int,
     forecast_horizon: int,
