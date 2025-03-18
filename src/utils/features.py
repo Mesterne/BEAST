@@ -1,9 +1,10 @@
+from typing import List, Tuple
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 from tqdm import tqdm
-from typing import List, Tuple
 
 
 def trend_strength(trend_comp: pd.Series, resid_comp: pd.Series) -> float:
@@ -43,29 +44,28 @@ def seasonal_strength(seasonal_comp: pd.Series, resid_comp: pd.Series) -> float:
 
 
 def decomp_and_features(
-    data: List[pd.DataFrame],
+    mts: np.ndarray,  # Shape (num_mts, num_uts_in_mts, num_timesteps)
+    num_features_per_uts: int,
     series_periodicity: int,
-    dataset_size: int = None,
     decomps_only: bool = False,
 ) -> Tuple[List[DecomposeResult], np.ndarray]:
-    if dataset_size is not None:
-        data = data[:dataset_size]
-
-    # NOTE: Check out series_periodicity in STL
     decomps = []
-    features = np.empty((len(data), len(data[0].columns), 4))
-    for i, df in tqdm(enumerate(data), total=len(data)):
+    num_uts_in_mts = mts.shape[1]
+    features = np.empty((len(mts), num_uts_in_mts * num_features_per_uts))
+    for i, ts in tqdm(enumerate(mts), total=len(mts)):
         mts_decomp = []
-        for j, col in enumerate(df.columns):
-            ts = df[col]
-            decomp = STL(ts, period=series_periodicity).fit()
+        for j in range(num_uts_in_mts):
+            uts = ts[j]
+            decomp = STL(uts, period=series_periodicity).fit()
             mts_decomp.append(decomp)
             if decomps_only:
                 continue
-            features[i, j, 0] = trend_strength(decomp.trend, decomp.resid)
-            features[i, j, 1] = trend_slope(decomp.trend)
-            features[i, j, 2] = trend_linearity(decomp.trend)
-            features[i, j, 3] = (
+            features[i, j * num_features_per_uts] = trend_strength(
+                decomp.trend, decomp.resid
+            )
+            features[i, j * num_features_per_uts + 1] = trend_slope(decomp.trend)
+            features[i, j * num_features_per_uts + 2] = trend_linearity(decomp.trend)
+            features[i, j * num_features_per_uts + 3] = (
                 seasonal_strength(decomp.seasonal, decomp.resid)
                 if series_periodicity > 1
                 else 0

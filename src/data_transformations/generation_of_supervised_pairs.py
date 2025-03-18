@@ -1,21 +1,17 @@
-from typing import List
-import pandas as pd
-import numpy as np
-from random import sample
-from src.data.constants import OUTPUT_DIR
-from src.plots.pca_train_test_pairing import pca_plot_train_test_pairing
-from src.utils.logging_config import logger
 import os
+from typing import List
+
+import numpy as np
+import pandas as pd
 from scipy.stats import zscore
+
+from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
+from src.utils.logging_config import logger
 
 
 def create_train_val_test_split(
-    pca_array: np.ndarray,
-    feature_df: pd.DataFrame,
-    FEATURES_NAMES: List[str],
-    DELTA_NAMES: List[str],
-    TARGET_NAMES: List[str],
-    SEED: int,
+    pca_array: np.ndarray,  # Shape (number of mts, 2)
+    mts_feature_array: np.ndarray,  # Shape (number of mts, number of uts * number of features in uts)
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -37,21 +33,19 @@ def create_train_val_test_split(
         f"Generating X,y pairs of feature space for train, validation and test sets..."
     )
 
-    # Convert the numpy array to a pandas DataFrame
+    feature_df: pd.DataFrame = pd.DataFrame(mts_feature_array, columns=COLUMN_NAMES)
     pca_df_converted = pd.DataFrame(pca_array, columns=["pca1", "pca2"])
 
     # Add a sequential index column from 0 to len(pca_df)-1
     pca_df_converted["index"] = np.arange(len(pca_df_converted))
 
     validation_indices = pca_df_converted[
-        (pca_df_converted["pca1"] > 0.8) & (pca_df_converted["pca2"] > 0)
+        (pca_df_converted["pca1"] > 0.1) & (pca_df_converted["pca2"] > 0)
     ]["index"].values
 
     # Now use the converted DataFrame for the filtering operations
     test_indices = pca_df_converted[
-        (pca_df_converted["pca1"] > 0.0)
-        & (pca_df_converted["pca1"] < 0.2)
-        & (pca_df_converted["pca2"] > 0.4)
+        (pca_df_converted["pca1"] < 0.1) & (pca_df_converted["pca2"] > 0.0)
     ]["index"].values
 
     train_indices = pca_df_converted["index"][
@@ -60,6 +54,16 @@ def create_train_val_test_split(
             | pca_df_converted["index"].isin(validation_indices)
         )
     ].values
+
+    assert (
+        len(train_indices) > 0
+    ), "Train set must be larger than 0. Check your sampling techniques"
+    assert (
+        len(validation_indices) > 0
+    ), "Validation set must be larger than 0. Check your sampling techniques"
+    assert (
+        len(test_indices) > 0
+    ), "Test set must be larger than 0. Check your sampling techniques"
 
     # Add the train/validation/test indicators to the DataFrame
     pca_df_converted["isTrain"] = pca_df_converted["index"].isin(train_indices)
@@ -94,31 +98,30 @@ def create_train_val_test_split(
         train_features, test_features
     )
 
-    dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
-        drop=True
-    )
-
-    # Pass the converted DataFrame to the plotting function
-    fig = pca_plot_train_test_pairing(pca_df_converted, dataset_row)
-    fig.savefig(os.path.join(OUTPUT_DIR, "pca_train_test_pairing.png"))
-    logger.info("Generated PCA plot with target/test pairing")
-
     def generate_X_y_pairs_from_df(df):
+        # Prefix COLUMN_NAMES with original_ and delta_
+        original_features_names: List[str] = [
+            f"original_{name}" for name in COLUMN_NAMES
+        ]
+        delta_names: List[str] = [f"delta_{name}" for name in COLUMN_NAMES]
+        target_names: List[str] = [f"target_{name}" for name in COLUMN_NAMES]
+
         # Extract X as both original features and delta values
-        original_features = df.loc[:, FEATURES_NAMES].values
-        delta_features = df.loc[:, DELTA_NAMES].values
+        original_features = df.loc[:, original_features_names].values
+        delta_features = df.loc[:, delta_names].values
 
         # Combine original features and delta features horizontally
         X = np.hstack((original_features, delta_features))
 
         # Extract y (targets) as usual
-        y = df.loc[:, TARGET_NAMES].values
+        y = df.loc[:, target_names].values
 
         return X, y
 
     logger.info(f"Generating X,y pairs for training dataset...")
     X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
     logger.info(f"Generating X,y pairs for validation dataset...")
+
     X_validation, y_validation = generate_X_y_pairs_from_df(
         validation_supervised_dataset
     )
@@ -328,104 +331,3 @@ def generate_supervised_dataset_from_original_and_target_dist(
     expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
 
     return expanded_dataset
-
-
-def get_col_names_original_target_delta():
-    ORIGNIAL_COLS = [
-        "original_index",
-        "original_grid1-load_trend-strength",
-        "original_grid1-load_trend-slope",
-        "original_grid1-load_trend-linearity",
-        "original_grid1-load_seasonal-strength",
-        "original_grid1-loss_trend-strength",
-        "original_grid1-loss_trend-slope",
-        "original_grid1-loss_trend-linearity",
-        "original_grid1-loss_seasonal-strength",
-        "original_grid1-temp_trend-strength",
-        "original_grid1-temp_trend-slope",
-        "original_grid1-temp_trend-linearity",
-        "original_grid1-temp_seasonal-strength",
-    ]
-
-    TARGET_COLS = [
-        "target_index",
-        "target_grid1-load_trend-strength",
-        "target_grid1-load_trend-slope",
-        "target_grid1-load_trend-linearity",
-        "target_grid1-load_seasonal-strength",
-        "target_grid1-loss_trend-strength",
-        "target_grid1-loss_trend-slope",
-        "target_grid1-loss_trend-linearity",
-        "target_grid1-loss_seasonal-strength",
-        "target_grid1-temp_trend-strength",
-        "target_grid1-temp_trend-slope",
-        "target_grid1-temp_trend-linearity",
-        "target_grid1-temp_seasonal-strength",
-    ]
-
-    DELTA_COLS = [
-        "delta_index",
-        "delta_grid1-load_trend-strength",
-        "delta_grid1-load_trend-slope",
-        "delta_grid1-load_trend-linearity",
-        "delta_grid1-load_seasonal-strength",
-        "delta_grid1-loss_trend-strength",
-        "delta_grid1-loss_trend-slope",
-        "delta_grid1-loss_trend-linearity",
-        "delta_grid1-loss_seasonal-strength",
-        "delta_grid1-temp_trend-strength",
-        "delta_grid1-temp_trend-slope",
-        "delta_grid1-temp_trend-linearity",
-        "delta_grid1-temp_seasonal-strength",
-    ]
-
-    return [*ORIGNIAL_COLS, *TARGET_COLS, *DELTA_COLS]
-
-
-def get_col_names_original_target():
-    ORIGINAL_NAMES = [
-        "original_grid1-load_trend-strength",
-        "original_grid1-load_trend-slope",
-        "original_grid1-load_trend-linearity",
-        "original_grid1-load_seasonal-strength",
-        "original_grid1-loss_trend-strength",
-        "original_grid1-loss_trend-slope",
-        "original_grid1-loss_trend-linearity",
-        "original_grid1-loss_seasonal-strength",
-        "original_grid1-temp_trend-strength",
-        "original_grid1-temp_trend-slope",
-        "original_grid1-temp_trend-linearity",
-        "original_grid1-temp_seasonal-strength",
-    ]
-
-    DELTA_NAMES = [
-        "delta_grid1-load_trend-strength",
-        "delta_grid1-load_trend-slope",
-        "delta_grid1-load_trend-linearity",
-        "delta_grid1-load_seasonal-strength",
-        "delta_grid1-loss_trend-strength",
-        "delta_grid1-loss_trend-slope",
-        "delta_grid1-loss_trend-linearity",
-        "delta_grid1-loss_seasonal-strength",
-        "delta_grid1-temp_trend-strength",
-        "delta_grid1-temp_trend-slope",
-        "delta_grid1-temp_trend-linearity",
-        "delta_grid1-temp_seasonal-strength",
-    ]
-
-    TARGET_NAMES = [
-        "target_grid1-load_trend-strength",
-        "target_grid1-load_trend-slope",
-        "target_grid1-load_trend-linearity",
-        "target_grid1-load_seasonal-strength",
-        "target_grid1-loss_trend-strength",
-        "target_grid1-loss_trend-slope",
-        "target_grid1-loss_trend-linearity",
-        "target_grid1-loss_seasonal-strength",
-        "target_grid1-temp_trend-strength",
-        "target_grid1-temp_trend-slope",
-        "target_grid1-temp_trend-linearity",
-        "target_grid1-temp_seasonal-strength",
-    ]
-
-    return ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES

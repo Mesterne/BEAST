@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,7 +31,6 @@ import wandb
 from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
-    get_col_names_original_target,
 )
 from src.models.cvae_wrapper import prepare_cvae_data
 from src.models.feature_transformation_model import FeatureTransformationModel
@@ -41,7 +40,6 @@ from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithm
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
 )
-from src.utils.data_formatting import use_model_predictions_to_create_dataframe
 from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
@@ -131,30 +129,32 @@ logger.info(
 ############ DATA INITIALIZATION
 
 # Load data and generate dataset of multivariate time series context windows
-# TODO: Make mts_dataset into ndarray
-mts_dataset: List[pd.DataFrame] = get_mts_dataset(
+mts_dataset_array: np.ndarray = get_mts_dataset(
     data_dir=data_dir,
     time_series_to_use=timeseries_to_use,
     context_length=context_length,
     step_size=step_size,
 )
-dataset_size: int = len(mts_dataset)
-num_uts_in_mts: int = len(timeseries_to_use)
-logger.info(f"MTS Dataset shape: ({len(mts_dataset)}, {len(mts_dataset[0])})")
 
-# TODO: mts_feature_df and mts_decomps should be ndarray
-mts_feature_df, mts_decomps = generate_feature_dataframe(
-    data=mts_dataset, series_periodicity=seasonal_period, dataset_size=dataset_size
+logger.info(
+    f"Reshaped multivariate time series dataset to shape: {mts_dataset_array.shape}"
+)
+
+dataset_size: int = len(mts_dataset_array)
+num_uts_in_mts: int = len(timeseries_to_use)
+logger.info(f"MTS Dataset shape: {mts_dataset_array.shape}")
+
+mts_features_array, mts_decomps = generate_feature_dataframe(
+    data=mts_dataset_array,
+    series_periodicity=seasonal_period,
+    num_features_per_uts=num_features_per_uts,
 )
 
 
 logger.info("Successfully generated feature dataframe")
 
-# Generate train, vlaidation and test splits
-ORIGINAL_NAMES, DELTA_NAMES, TARGET_NAMES = get_col_names_original_target()
-
 # Generate PCA space used to create train test splits
-mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_feature_df)
+mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
 logger.info("Successfully generated MTS PCA space")
 
 (
@@ -169,11 +169,7 @@ logger.info("Successfully generated MTS PCA space")
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
     mts_pca_array,
-    mts_feature_df,
-    ORIGINAL_NAMES,
-    DELTA_NAMES,
-    TARGET_NAMES,
-    SEED,
+    mts_features_array,
 )
 
 print(validation_features_supervised_dataset.head(10))
@@ -194,13 +190,12 @@ test_indices: List[int] = (
     test_features_supervised_dataset["target_index"].astype(int).unique().tolist()
 )
 
-mts_array: np.ndarray = np.array([df.values.T for df in mts_dataset])
-logger.info(f"Reshaped multivariate time series dataset to shape: {mts_array.shape}")
 
-train_mts_array: np.ndarray = [mts_array[i] for i in train_indices]
-# train_mts_array: np.ndarray = mts_array[train_indices]
-validation_mts_array: np.ndarray = [mts_array[i] for i in validation_indices]
-test_mts_array: np.ndarray = [mts_array[i] for i in test_indices]
+train_mts_array: np.ndarray = np.array([mts_dataset_array[i] for i in train_indices])
+validation_mts_array: np.ndarray = np.array(
+    [mts_dataset_array[i] for i in validation_indices]
+)
+test_mts_array: np.ndarray = np.array([mts_dataset_array[i] for i in test_indices])
 
 (
     X_mts_train,
@@ -264,8 +259,7 @@ logger.info("Successfully initialized the conditional generative model model")
 # TODO: Inputs should be ndarray
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
-    mts_dataset=mts_dataset,
-    mts_features=mts_feature_df,
+    mts_dataset=mts_dataset_array,
     mts_decomp=mts_decomps,
     num_uts_in_mts=num_uts_in_mts,
     num_features_per_uts=num_features_per_uts,
@@ -303,7 +297,7 @@ logger.info("Preparing data for conditional generative model...")
     X_cvae_test,
     y_cvae_test,
 ) = prepare_cvae_data(
-    mts_array=mts_array,
+    mts_array=mts_dataset_array,
     X_features_train=X_features_train,
     train_indices=train_indices,
     X_features_validation=X_features_validation,
@@ -311,6 +305,8 @@ logger.info("Preparing data for conditional generative model...")
     X_features_test=X_features_test,
     test_indices=test_indices,
 )
+############ INFERENCE
+TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 
 logger.info("Training conditional generative model...")
 conditional_gen_model.train(
@@ -324,19 +320,10 @@ conditional_gen_model.train(
 ############ INFERENCE
 logger.info("Running inference on validation set...")
 validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
-validation_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    validation_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=validation_features_supervised_dataset,
-)
 
 logger.info("Running inference on test set...")
 test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-test_predicted_features: pd.DataFrame = use_model_predictions_to_create_dataframe(
-    test_predicted_features,
-    TARGET_NAMES=TARGET_NAMES,
-    target_dataframe=test_features_supervised_dataset,
-)
+
 logger.info("Successfully ran inference on validation and test sets")
 
 logger.info("Running inference with CVAE on validation set...")
@@ -368,36 +355,42 @@ _, cvae_validation_predicted_features = numpy_decomp_and_features(
 # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
 # original time series, instead of multiple. This will limit the number of time series to generate to the size of
 # the train indices.
-sampled_test_features_supervised_dataset: pd.DataFrame = (
-    test_features_supervised_dataset[
-        ~test_features_supervised_dataset["original_index"].duplicated()
-    ]
+prediction_indices: List[int] = validation_features_supervised_dataset[
+    ~validation_features_supervised_dataset["original_index"].duplicated()
+].index.tolist()
+original_indices: List[int] = (
+    validation_features_supervised_dataset[
+        ~validation_features_supervised_dataset["original_index"].duplicated()
+    ]["original_index"]
+    .astype(int)
+    .tolist()
 )
-prediction_indices: List[int] = sampled_test_features_supervised_dataset.index.tolist()
+target_indices: List[int] = (
+    validation_features_supervised_dataset[
+        ~validation_features_supervised_dataset["original_index"].duplicated()
+    ]["target_index"]
+    .astype(int)
+    .tolist()
+)
 
-predicted_features_to_generated_mts_for: pd.DataFrame = test_predicted_features[
-    test_predicted_features["prediction_index"].isin(prediction_indices)
+predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_features[
+    prediction_indices
 ]
-original_timeseries_indices_transformed_from: List[int] = (
-    sampled_test_features_supervised_dataset["original_index"].astype(int).tolist()
-)
-original_timeseries: np.ndarray = mts_array[
-    original_timeseries_indices_transformed_from
-]
-target_timeseries_indices_transformed_to: List[int] = (
-    sampled_test_features_supervised_dataset["target_index"].astype(int).tolist()
-)
-target_timeseries: np.ndarray = mts_array[target_timeseries_indices_transformed_to]
 
 
 logger.info("Using generated features to generate new time series")
+
 generated_transformed_mts, features_of_genereated_timeseries_mts = (
     generate_new_time_series(
-        supervised_dataset=sampled_test_features_supervised_dataset,
+        original_indices=original_indices,
         predicted_features=predicted_features_to_generated_mts_for,
         ga=ga,
     )
 )
+
+original_timeseries: np.ndarray = mts_dataset_array[original_indices]
+target_timeseries: np.ndarray = mts_dataset_array[target_indices]
+
 # We have to remove the delta values
 original_features: np.ndarray = X_features_validation[
     prediction_indices, : len(COLUMN_NAMES)
@@ -406,7 +399,7 @@ target_features: np.ndarray = y_features_validation[prediction_indices]
 
 features_of_genereated_timeseries_mts: np.ndarray = np.array(
     features_of_genereated_timeseries_mts
-).reshape(-1, 12)
+).reshape(-1, num_features_per_uts * num_uts_in_mts)
 
 
 ## Evaluation of MTS generation

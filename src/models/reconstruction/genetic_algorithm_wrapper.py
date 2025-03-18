@@ -1,21 +1,21 @@
-import pandas as pd
-import numpy as np
 from typing import List, Tuple
+
+import numpy as np
+import pandas as pd
+from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
 from tqdm import tqdm
 
 from src.models.reconstruction.genetic_algorithm import GeneticAlgorithm
-from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
-from src.utils.logging_config import logger
-
 from src.utils.features import (
-    trend_strength,
-    trend_slope,
-    trend_linearity,
     seasonal_strength,
+    trend_linearity,
+    trend_slope,
+    trend_strength,
 )
+from src.utils.logging_config import logger
 from src.utils.transformations import (
-    manipulate_trend_component,
     manipulate_seasonal_component,
+    manipulate_trend_component,
 )
 
 
@@ -23,15 +23,13 @@ class GeneticAlgorithmWrapper:
     def __init__(
         self,
         ga_params: dict,
-        mts_dataset: pd.DataFrame,
-        mts_features: pd.DataFrame,
+        mts_dataset: np.ndarray,
         mts_decomp: List[DecompResults],
         num_uts_in_mts: int,
         num_features_per_uts: int,
     ):
         self.model_params = ga_params
         self.mts_dataset = mts_dataset
-        self.mts_features = mts_features
         self.mts_decomp = mts_decomp
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts
@@ -42,8 +40,8 @@ class GeneticAlgorithmWrapper:
 
     def transform(
         self,
-        predicted_features: pd.DataFrame,
-        original_mts_indices: List[int],
+        predicted_features: np.ndarray,
+        original_mts_indices: np.ndarray,
     ) -> Tuple[List, List, List, np.ndarray]:
         """Transform MTS using genetic algorithm.
 
@@ -92,10 +90,6 @@ class GeneticAlgorithmWrapper:
             np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
             np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
         ]
-
-        # Get predicted feature values in right shape
-        is_index_column = predicted_features.columns.str.contains("index")
-        predicted_features = predicted_features.loc[:, ~is_index_column].to_numpy()
 
         # Calculate the number of MTS we need to process
         num_mts = len(original_mts_indices)

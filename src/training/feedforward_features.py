@@ -181,7 +181,7 @@ mts_pca_df = pca_transformer.fit_transform(feature_df)
     test_supervised_dataset,
 ) = create_train_val_test_split(
     pca_df=mts_pca_df,
-    feature_df=feature_df,
+    mts_feature_array=feature_df,
     FEATURES_NAMES=FEATURES_NAMES,
     TARGET_NAMES=TARGET_NAMES,
     SEED=SEED,
