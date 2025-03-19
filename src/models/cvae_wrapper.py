@@ -2,6 +2,7 @@ import copy
 from typing import List, Tuple
 
 import numpy as np
+import pandas as pd
 import torch
 import wandb
 from torch.utils.data import DataLoader, TensorDataset
@@ -175,3 +176,123 @@ def prepare_cvae_data(
         X_cvae_test,
         y_cvae_test,
     )
+
+
+def mask_feature_values(
+    feature_values: np.ndarray, num_uts: int, uts_idx: int
+) -> np.ndarray:
+    num_features = feature_values.shape[0]
+    num_features_per_uts = num_features // num_uts
+
+    # Use the masked UTS features (zero value) in delta values to mask the original values
+    feature_values_reshaped = feature_values.reshape(num_uts, num_features_per_uts)
+
+    masked_values = np.zeros_like(feature_values_reshaped)
+
+    masked_values[uts_idx, :] = feature_values_reshaped[uts_idx, :]
+
+    return masked_values.flatten()
+
+
+def get_feature_conditioned_dataset(
+    mts_array: list,  # List of MTS (num mts, num timesteps x num uts)
+    train_features_supervised_dataset: pd.DataFrame,  # Connects the features to the MTS
+    validation_features_supervised_dataset: pd.DataFrame,
+    test_features_supervised_dataset: pd.DataFrame,
+) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]]:
+    # Train, validation and test datasets
+    dataset_list = [[], [], []]
+    df_list = [
+        train_features_supervised_dataset,
+        validation_features_supervised_dataset,
+        test_features_supervised_dataset,
+    ]
+
+    # NOTE: mts_array is a list of MTS where each mts is a numpy array of shape (num_uts, num_timesteps)
+    # The array is NOT FLATTENED.
+    num_uts = mts_array[0].shape[0]
+    print("Number of MTS: ", len(mts_array))
+    print(
+        "Number of origal indices in train:",
+        len(train_features_supervised_dataset["original_index"].unique()),
+    )
+    print(
+        "Number of origal indices in validation:",
+        len(validation_features_supervised_dataset["original_index"].unique()),
+    )
+    print(
+        "Number of origal indices in test:",
+        len(test_features_supervised_dataset["original_index"].unique()),
+    )
+    # Get all columns starting with original_ and target_ prefix
+    orig_cols = [
+        col for col in df_list[0].columns if "original_" in col and "index" not in col
+    ]
+    target_cols = [
+        col for col in df_list[0].columns if "target_" in col and "index" not in col
+    ]
+    logger.info("Generating feature conditioned dataset (train, validation, test)")
+    for df_idx, df in enumerate(df_list):
+
+        # NOTE: Check if the dataset is train or not. Decides if the original or target index should be used
+        is_train: bool = df_idx == 0
+
+        # Get first instance of each MTS index
+        df = (
+            df.drop_duplicates(subset="original_index")
+            if is_train
+            else df.drop_duplicates(subset="target_index")
+        )
+
+        X_list = []
+        y_list = []
+        for _, row in tqdm(df.iterrows(), total=len(df)):
+            mts_idx = (
+                int(row["original_index"]) if is_train else int(row["target_index"])
+            )
+            mts_flattened = mts_array[mts_idx].flatten()
+            # Mask different subset of features for each UTS
+            for uts_idx in range(num_uts):
+                feature_values = (
+                    row[orig_cols].values if is_train else row[target_cols].values
+                )
+
+                # Feature values are masked based on delta values
+                masked_feature_values = mask_feature_values(
+                    feature_values, num_uts, uts_idx
+                )
+                dataset_entry_X = np.hstack((mts_flattened, masked_feature_values))
+                dataset_entry_y = mts_flattened.copy()
+                X_list.append(dataset_entry_X)
+                y_list.append(dataset_entry_y)
+        dataset_list[df_idx] = (np.array(X_list), np.array(y_list))
+    train_array = dataset_list[0]
+    validation_array = dataset_list[1]
+    test_array = dataset_list[2]
+
+    return train_array, validation_array, test_array
+
+
+def prepare_cgen_data(
+    condition_type: str,
+    mts_array: list,
+    X_features_train: np.ndarray,
+    y_features_train: np.ndarray,
+    X_features_validation: np.ndarray,
+    y_features_validation: np.ndarray,
+    X_features_test: np.ndarray,
+    y_features_test: np.ndarray,
+    train_features_supervised_dataset: pd.DataFrame,
+    validation_features_supervised_dataset: pd.DataFrame,
+    test_features_supervised_dataset: pd.DataFrame,
+) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]] | None:
+    if condition_type == "feature":
+        return get_feature_conditioned_dataset(
+            mts_array,
+            train_features_supervised_dataset,
+            validation_features_supervised_dataset,
+            test_features_supervised_dataset,
+        )
+    if condition_type == "feature_delta":
+        pass
+    return None

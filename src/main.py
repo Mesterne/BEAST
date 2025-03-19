@@ -32,7 +32,7 @@ from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
 )
-from src.models.cvae_wrapper import prepare_cvae_data
+from src.models.cvae_wrapper import prepare_cgen_data, prepare_cvae_data
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
@@ -172,13 +172,33 @@ logger.info("Successfully generated MTS PCA space")
     mts_features_array,
 )
 
-print(validation_features_supervised_dataset.head(10))
-# Print all distinct values of the original index
-print(
-    "ORIGINAL INDICES",
-    validation_features_supervised_dataset["original_index"].unique(),
-)
-print("TARGET INDICES", validation_features_supervised_dataset["target_index"].unique())
+# Check if the feature model is a conditional generative model. If so, do necessary data preparation.
+is_conditional_gen_model: bool = config["model_args"]["feature_model_args"][
+    "conditional_gen_model_args"
+]["is_conditional_gen_model"]
+if is_conditional_gen_model:
+    logger.info("Preparing data set for conditional generative model...")
+    condition_type: str = config["model_args"]["feature_model_args"][
+        "conditional_gen_model_args"
+    ]["condition_type"]
+    (
+        X_y_pairs_cgen_train,
+        X_y_pairs_cgen_validation,
+        X_y_pairs_cgen_test,
+    ) = prepare_cgen_data(
+        condition_type,
+        mts_dataset_array,
+        X_features_train,
+        y_features_train,
+        X_features_validation,
+        y_features_validation,
+        X_features_test,
+        y_features_test,
+        train_features_supervised_dataset,
+        validation_features_supervised_dataset,
+        test_features_supervised_dataset,
+    )
+    logger.info("Successfully prepared data for conditional generative model")
 
 train_indices: List[int] = (
     train_features_supervised_dataset["original_index"].astype(int).unique().tolist()
