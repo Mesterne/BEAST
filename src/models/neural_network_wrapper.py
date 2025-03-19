@@ -1,12 +1,14 @@
+import copy
+from typing import List, Tuple
+
 import numpy as np
 import torch
-from src.models.feature_transformation_model import FeatureTransformationModel
-from torch.utils.data import TensorDataset, DataLoader
-from src.utils.logging_config import logger
-import copy
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
+
 import wandb
-from typing import List, Tuple
+from src.models.feature_transformation_model import FeatureTransformationModel
+from src.utils.logging_config import logger
 
 
 class NeuralNetworkWrapper(FeatureTransformationModel):
@@ -65,6 +67,8 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
 
         best_validation_loss = float("inf")
         best_model_weigths = copy.deepcopy(self.model.state_dict())
+
+        patience_counter: int = 0
 
         for epoch in tqdm(range(self.num_epochs)):
             self.model.train()

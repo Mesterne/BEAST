@@ -1,11 +1,10 @@
-import os
 from typing import List
 
 import numpy as np
 import pandas as pd
-from scipy.stats import zscore
+from tqdm import tqdm
 
-from src.data.constants import COLUMN_NAMES, FEATURE_NAMES, OUTPUT_DIR, UTS_NAMES
+from src.data.constants import COLUMN_NAMES, FEATURE_NAMES, UTS_NAMES
 from src.utils.logging_config import logger
 
 
@@ -103,15 +102,19 @@ def create_train_val_test_split(
         original_features_names: List[str] = [
             f"original_{name}" for name in COLUMN_NAMES
         ]
-        delta_names: List[str] = [f"delta_{name}" for name in COLUMN_NAMES]
+        delta_names: List[str] = [f"delta_{name}" for name in FEATURE_NAMES]
+        one_hot_encoded_names: List[str] = [
+            f"{uts_name}_is_delta" for uts_name in UTS_NAMES
+        ]
         target_names: List[str] = [f"target_{name}" for name in COLUMN_NAMES]
 
         # Extract X as both original features and delta values
         original_features = df.loc[:, original_features_names].values
+        one_hot_encoding = df.loc[:, one_hot_encoded_names].values
         delta_features = df.loc[:, delta_names].values
 
         # Combine original features and delta features horizontally
-        X = np.hstack((original_features, delta_features))
+        X = np.hstack((original_features, delta_features, one_hot_encoding))
 
         # Extract y (targets) as usual
         y = df.loc[:, target_names].values
@@ -137,112 +140,6 @@ def create_train_val_test_split(
             y_test: {y_test.shape}
     """
     )
-    return (
-        X_train,
-        y_train,
-        X_validation,
-        y_validation,
-        X_test,
-        y_test,
-        train_supervised_dataset,
-        validation_supervised_dataset,
-        test_supervised_dataset,
-    )
-
-
-def create_train_val_test_split_outliers(
-    pca_df, feature_df, FEATURES_NAMES, DELTA_NAMES, TARGET_NAMES, SEED
-):
-    """
-    Generate X and y lists for train, validation, and test supervised datasets.
-    It detects outliers in PCA space using Z-scores and assigns them to validation and test sets.
-    """
-    logger.info("Generating X, y pairs for train, validation, and test sets...")
-
-    # Compute Z-scores for each PCA component
-    pca_df["z_pca1"] = zscore(pca_df["pca1"])
-    pca_df["z_pca2"] = zscore(pca_df["pca2"])
-
-    # Compute overall outlier score (e.g., Euclidean distance in Z-score space)
-    pca_df["outlier_score"] = np.sqrt(pca_df["z_pca1"] ** 2 + pca_df["z_pca2"] ** 2)
-
-    # Define outliers as points with a Z-score distance > threshold (e.g., 3 std devs)
-    outlier_threshold = 2  # Adjustable threshold
-    outliers = pca_df[pca_df["outlier_score"] > outlier_threshold].copy()
-    logger.info(f"Found {len(outliers)} outliers")
-
-    # Randomly split outliers into validation and test sets
-    outlier_indices = outliers.index.values
-    np.random.shuffle(outlier_indices)
-
-    split_idx = len(outlier_indices) // 2
-    validation_indices = outlier_indices[:split_idx]
-    test_indices = outlier_indices[split_idx:]
-
-    # Remaining points go to training set
-    train_indices = pca_df.index[~pca_df.index.isin(outlier_indices)].values
-
-    pca_df["isTrain"] = pca_df.index.isin(train_indices)
-    pca_df["isValidation"] = pca_df.index.isin(validation_indices)
-    pca_df["isTest"] = pca_df.index.isin(test_indices)
-
-    train_features = feature_df.loc[train_indices]
-    validation_features = feature_df.loc[validation_indices]
-    test_features = feature_df.loc[test_indices]
-
-    logger.info("Generating supervised training dataset...")
-    train_supervised_dataset = (
-        generate_supervised_dataset_from_original_and_target_dist(
-            train_features, train_features
-        )
-    )
-    logger.info("Generating supervised validation dataset...")
-    validation_supervised_dataset = (
-        generate_supervised_dataset_from_original_and_target_dist(
-            train_features, validation_features
-        )
-    )
-    logger.info("Generating supervised test dataset...")
-    test_supervised_dataset = generate_supervised_dataset_from_original_and_target_dist(
-        train_features, test_features
-    )
-
-    dataset_row = test_supervised_dataset.sample(n=1, random_state=SEED).reset_index(
-        drop=True
-    )
-    fig = pca_plot_train_test_pairing(pca_df, dataset_row)
-    fig.savefig(os.path.join(OUTPUT_DIR, "pca_train_test_pairing.png"))
-    logger.info("Generated PCA plot with target/test pairing")
-
-    def generate_X_y_pairs_from_df(df):
-        # Extract X as both original features and delta values
-        original_features = df.loc[:, FEATURES_NAMES].values
-        delta_features = df.loc[:, DELTA_NAMES].values
-
-        # Combine original features and delta features horizontally
-        X = np.hstack((original_features, delta_features))
-
-        # Extract y (targets) as usual
-        y = df.loc[:, TARGET_NAMES].values
-
-        return X, y
-
-    logger.info("Generating X, y pairs for training dataset...")
-    X_train, y_train = generate_X_y_pairs_from_df(train_supervised_dataset)
-    logger.info("Generating X, y pairs for validation dataset...")
-    X_validation, y_validation = generate_X_y_pairs_from_df(
-        validation_supervised_dataset
-    )
-    logger.info("Generating X, y pairs for test dataset...")
-    X_test, y_test = generate_X_y_pairs_from_df(test_supervised_dataset)
-
-    logger.info(
-        f"Generated X, y pairs with shapes:\n"
-        f"X_train: {X_train.shape}, y_train: {y_train.shape}\n"
-        f"X_validation: {X_validation.shape}, y_validation: {y_validation.shape}\n"
-        f"X_test: {X_test.shape}, y_test: {y_test.shape}"
-    )
-
     return (
         X_train,
         y_train,
@@ -298,36 +195,24 @@ def generate_supervised_dataset_from_original_and_target_dist(
     # Remove pairs where the original and target indices are identical
     dataset = dataset[dataset["original_index"] != dataset["target_index"]]
 
-    # Compute delta columns
-    for col in orig_copy.columns:
-        if col.startswith("original_"):
-            target_col = "target_" + col[len("original_") :]
-            delta_col = "delta_" + col[len("original_") :]
-            dataset[delta_col] = dataset[target_col] - dataset[col]
+    delta_feature_columns = [f"delta_{feature}" for feature in FEATURE_NAMES]
 
-    delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
-
-    # Define groups of delta columns
-    load_columns = [col for col in delta_columns if col.startswith("delta_grid1-load")]
-    loss_columns = [col for col in delta_columns if col.startswith("delta_grid1-loss")]
-    temp_columns = [col for col in delta_columns if col.startswith("delta_grid1-temp")]
-
-    grouped_columns = [load_columns, loss_columns, temp_columns]
-
-    # Create rows by activating each group separately
+    # For each row, we create 3 supervised rows - One for each uts activated
+    # For each uts row, we compute the delta of the
     expanded_rows: List = []
-    for _, row in dataset.iterrows():
-        for group in grouped_columns:
+    for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
+        for uts_name in UTS_NAMES:
             new_row = row.copy()
-            # Set all delta columns to 0
-            for col in delta_columns:
-                new_row[col] = 0
-            # Activate all columns in the current group
-            for col in group:
-                new_row[col] = row[col]
-            for uts_name in UTS_NAMES:
-                # TODO:
-                row[f"{uts_name}_is_delta"] = 1
+            # For each uts activated iterate through features and calculate delta
+            for delta_feature in delta_feature_columns:
+                original_col = f"original_{uts_name}_{delta_feature[len('delta_') :]}"
+                target_col = f"target_{uts_name}_{delta_feature[len('delta_') :]}"
+                new_row[delta_feature] = row[target_col] - row[original_col]
+            for uts in UTS_NAMES:
+                if uts_name == uts:
+                    new_row[f"{uts}_is_delta"] = 1
+                else:
+                    new_row[f"{uts}_is_delta"] = 0
             expanded_rows.append(new_row)
 
     # Create a new DataFrame from the expanded rows

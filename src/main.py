@@ -1,13 +1,13 @@
+import argparse
 import logging
 import os
-import sys
-import argparse
-from typing import Any, Dict, List
-import numpy as np
 import random
-import torch
-import matplotlib.pyplot as plt
+import sys
+from typing import Any, Dict, List
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
@@ -20,30 +20,16 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-from src.models.feature_transformation_model import FeatureTransformationModel
-from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
-from src.models.forecasting.feedforward import FeedForwardForecaster
-from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.utils.forecasting_utils import (
-    compare_old_and_new_model,
-)
+import uuid
 
 import wandb
-import uuid
-from src.utils.yaml_loader import read_yaml  # noqa: E402
-from src.utils.generate_dataset import (
-    create_training_windows_from_mts,
-    generate_feature_dataframe,
-)  # noqa: E402
-from src.utils.pca import PCAWrapper  # noqa: E402
-from src.utils.experiment_helper import (  # noqa: E402
-    get_feature_model_by_type,
-    get_mts_dataset,
-)
-from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
+from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
+from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
-)
-from src.utils.logging_config import logger  # noqa: E402
+)  # noqa: E402
+from src.models.feature_transformation_model import FeatureTransformationModel
+from src.models.forecasting.feedforward import FeedForwardForecaster
+from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
@@ -52,9 +38,19 @@ from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
 )
-from src.utils.ga_utils import (
-    generate_new_time_series,
+from src.utils.experiment_helper import (  # noqa: E402
+    get_feature_model_by_type,
+    get_mts_dataset,
 )
+from src.utils.forecasting_utils import compare_old_and_new_model
+from src.utils.ga_utils import generate_new_time_series
+from src.utils.generate_dataset import (  # noqa: E402
+    create_training_windows_from_mts,
+    generate_feature_dataframe,
+)
+from src.utils.logging_config import logger  # noqa: E402
+from src.utils.pca import PCAWrapper  # noqa: E402
+from src.utils.yaml_loader import read_yaml  # noqa: E402
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -209,7 +205,6 @@ logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shap
 )
 logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
-feature_model_params["number_of_features_in_each_uts"] = num_features_per_uts
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
 ########### MODEL INITIALIZATION
@@ -240,8 +235,10 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 logger.info("Successfully initialized the genetic algorithm")
 
 ############ TRAINING
+# TODO: Er noe feil med training biten av modellen. One hot encodingen er nan
 # Fit model to data
 logger.info("Training feature model...")
+print(X_features_train[0])
 feature_model.train(
     X_train=X_features_train,
     y_train=y_features_train,
