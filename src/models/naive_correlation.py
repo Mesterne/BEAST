@@ -76,7 +76,7 @@ class CorrelationModel(FeatureTransformationModel):
                 tmp_corr_values * tmp_delta_values
             ) + feature_vector
 
-            if row_index == num_samples - 1:
+            if row_index == 11466:
                 print(f"Correlation matrix: {self.correlation_matrix}")
                 print(f"activated_uts_index: {activated_uts_index}")
                 print(f"Relevant rows in correlation_matrix: {relevant_rows}")

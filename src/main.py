@@ -236,8 +236,6 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 logger.info("Successfully initialized the genetic algorithm")
 
 ############ TRAINING
-# TODO: Er noe feil med training biten av modellen. One hot encodingen er nan
-# Fit model to data
 logger.info("Training feature model...")
 print(X_features_train[0])
 feature_model.train(
@@ -295,6 +293,11 @@ predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_featu
     prediction_indices
 ]
 
+print(
+    logger.info(
+        f"Index of predicted feature in validation set: {prediction_indices[91]}"
+    )
+)
 
 logger.info("Using generated features to generate new time series")
 
@@ -341,6 +344,7 @@ create_and_save_plots_of_model_performances(
     target_mts=target_timeseries,
     generated_mts=generated_transformed_mts,
     original_mts_features=original_features,
+    predicted_mts_features=predicted_features_to_generated_mts_for,
     transformed_mts_features=features_of_genereated_timeseries_mts,
     target_mts_features=target_features,
 )
