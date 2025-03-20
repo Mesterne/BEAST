@@ -237,7 +237,6 @@ logger.info("Successfully initialized the genetic algorithm")
 
 ############ TRAINING
 logger.info("Training feature model...")
-print(X_features_train[0])
 feature_model.train(
     X_train=X_features_train,
     y_train=y_features_train,
@@ -292,12 +291,6 @@ target_indices: List[int] = (
 predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_features[
     prediction_indices
 ]
-
-print(
-    logger.info(
-        f"Index of predicted feature in validation set: {prediction_indices[91]}"
-    )
-)
 
 logger.info("Using generated features to generate new time series")
 

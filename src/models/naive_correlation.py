@@ -48,7 +48,6 @@ class CorrelationModel(FeatureTransformationModel):
             (num_samples, num_features * num_uts)
         )  # Preallocate array
 
-        print(one_hot_encodings)
         for row_index in tqdm(range(num_samples), total=num_samples):
             delta_vector = delta_values[row_index]
             one_hot_vector = one_hot_encodings[row_index]
@@ -75,18 +74,5 @@ class CorrelationModel(FeatureTransformationModel):
             predicted_features[row_index] = (
                 tmp_corr_values * tmp_delta_values
             ) + feature_vector
-
-            if row_index == 11466:
-                print(f"Correlation matrix: {self.correlation_matrix}")
-                print(f"activated_uts_index: {activated_uts_index}")
-                print(f"Relevant rows in correlation_matrix: {relevant_rows}")
-                print(f"Entire row: {X[row_index]}")
-                print(f"Delta vector: {tmp_delta_values}")
-                print(f"Correlation values: {tmp_corr_values}")
-                print(f"Feature vector {feature_vector}")
-                print(
-                    f"tmp_corr_values*tmp_delta_values: {(tmp_corr_values * tmp_delta_values)}"
-                )
-                print(f"Prediction: {predicted_features[row_index]}")
 
         return predicted_features
