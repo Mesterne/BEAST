@@ -31,6 +31,7 @@ from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
 )
@@ -136,6 +137,8 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
     num_features_per_uts=num_features_per_uts,
 )
 
+dist_of_features = plot_feature_distribution(mts_features_array)
+dist_of_features.savefig("distribution_of_features.png")
 
 logger.info("Successfully generated feature dataframe")
 
