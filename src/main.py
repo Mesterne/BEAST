@@ -206,6 +206,7 @@ logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shap
 logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
+feature_model_params["number_of_features_per_uts"] = num_features_per_uts
 
 ########### MODEL INITIALIZATION
 

@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv
+  training_data: train_small.csv
   test_data: test.csv
   window_size: 192
   step_size: 24

@@ -1,15 +1,14 @@
-import pandas as pd
-import numpy as np
-from typing import Tuple, List
-from tqdm import tqdm
-from src.models.feature_transformation_model import FeatureTransformationModel
+from typing import List, Tuple
 
-from src.utils.logging_config import logger
+import numpy as np
+from tqdm import tqdm
+
+from src.models.feature_transformation_model import FeatureTransformationModel
 
 
 class CorrelationModel(FeatureTransformationModel):
     def __init__(self, params):
-        self.number_of_features_in_each_uts = params["number_of_features_in_each_uts"]
+        self.number_of_features_in_each_uts = params["number_of_features_per_uts"]
         self.number_of_uts_in_mts = params["number_of_uts_in_mts"]
 
     def train(
@@ -22,7 +21,7 @@ class CorrelationModel(FeatureTransformationModel):
     ) -> Tuple[List[float], List[float]]:
         # The actual features (Omitting the delta values)
         features = X_train[
-            :, : -self.number_of_features_in_each_uts * self.number_of_uts_in_mts
+            :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
 
         # We then calcualte the correlation matrix based on features
@@ -30,27 +29,57 @@ class CorrelationModel(FeatureTransformationModel):
         return [], []
 
     def infer(self, X: np.ndarray) -> np.ndarray:
-        delta_values = X[
-            :, -self.number_of_features_in_each_uts * self.number_of_uts_in_mts :
-        ]
+        # Extract feature, delta, and one-hot encoding parts
         features = X[
-            :, : -self.number_of_features_in_each_uts * self.number_of_uts_in_mts
+            :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
+        delta_values = X[
+            :,
+            self.number_of_features_in_each_uts
+            * self.number_of_uts_in_mts : -self.number_of_uts_in_mts,
+        ]
+        one_hot_encodings = X[:, -self.number_of_uts_in_mts :]
 
-        logger.info(f"Delta values shape: {delta_values.shape}")
-        logger.info(f"feature values shape: {features.shape}")
-        logger.info(f"correlation matrix shape: {self.correlation_matrix.shape}")
-        logger.info(f"correlation matrix: {self.correlation_matrix}")
+        num_samples = features.shape[0]
+        num_features = self.number_of_features_in_each_uts
+        num_uts = self.number_of_uts_in_mts
 
-        # Iterate over each row in the features. Selecting the largest delta value
-        predicted_features = []
-        for idx, row in tqdm(enumerate(features), total=features.shape[0]):
-            # Find the index of the largest delta value
-            delta_vector = delta_values[idx]
-            max_delta_index = np.argmax(delta_vector)
-            correlation_vector = self.correlation_matrix[max_delta_index]
-            # Select the feature with the highest correlation
-            predicted_feature = row + np.dot(correlation_vector, delta_vector)
-            predicted_features.append(predicted_feature)
+        predicted_features = np.zeros(
+            (num_samples, num_features * num_uts)
+        )  # Preallocate array
 
-        return np.array(predicted_features)
+        print(one_hot_encodings)
+        for row_index in tqdm(range(num_samples), total=num_samples):
+            delta_vector = delta_values[row_index]
+            one_hot_vector = one_hot_encodings[row_index]
+            feature_vector = features[row_index]
+            activated_uts_index = np.argmax(one_hot_vector)
+
+            # Extract relevant rows from correlation matrix
+            relevant_rows = self.correlation_matrix[
+                activated_uts_index : activated_uts_index + num_features
+            ]
+
+            # Compute predictions using vectorized operations
+            tmp_delta_values = np.tile(delta_vector, num_uts)
+            try:
+                tmp_corr_values = [
+                    relevant_rows[i % num_uts, j]
+                    for j, i in enumerate(range(num_features * num_uts))
+                ]
+            except IndexError:
+                print(f"activated_uts_index: {activated_uts_index}")
+                print(
+                    f"activated_uts_index + num_features: {activated_uts_index + num_features}"
+                )
+                print(f"one_hot_vector {one_hot_vector}")
+                print(f"Entire row: {X[row_index]}")
+                print(relevant_rows.shape)
+                raise IndexError
+
+            # Perform vectorized computation
+            predicted_features[row_index] = (
+                np.dot(tmp_corr_values, tmp_delta_values) + feature_vector
+            )
+
+        return predicted_features
