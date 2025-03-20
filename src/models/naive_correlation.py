@@ -57,29 +57,36 @@ class CorrelationModel(FeatureTransformationModel):
 
             # Extract relevant rows from correlation matrix
             relevant_rows = self.correlation_matrix[
-                activated_uts_index : activated_uts_index + num_features
+                activated_uts_index
+                * num_features : (activated_uts_index * num_features)
+                + num_features
+                + 1,
+                :,
             ]
 
             # Compute predictions using vectorized operations
             tmp_delta_values = np.tile(delta_vector, num_uts)
-            try:
-                tmp_corr_values = [
-                    relevant_rows[i % num_uts, j]
-                    for j, i in enumerate(range(num_features * num_uts))
-                ]
-            except IndexError:
-                print(f"activated_uts_index: {activated_uts_index}")
-                print(
-                    f"activated_uts_index + num_features: {activated_uts_index + num_features}"
-                )
-                print(f"one_hot_vector {one_hot_vector}")
-                print(f"Entire row: {X[row_index]}")
-                print(relevant_rows.shape)
-                raise IndexError
+            tmp_corr_values = [
+                relevant_rows[i % num_features, j]
+                for j, i in enumerate(range(num_features * num_uts))
+            ]
 
             # Perform vectorized computation
             predicted_features[row_index] = (
-                np.dot(tmp_corr_values, tmp_delta_values) + feature_vector
-            )
+                tmp_corr_values * tmp_delta_values
+            ) + feature_vector
+
+            if row_index == num_samples - 1:
+                print(f"Correlation matrix: {self.correlation_matrix}")
+                print(f"activated_uts_index: {activated_uts_index}")
+                print(f"Relevant rows in correlation_matrix: {relevant_rows}")
+                print(f"Entire row: {X[row_index]}")
+                print(f"Delta vector: {tmp_delta_values}")
+                print(f"Correlation values: {tmp_corr_values}")
+                print(f"Feature vector {feature_vector}")
+                print(
+                    f"tmp_corr_values*tmp_delta_values: {(tmp_corr_values * tmp_delta_values)}"
+                )
+                print(f"Prediction: {predicted_features[row_index]}")
 
         return predicted_features
