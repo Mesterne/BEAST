@@ -77,6 +77,7 @@ timeseries_to_use: List[str] = config["dataset_args"]["timeseries_to_use"]
 step_size: int = config["dataset_args"]["step_size"]
 context_length: int = config["dataset_args"]["window_size"]
 num_features_per_uts: int = config["dataset_args"]["num_features_per_uts"]
+use_one_hot_encoding = config["dataset_args"]["use_one_hot_encoding"]
 
 log_training_to_wandb: bool = config["training_args"]["log_to_wandb"]
 
@@ -153,8 +154,7 @@ logger.info("Successfully generated MTS PCA space")
     validation_features_supervised_dataset,
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
-    mts_pca_array,
-    mts_features_array,
+    mts_pca_array, mts_features_array, use_one_hot_encoding=use_one_hot_encoding
 )
 
 train_indices: List[int] = (
@@ -207,6 +207,9 @@ logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 feature_model_params["number_of_features_per_uts"] = num_features_per_uts
+feature_model_params["input_size"] = X_features_train.shape[1]
+
+print(f"Shape of X: {X_features_train.shape}")
 
 ########### MODEL INITIALIZATION
 

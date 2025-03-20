@@ -1,6 +1,6 @@
-import yaml
-
 import os
+
+import yaml
 
 
 def get_project_root():
@@ -15,4 +15,19 @@ def read_yaml(filename):
         output["dataset_args"]["directory"] = os.path.join(
             get_project_root(), output["dataset_args"]["directory"]
         )
+        validate_config(output)
     return output
+
+
+def validate_config(config):
+    model_name = None
+    try:
+        model_name = config["model_args"]["feature_model_args"]["model_name"]
+    except:
+        model_name = "undefined_model"
+
+    match model_name:
+        case "correlation_model":
+            assert (
+                config["dataset_args"]["use_one_hot_encoding"] == True
+            ), "The correlation model does not support setting use_one_hot_encoding to True"
