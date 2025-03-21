@@ -91,8 +91,9 @@ class MTSCVAE(nn.Module):
         self, mts: np.ndarray, feature_deltas: np.ndarray
     ) -> np.ndarray:
         """Transform MTS data given feature deltas as condition."""
+        tensor_mts = torch.tensor(mts, dtype=torch.float32)
         tensor_feature_deltas = torch.tensor(feature_deltas, dtype=torch.float32)
-        latent_mean, latent_log_var = self.encoder(mts, feature_deltas)
+        latent_mean, latent_log_var = self.encoder(tensor_mts, tensor_feature_deltas)
         latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
         return self.decoder(tensor_feature_deltas, latent_vector).detach().numpy()
 

@@ -32,7 +32,7 @@ from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
 )
-from src.models.cvae_wrapper import prepare_cgen_data, prepare_cvae_data
+from src.models.cvae_wrapper import prepare_cgen_data
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper

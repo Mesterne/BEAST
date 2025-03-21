@@ -147,61 +147,6 @@ class CVAEWrapper(FeatureTransformationModel):
         return generated_mts, features_of_generated_mts
 
 
-# FIXME: No longer in use. REMOVE
-def prepare_cvae_data(
-    mts_array: list,
-    X_features_train: np.ndarray,
-    train_indices: np.ndarray,
-    X_features_validation: np.ndarray,
-    validation_indices: np.ndarray,
-    X_features_test: np.ndarray,
-    test_indices: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    # Starting out by flattening each MTS
-    full_mts_array: np.ndarray = np.asarray(mts_array)
-    full_mts_array: np.ndarray = full_mts_array.reshape(
-        full_mts_array.shape[0], full_mts_array.shape[1] * full_mts_array.shape[2]
-    )
-    # Use train indices to get the training MTS
-    cvae_train_mts_array: np.ndarray = full_mts_array[train_indices]
-    # The train features are the features of each training MTS
-    # FIXME: This is not currently done. X_features_train contains all pairings of training features and validation features.
-    # This is more than 80k rows, and the code is currently only getting the first 180 rows, which most likely all belong to the same MTS.
-    print(X_features_train.shape)
-    cvae_train_features_array: np.ndarray = X_features_train[train_indices]
-    X_cvae_train: np.ndarray = np.hstack(
-        (cvae_train_mts_array, cvae_train_features_array)
-    )
-    y_cvae_train: np.ndarray = cvae_train_mts_array.copy()
-
-    # Validation input and target for CVAE
-    # FIXME: Getting validation indice from X_feature_validation seems unnecessary
-    cvae_validation_mts_array: np.ndarray = full_mts_array[validation_indices]
-    cvae_validation_features_array: np.ndarray = X_features_validation[
-        validation_indices
-    ]
-    X_cvae_validation: np.ndarray = np.hstack(
-        (cvae_validation_mts_array, cvae_validation_features_array)
-    )
-    y_cvae_validation: np.ndarray = cvae_validation_mts_array.copy()
-
-    # Test input and target for CVAE
-    # FIXME: Getting validation indice from X_feature_test seems unnecessary
-    cvae_test_mts_array: np.ndarray = full_mts_array[test_indices]
-    cvae_test_features_array: np.ndarray = X_features_test[test_indices]
-    X_cvae_test: np.ndarray = cvae_test_features_array.copy()
-    y_cvae_test: np.ndarray = cvae_test_mts_array.copy()
-
-    return (
-        X_cvae_train,
-        y_cvae_train,
-        X_cvae_validation,
-        y_cvae_validation,
-        X_cvae_test,
-        y_cvae_test,
-    )
-
-
 def mask_feature_values(
     feature_values: np.ndarray, num_uts: int, uts_idx: int
 ) -> np.ndarray:
@@ -286,8 +231,66 @@ def get_feature_conditioned_dataset(
     return train_array, validation_array, test_array
 
 
-def get_delta_conditioned_dataset():
-    pass
+def get_delta_conditioned_dataset(
+    mts_array: list,
+    train_features_supervised_dataset: pd.DataFrame,
+    validation_features_supervised_dataset: pd.DataFrame,
+    test_features_supervised_dataset: pd.DataFrame,
+) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]]:
+    dataset_list = [[], [], []]
+    df_list = [
+        train_features_supervised_dataset,
+        validation_features_supervised_dataset,
+        test_features_supervised_dataset,
+    ]
+
+    # Need the column number for the original index, target index, and delta values
+    columns = df_list[0].columns
+    original_index = [
+        idx for idx, col in enumerate(columns) if "original" in col and "index" in col
+    ][0]
+    target_index = [
+        idx for idx, col in enumerate(columns) if "target" in col and "index" in col
+    ][0]
+    delta_value_indices = [
+        idx for idx, col in enumerate(columns) if "delta" in col and "index" not in col
+    ]
+
+    for df_idx, df in enumerate(df_list):
+        # NOTE: Convert to numpy array for faster indexing
+        numpy_df = df.to_numpy()
+
+        # Get original and target MTS
+        original_mts_indices = numpy_df[:, original_index].astype(int)
+        target_mts_indices = numpy_df[:, target_index].astype(int)
+        num_uts = mts_array.shape[1]
+        uts_length = mts_array.shape[2]
+        X_mts_array = mts_array[original_mts_indices].reshape(-1, num_uts * uts_length)
+        y_mts_array = mts_array[target_mts_indices].reshape(-1, num_uts * uts_length)
+
+        # Get delta values
+        delta_values = numpy_df[:, delta_value_indices]
+
+        print(X_mts_array.shape, delta_values.shape)
+
+        X = np.hstack((X_mts_array, delta_values))
+        y = y_mts_array
+
+        assert X.shape[0] == y.shape[0], f"X shape: {X.shape}, y shape: {y.shape}"
+        assert (
+            X.shape[0] == delta_values.shape[0]
+        ), f"X shape: {X.shape}, delta shape: {delta_values.shape}"
+        assert (
+            X.shape[1] == y.shape[1] + delta_values.shape[1]
+        ), f"X shape: {X.shape}, y shape: {y.shape}, delta shape: {delta_values.shape}"
+        assert X.shape[0] == len(df), f"X shape: {X.shape}, df shape: {df.shape}"
+
+        dataset_list[df_idx] = (X, y)
+
+    train_array = dataset_list[0]
+    validation_array = dataset_list[1]
+    test_array = dataset_list[2]
+    return train_array, validation_array, test_array
 
 
 def prepare_cgen_data(
@@ -311,5 +314,10 @@ def prepare_cgen_data(
             test_features_supervised_dataset,
         )
     if condition_type == "feature_delta":
-        return get_delta_conditioned_dataset()
+        return get_delta_conditioned_dataset(
+            mts_array,
+            train_features_supervised_dataset,
+            validation_features_supervised_dataset,
+            test_features_supervised_dataset,
+        )
     return None
