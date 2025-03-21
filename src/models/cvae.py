@@ -26,7 +26,7 @@ class MTSCVAE(nn.Module):
         self.mts_size = model_params["mts_size"]
         self.num_features = model_params["num_features"]
         self.latent_size = model_params["latent_size"]
-        self.use_feature_deltas = model_params["use_feature_deltas"]
+        self.condition_type = model_params["condition_type"]
         self.encoder = Encoder(
             self.mts_size,
             self.num_features,
@@ -48,18 +48,13 @@ class MTSCVAE(nn.Module):
         Sampling from a standard normal distribution is one of several possible reparameterization strategies.
         """
 
-        # First mts_size elements are the MTS, the rest is feature info
+        # First mts_size elements are the MTS, the rest is either feature values or feature deltas
         assert (
-            input.shape[1] == self.mts_size + self.num_features * 2
-        ), f"Input size mismatch. Expected {self.mts_size + self.num_features*2}, got {input.shape[1]}"
+            input.shape[1] == self.mts_size + self.num_features
+        ), f"Input size mismatch. Expected {self.mts_size + self.num_features}, got {input.shape[1]}"
 
         mts: np.ndarray = input[:, : self.mts_size]
-        # NOTE: Feature info may be both feature values (first 12) or delta values (last 12)
-        feature_info: np.ndarray = (
-            input[:, self.mts_size + self.num_features :]
-            if self.use_feature_deltas
-            else input[:, self.mts_size : self.mts_size + self.num_features]
-        )
+        feature_info: np.ndarray = input[:, self.mts_size :]
 
         assert (
             mts.shape[1] == self.mts_size
@@ -72,25 +67,34 @@ class MTSCVAE(nn.Module):
         latent_mean, latent_log_var = self.encoder(mts, feature_info)
 
         # Reparameterization trick
-        noise = randn_like(
-            latent_mean
-        )  # Sample noise from standard normal distribution. Same shape as latent_mean
-        standard_deviation = exp(
-            0.5 * latent_log_var
-        )  # Calculate standard deviation from log variance
-        latent_vector = latent_mean + standard_deviation * noise
+        latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
 
         # Decoding step
         output = self.decoder(feature_info, latent_vector)
 
         return output, latent_mean, latent_log_var
 
-    def generate_mts(self, feature_info: np.ndarray) -> np.ndarray:
-        """Generate MTS data given feature info as condition."""
-        print("FEATURE INFO", feature_info.shape)
-        tensor_feature_info = torch.tensor(feature_info, dtype=torch.float32)
-        latent_vector = randn(feature_info.shape[0], self.latent_size)
-        return self.decoder(tensor_feature_info, latent_vector).detach().numpy()
+    def reparamterization_trick(self, mean: Tensor, log_var: Tensor) -> Tensor:
+        """Reparameterization trick using standard normal distribution to sample from the latent space."""
+        noise = randn_like(mean)
+        standard_deviation = exp(0.5 * log_var)
+        return mean + standard_deviation * noise
+
+    def generate_mts(self, feature_values: np.ndarray) -> np.ndarray:
+        """Generate MTS data given feature values as condition."""
+        print("FEATURE INFO", feature_values.shape)
+        tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32)
+        latent_vector = randn(feature_values.shape[0], self.latent_size)
+        return self.decoder(tensor_feature_values, latent_vector).detach().numpy()
+
+    def transform_mts_from_original(
+        self, mts: np.ndarray, feature_deltas: np.ndarray
+    ) -> np.ndarray:
+        """Transform MTS data given feature deltas as condition."""
+        tensor_feature_deltas = torch.tensor(feature_deltas, dtype=torch.float32)
+        latent_mean, latent_log_var = self.encoder(mts, feature_deltas)
+        latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
+        return self.decoder(tensor_feature_deltas, latent_vector).detach().numpy()
 
 
 class Encoder(nn.Module):

@@ -102,14 +102,6 @@ forecasting_model_training_params: Dict[str, Any] = forecasting_model_params[
     "training_args"
 ]
 training_params: Dict[str, Any] = feature_model_params["training_args"]
-# CONDITIONAL GENERATIVE MODEL
-conditional_gen_model_params: Dict[str, Any] = config["model_args"][
-    "conditional_gen_model_args"
-]
-codnitional_gen_model_name: str = conditional_gen_model_params["model_name"]
-conditional_gen_model_training_params: Dict[str, Any] = conditional_gen_model_params[
-    "training_args"
-]
 
 # Set up logging to wandb
 if log_training_to_wandb:
@@ -252,7 +244,6 @@ feature_model_params["number_of_features_in_each_uts"] = num_features_per_uts
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 
 ########### MODEL INITIALIZATION
-
 feature_model: FeatureTransformationModel = get_feature_model_by_type(
     model_type=model_type,
     model_params=feature_model_params,
@@ -269,13 +260,6 @@ forecasting_model_wrapper: NeuralNetworkWrapper = NeuralNetworkWrapper(
 )
 logging.info("Successfully initialized the forecasting model")
 
-conditional_gen_model: FeatureTransformationModel = get_feature_model_by_type(
-    model_type=codnitional_gen_model_name,
-    model_params=conditional_gen_model_params,
-    training_params=conditional_gen_model_training_params,
-)
-logger.info("Successfully initialized the conditional generative model model")
-
 # TODO: Inputs should be ndarray
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
@@ -288,14 +272,24 @@ logger.info("Successfully initialized the genetic algorithm")
 
 
 ############ TRAINING
-# Fit model to data
-
 logger.info("Training feature model...")
 feature_model.train(
-    X_train=X_features_train,
-    y_train=y_features_train,
-    X_val=X_features_validation,
-    y_val=y_features_validation,
+    X_train=(
+        X_features_train if not is_conditional_gen_model else X_y_pairs_cgen_train[0]
+    ),
+    y_train=(
+        y_features_train if not is_conditional_gen_model else X_y_pairs_cgen_train[1]
+    ),
+    X_val=(
+        X_features_validation
+        if not is_conditional_gen_model
+        else X_y_pairs_cgen_validation[0]
+    ),
+    y_val=(
+        y_features_validation
+        if not is_conditional_gen_model
+        else X_y_pairs_cgen_validation[1]
+    ),
     log_to_wandb=False,
 )
 
@@ -308,125 +302,149 @@ forecasting_model_wrapper.train(
     log_to_wandb=False,
 )
 
-logger.info("Preparing data for conditional generative model...")
-(
-    X_cvae_train,
-    y_cvae_train,
-    X_cvae_validation,
-    y_cvae_validation,
-    X_cvae_test,
-    y_cvae_test,
-) = prepare_cvae_data(
-    mts_array=mts_dataset_array,
-    X_features_train=X_features_train,
-    train_indices=train_indices,
-    X_features_validation=X_features_validation,
-    validation_indices=validation_indices,
-    X_features_test=X_features_test,
-    test_indices=test_indices,
-)
+
 ############ INFERENCE
 TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
-
-logger.info("Training conditional generative model...")
-conditional_gen_model.train(
-    X_train=X_cvae_train,
-    y_train=y_cvae_train,
-    X_val=X_cvae_validation,
-    y_val=y_cvae_validation,
-    log_to_wandb=False,
-)
-
-############ INFERENCE
 logger.info("Running inference on validation set...")
-validation_predicted_features: np.ndarray = feature_model.infer(X_features_validation)
+if is_conditional_gen_model:
+    validation_predicted_mts, validation_predicted_features = feature_model.infer(
+        X_y_pairs_cgen_validation[0],
+        num_uts_in_mts=num_uts_in_mts,
+        num_features_per_uts=num_features_per_uts,
+        seasonal_period=seasonal_period,
+    )
+else:
+    validation_predicted_features: np.ndarray = feature_model.infer(
+        X_features_validation
+    )
 
 logger.info("Running inference on test set...")
-test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
+if is_conditional_gen_model:
+    test_predicted_mts, test_predicted_features = feature_model.infer(
+        X_y_pairs_cgen_test[0],
+        num_uts_in_mts=num_uts_in_mts,
+        num_features_per_uts=num_features_per_uts,
+        seasonal_period=seasonal_period,
+    )
+else:
+    test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
 
 logger.info("Successfully ran inference on validation and test sets")
 
-logger.info("Running inference with CVAE on validation set...")
-use_delta = int(conditional_gen_model_params["use_feature_deltas"])
-num_mts_features = num_uts_in_mts * num_features_per_uts
-print("X FEATURES VALIDATION", X_features_validation.shape)
-print(X_features_validation[0])
-print("Y FEATURES VALIDATION", y_features_validation.shape)
-print(y_features_validation[0])
-validation_features = X_features_validation[validation_indices]
-print("VALIDATION FEATURES", validation_features.shape)
-print(validation_features[0])
-cvae_infer_input_array: np.ndarray = (
-    validation_features[:, num_mts_features : num_mts_features * 2]
-    if use_delta
-    else validation_features[:, :num_mts_features]
-)
-# FIXME: CVAE SHOULD INFER ON Y FEATURES VALIDATION, WITH DIRECT FEATURES, NOT DELTA, AS CONDITIONS
-# FIXME: SHOULD REMOVE DELTA OPTION FROM CVAE
-cvae_validation_predicted_mts: np.ndarray = conditional_gen_model.infer(
-    cvae_infer_input_array
-)
-_, cvae_validation_predicted_features = numpy_decomp_and_features(
-    cvae_validation_predicted_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
-)
 
-# Generation of new time series based on newly inferred features
-
-# Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
-# original time series, instead of multiple. This will limit the number of time series to generate to the size of
-# the train indices.
-prediction_indices: List[int] = validation_features_supervised_dataset[
-    ~validation_features_supervised_dataset["original_index"].duplicated()
-].index.tolist()
-original_indices: List[int] = (
-    validation_features_supervised_dataset[
-        ~validation_features_supervised_dataset["original_index"].duplicated()
-    ]["original_index"]
-    .astype(int)
-    .tolist()
-)
-target_indices: List[int] = (
-    validation_features_supervised_dataset[
-        ~validation_features_supervised_dataset["original_index"].duplicated()
-    ]["target_index"]
-    .astype(int)
-    .tolist()
-)
-
-predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_features[
-    prediction_indices
-]
-
-
-logger.info("Using generated features to generate new time series")
-
-generated_transformed_mts, features_of_genereated_timeseries_mts = (
-    generate_new_time_series(
-        original_indices=original_indices,
-        predicted_features=predicted_features_to_generated_mts_for,
-        ga=ga,
+if is_conditional_gen_model:
+    logger.info(
+        "Preparing inputs for analysis and visualization of time series generated by conditional generative model"
     )
-)
+    logger.info("Preparing original and target time series")
+    mts_size = len(X_y_pairs_cgen_train[1][0])
+    cgen_original_timeseries_train: np.ndarray = X_y_pairs_cgen_train[0][:, :mts_size]
+    cgen_target_timeseries_train: np.ndarray = X_y_pairs_cgen_train[1]
+    cgen_original_timeseries_validation: np.ndarray = X_y_pairs_cgen_validation[0][
+        :, :mts_size
+    ]
+    cgen_target_timeseries_validation: np.ndarray = X_y_pairs_cgen_validation[1]
+    cgen_original_timeseries_test: np.ndarray = X_y_pairs_cgen_test[0][:, :mts_size]
+    cgen_target_timeseries_test: np.ndarray = X_y_pairs_cgen_test[1]
 
-original_timeseries: np.ndarray = mts_dataset_array[original_indices]
-target_timeseries: np.ndarray = mts_dataset_array[target_indices]
+    uts_wise_cgen_original_timeseries = cgen_original_timeseries_validation.reshape(
+        -1, num_uts_in_mts, mts_size // num_uts_in_mts
+    )
+    uts_wise_cgen_target_timeseries = cgen_target_timeseries_validation.reshape(
+        -1, num_uts_in_mts, mts_size // num_uts_in_mts
+    )
+    uts_wise_predicted_mts = validation_predicted_mts.reshape(
+        -1, num_uts_in_mts, mts_size // num_uts_in_mts
+    )
 
-# We have to remove the delta values
-original_features: np.ndarray = X_features_validation[
-    prediction_indices, : len(COLUMN_NAMES)
-]
-target_features: np.ndarray = y_features_validation[prediction_indices]
+    logger.info("Preparing features")
+    target_features_train: np.ndarray = numpy_decomp_and_features(
+        cgen_target_timeseries_train,
+        num_uts_in_mts,
+        num_features_per_uts,
+        seasonal_period,
+    )[1]
+    target_features_validation: np.ndarray = numpy_decomp_and_features(
+        cgen_target_timeseries_validation,
+        num_uts_in_mts,
+        num_features_per_uts,
+        seasonal_period,
+    )[1]
+    target_features_test: np.ndarray = numpy_decomp_and_features(
+        cgen_target_timeseries_test,
+        num_uts_in_mts,
+        num_features_per_uts,
+        seasonal_period,
+    )[1]
+    # Need original features for plotting
+    original_features_validation: np.ndarray = numpy_decomp_and_features(
+        cgen_original_timeseries_validation,
+        num_uts_in_mts,
+        num_features_per_uts,
+        seasonal_period,
+    )[1]
+    logger.info("Calculating MSE for features og generated time series using test set")
+    mse_values_for_each_feature = calculate_mse_for_each_feature(
+        predicted_features=validation_predicted_features,
+        target_features=target_features_validation,
+    )
+else:
+    # Generation of new time series based on newly inferred features
 
-features_of_genereated_timeseries_mts: np.ndarray = np.array(
-    features_of_genereated_timeseries_mts
-).reshape(-1, num_features_per_uts * num_uts_in_mts)
+    # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
+    # original time series, instead of multiple. This will limit the number of time series to generate to the size of
+    # the train indices.
+    prediction_indices: List[int] = validation_features_supervised_dataset[
+        ~validation_features_supervised_dataset["original_index"].duplicated()
+    ].index.tolist()
+    original_indices: List[int] = (
+        validation_features_supervised_dataset[
+            ~validation_features_supervised_dataset["original_index"].duplicated()
+        ]["original_index"]
+        .astype(int)
+        .tolist()
+    )
+    target_indices: List[int] = (
+        validation_features_supervised_dataset[
+            ~validation_features_supervised_dataset["original_index"].duplicated()
+        ]["target_index"]
+        .astype(int)
+        .tolist()
+    )
 
+    predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_features[
+        prediction_indices
+    ]
 
-## Evaluation of MTS generation
-mse_values_for_each_feature = calculate_mse_for_each_feature(
-    predicted_features=features_of_genereated_timeseries_mts,
-    target_features=target_features,
-)
+    logger.info("Using generated features to generate new time series")
+
+    generated_transformed_mts, features_of_genereated_timeseries_mts = (
+        generate_new_time_series(
+            original_indices=original_indices,
+            predicted_features=predicted_features_to_generated_mts_for,
+            ga=ga,
+        )
+    )
+
+    original_timeseries: np.ndarray = mts_dataset_array[original_indices]
+    target_timeseries: np.ndarray = mts_dataset_array[target_indices]
+
+    # We have to remove the delta values
+    original_features: np.ndarray = X_features_validation[
+        prediction_indices, : len(COLUMN_NAMES)
+    ]
+    target_features: np.ndarray = y_features_validation[prediction_indices]
+
+    features_of_genereated_timeseries_mts: np.ndarray = np.array(
+        features_of_genereated_timeseries_mts
+    ).reshape(-1, num_features_per_uts * num_uts_in_mts)
+
+    ## Evaluation of MTS generation
+    mse_values_for_each_feature = calculate_mse_for_each_feature(
+        predicted_features=features_of_genereated_timeseries_mts,
+        target_features=target_features,
+    )
+
 
 total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
@@ -436,24 +454,56 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
 create_and_save_plots_of_model_performances(
     total_mse_for_each_mts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
-    mts_features_train=y_features_train,
-    mts_features_validation=y_features_validation,
-    mts_features_test=y_features_test,
-    original_mts=original_timeseries,
-    target_mts=target_timeseries,
-    generated_mts=generated_transformed_mts,
-    original_mts_features=original_features,
-    transformed_mts_features=features_of_genereated_timeseries_mts,
-    target_mts_features=target_features,
+    mts_features_train=(
+        y_features_train if not is_conditional_gen_model else target_features_train
+    ),
+    mts_features_validation=(
+        y_features_validation
+        if not is_conditional_gen_model
+        else target_features_validation
+    ),
+    mts_features_test=(
+        y_features_test if not is_conditional_gen_model else target_features_test
+    ),
+    original_mts=(
+        original_timeseries
+        if not is_conditional_gen_model
+        else uts_wise_cgen_original_timeseries
+    ),
+    target_mts=(
+        target_timeseries
+        if not is_conditional_gen_model
+        else uts_wise_cgen_target_timeseries
+    ),
+    generated_mts=(
+        generated_transformed_mts
+        if not is_conditional_gen_model
+        else uts_wise_predicted_mts
+    ),
+    original_mts_features=(
+        original_features
+        if not is_conditional_gen_model
+        else original_features_validation
+    ),
+    transformed_mts_features=(
+        features_of_genereated_timeseries_mts
+        if not is_conditional_gen_model
+        else validation_predicted_features
+    ),
+    target_mts_features=(
+        target_features if not is_conditional_gen_model else target_features_validation
+    ),
 )
 
-
-# Retrain forecasting model on new timeseries.
 (
     X_transformed,
     y_transformed,
 ) = create_training_windows_from_mts(
-    mts=generated_transformed_mts,
+    mts=(
+        generated_transformed_mts
+        if not is_conditional_gen_model
+        else uts_wise_predicted_mts
+    ),
     target_col_index=1,
     window_size=forecasting_model_params["window_size"],
     forecast_horizon=forecasting_model_params["horizon_length"],
@@ -490,13 +540,6 @@ model_comparison_fig = compare_old_and_new_model(
 )
 model_comparison_fig.savefig(
     os.path.join(OUTPUT_DIR, "forecasting_model_comparison.png")
-)
-
-# FIXME: Add visualizations of generated time sereis. Retrain model. Compare old and new model.
-# Calculate MSE for conditional generative model. Using validation
-cond_gen_mse_values_for_each_feature = calculate_mse_for_each_feature(
-    predicted_features=cvae_validation_predicted_features,
-    target_features=cvae_infer_input_array,
 )
 
 

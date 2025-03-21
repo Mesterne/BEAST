@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from src.models.cvae import MTSCVAE
 from src.models.feature_transformation_model import FeatureTransformationModel
+from src.utils.features import numpy_decomp_and_features
 from src.utils.logging_config import logger
 
 
@@ -118,12 +119,35 @@ class CVAEWrapper(FeatureTransformationModel):
 
         return train_loss_history, validation_loss_history
 
-    def infer(self, X):
-        # Run generate_mts for each row in X
-        generated_mts: np.ndarray = self.model.generate_mts(X)
-        return generated_mts
+    def infer(
+        self,
+        X,
+        num_uts_in_mts: int = None,
+        num_features_per_uts: int = None,
+        seasonal_period: int = None,
+    ) -> np.ndarray:
+        # If the model is conditioned on features, X should be only the features
+        if self.model.condition_type == "feature":
+            input_features = X[:, self.model.mts_size :]
+            # Run generate_mts for each row in X
+            generated_mts: np.ndarray = self.model.generate_mts(input_features)
+
+        # If the model is conditioned on feature deltas, X should be the original mts and the feature deltas
+        if self.model.condition_type == "feature_delta":
+            # FIXME: IMPLEMENT THIS MEHTOD IN CVAE CLASS
+            input_mts = X[:, : self.model.mts_size]
+            input_feature_deltas = X[:, self.model.mts_size :]
+            generated_mts: np.ndarray = self.model.transform_mts_from_original(
+                input_mts, input_feature_deltas
+            )
+
+        features_of_generated_mts = numpy_decomp_and_features(
+            generated_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
+        )[1]
+        return generated_mts, features_of_generated_mts
 
 
+# FIXME: No longer in use. REMOVE
 def prepare_cvae_data(
     mts_array: list,
     X_features_train: np.ndarray,
@@ -209,21 +233,9 @@ def get_feature_conditioned_dataset(
     ]
 
     # NOTE: mts_array is a list of MTS where each mts is a numpy array of shape (num_uts, num_timesteps)
-    # The array is NOT FLATTENED.
+    # The MTS is NOT FLATTENED.
     num_uts = mts_array[0].shape[0]
-    print("Number of MTS: ", len(mts_array))
-    print(
-        "Number of origal indices in train:",
-        len(train_features_supervised_dataset["original_index"].unique()),
-    )
-    print(
-        "Number of origal indices in validation:",
-        len(validation_features_supervised_dataset["original_index"].unique()),
-    )
-    print(
-        "Number of origal indices in test:",
-        len(test_features_supervised_dataset["original_index"].unique()),
-    )
+
     # Get all columns starting with original_ and target_ prefix
     orig_cols = [
         col for col in df_list[0].columns if "original_" in col and "index" not in col
@@ -235,9 +247,10 @@ def get_feature_conditioned_dataset(
     for df_idx, df in enumerate(df_list):
 
         # NOTE: Check if the dataset is train or not. Decides if the original or target index should be used
+        # Assuming first df is train dataset
         is_train: bool = df_idx == 0
 
-        # Get first instance of each MTS index
+        # Get first instance of each relevant MTS index
         df = (
             df.drop_duplicates(subset="original_index")
             if is_train
@@ -273,6 +286,10 @@ def get_feature_conditioned_dataset(
     return train_array, validation_array, test_array
 
 
+def get_delta_conditioned_dataset():
+    pass
+
+
 def prepare_cgen_data(
     condition_type: str,
     mts_array: list,
@@ -294,5 +311,5 @@ def prepare_cgen_data(
             test_features_supervised_dataset,
         )
     if condition_type == "feature_delta":
-        pass
+        return get_delta_conditioned_dataset()
     return None
