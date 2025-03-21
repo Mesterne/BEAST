@@ -15,6 +15,13 @@ COLUMN_NAMES = [
     "grid1-temp_seasonal-strength",
 ]
 
+FEATURE_NAMES = [
+    "trend-strength",
+    "trend-slope",
+    "trend-linearity",
+    "seasonal-strength",
+]
+
 UTS_NAMES = [
     "grid1-load",
     "grid1-loss",

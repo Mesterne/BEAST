@@ -1,13 +1,13 @@
+import argparse
 import logging
 import os
-import sys
-import argparse
-from typing import Any, Dict, List
-import numpy as np
 import random
-import torch
-import matplotlib.pyplot as plt
+import sys
+from typing import Any, Dict, List
 
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
@@ -20,30 +20,16 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 
-from src.models.feature_transformation_model import FeatureTransformationModel
-from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
-from src.models.forecasting.feedforward import FeedForwardForecaster
-from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.utils.forecasting_utils import (
-    compare_old_and_new_model,
-)
+import uuid
 
 import wandb
-import uuid
-from src.utils.yaml_loader import read_yaml  # noqa: E402
-from src.utils.generate_dataset import (
-    create_training_windows_from_mts,
-    generate_feature_dataframe,
-)  # noqa: E402
-from src.utils.pca import PCAWrapper  # noqa: E402
-from src.utils.experiment_helper import (  # noqa: E402
-    get_feature_model_by_type,
-    get_mts_dataset,
-)
-from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
+from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
+from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
-)
-from src.utils.logging_config import logger  # noqa: E402
+)  # noqa: E402
+from src.models.feature_transformation_model import FeatureTransformationModel
+from src.models.forecasting.feedforward import FeedForwardForecaster
+from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
@@ -52,9 +38,19 @@ from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
 )
-from src.utils.ga_utils import (
-    generate_new_time_series,
+from src.utils.experiment_helper import (  # noqa: E402
+    get_feature_model_by_type,
+    get_mts_dataset,
 )
+from src.utils.forecasting_utils import compare_old_and_new_model
+from src.utils.ga_utils import generate_new_time_series
+from src.utils.generate_dataset import (  # noqa: E402
+    create_training_windows_from_mts,
+    generate_feature_dataframe,
+)
+from src.utils.logging_config import logger  # noqa: E402
+from src.utils.pca import PCAWrapper  # noqa: E402
+from src.utils.yaml_loader import read_yaml  # noqa: E402
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -81,6 +77,7 @@ timeseries_to_use: List[str] = config["dataset_args"]["timeseries_to_use"]
 step_size: int = config["dataset_args"]["step_size"]
 context_length: int = config["dataset_args"]["window_size"]
 num_features_per_uts: int = config["dataset_args"]["num_features_per_uts"]
+use_one_hot_encoding = config["dataset_args"]["use_one_hot_encoding"]
 
 log_training_to_wandb: bool = config["training_args"]["log_to_wandb"]
 
@@ -157,8 +154,7 @@ logger.info("Successfully generated MTS PCA space")
     validation_features_supervised_dataset,
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
-    mts_pca_array,
-    mts_features_array,
+    mts_pca_array, mts_features_array, use_one_hot_encoding=use_one_hot_encoding
 )
 
 train_indices: List[int] = (
@@ -209,8 +205,11 @@ logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shap
 )
 logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
-feature_model_params["number_of_features_in_each_uts"] = num_features_per_uts
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
+feature_model_params["number_of_features_per_uts"] = num_features_per_uts
+feature_model_params["input_size"] = X_features_train.shape[1]
+
+print(f"Shape of X: {X_features_train.shape}")
 
 ########### MODEL INITIALIZATION
 
@@ -240,7 +239,6 @@ ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
 logger.info("Successfully initialized the genetic algorithm")
 
 ############ TRAINING
-# Fit model to data
 logger.info("Training feature model...")
 feature_model.train(
     X_train=X_features_train,
@@ -297,7 +295,6 @@ predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_featu
     prediction_indices
 ]
 
-
 logger.info("Using generated features to generate new time series")
 
 generated_transformed_mts, features_of_genereated_timeseries_mts = (
@@ -343,6 +340,7 @@ create_and_save_plots_of_model_performances(
     target_mts=target_timeseries,
     generated_mts=generated_transformed_mts,
     original_mts_features=original_features,
+    predicted_mts_features=predicted_features_to_generated_mts_for,
     transformed_mts_features=features_of_genereated_timeseries_mts,
     target_mts_features=target_features,
 )

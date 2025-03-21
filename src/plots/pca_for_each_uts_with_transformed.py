@@ -1,11 +1,13 @@
 from typing import List
+
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from matplotlib.figure import Figure
-from src.utils.pca import PCAWrapper
+
 from src.data.constants import COLUMN_NAMES, UTS_NAMES
+from src.utils.pca import PCAWrapper
 
 
 def plot_pca_for_each_uts_with_transformed(
