@@ -13,6 +13,7 @@ def plot_time_series_for_all_uts(
     transformed_mts: np.array,
     original_mts_features: np.array,  # Shape: (num_uts*num_features)
     target_mts_features: np.array,
+    predicted_mts_features: np.array,
     transformed_mts_features: np.array,
 ) -> plt.Figure:
     """
@@ -41,6 +42,7 @@ def plot_time_series_for_all_uts(
     original_mts_features = original_mts_features.reshape((num_uts, num_features))
     target_mts_features = target_mts_features.reshape((num_uts, num_features))
     transformed_mts_features = transformed_mts_features.reshape((num_uts, num_features))
+    predicted_mts_features = predicted_mts_features.reshape((num_uts, num_features))
 
     for i, uts_name in enumerate(UTS_NAMES):
         # Plot time series
@@ -77,6 +79,7 @@ def plot_time_series_for_all_uts(
                         "original": [],
                         "target": [],
                         "transformed": [],
+                        "predicted": [],
                     }
 
                 grouped_features[base_name]["original"] = original_mts_features[i][
@@ -88,6 +91,9 @@ def plot_time_series_for_all_uts(
                 grouped_features[base_name]["transformed"] = transformed_mts_features[
                     i
                 ][j % num_features]
+                grouped_features[base_name]["predicted"] = predicted_mts_features[i][
+                    j % num_features
+                ]
 
         # Prepare DataFrame for seaborn bar plot
         data = []
@@ -103,6 +109,13 @@ def plot_time_series_for_all_uts(
                     "Feature": base_name,
                     "Type": "transformed",
                     "Value": values["transformed"],
+                }
+            )
+            data.append(
+                {
+                    "Feature": base_name,
+                    "Type": "predicted",
+                    "Value": values["predicted"],
                 }
             )
 
