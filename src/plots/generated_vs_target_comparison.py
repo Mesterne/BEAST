@@ -9,6 +9,7 @@ from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
 )
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
+from src.plots.total_mse_distribution import plot_total_mse_distribution
 from src.utils.logging_config import logger
 
 
@@ -30,6 +31,11 @@ def create_and_save_plots_of_model_performances(
     mts_features_train = np.unique(mts_features_train, axis=0)
     mts_features_validation = np.unique(mts_features_validation, axis=0)
     mts_features_test = np.unique(mts_features_test, axis=0)
+
+    total_mse_plot = plot_total_mse_distribution(
+        total_mse_for_each_mts=total_mse_for_each_mts
+    )
+    total_mse_plot.savefig("total_mse_distribution.png")
 
     feature_wise_errror_plot = plot_distribution_of_feature_wise_error(
         mse_per_feature=mse_per_feature
