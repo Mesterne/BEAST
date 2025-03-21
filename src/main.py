@@ -493,6 +493,11 @@ create_and_save_plots_of_model_performances(
         if not is_conditional_gen_model
         else validation_predicted_features
     ),
+    mts_features_of_genererated_mts=(
+        features_of_genereated_timeseries_mts
+        if not is_conditional_gen_model
+        else validation_predicted_features
+    ),
     target_for_predicted_mts_features=(
         target_for_predicted_features
         if not is_conditional_gen_model
