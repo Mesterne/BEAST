@@ -315,7 +315,7 @@ target_timeseries: np.ndarray = mts_dataset_array[target_indices]
 original_features: np.ndarray = X_features_validation[
     prediction_indices, : len(COLUMN_NAMES)
 ]
-target_features: np.ndarray = y_features_validation[prediction_indices]
+target_for_predicted_features: np.ndarray = y_features_validation[prediction_indices]
 
 features_of_genereated_timeseries_mts: np.ndarray = np.array(
     features_of_genereated_timeseries_mts
@@ -325,27 +325,28 @@ features_of_genereated_timeseries_mts: np.ndarray = np.array(
 ## Evaluation of MTS generation
 mse_values_for_each_feature = calculate_mse_for_each_feature(
     predicted_features=features_of_genereated_timeseries_mts,
-    target_features=target_features,
+    target_features=target_for_predicted_features,
 )
 
 total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
 )
 
+
 # NOTE: We pass y for features, as these will contain all series
 create_and_save_plots_of_model_performances(
     total_mse_for_each_mts=total_mse_for_each_uts,
     mse_per_feature=mse_values_for_each_feature,
-    mts_features_train=y_features_train,
-    mts_features_validation=y_features_validation,
-    mts_features_test=y_features_test,
-    original_mts=original_timeseries,
-    target_mts=target_timeseries,
-    generated_mts=generated_transformed_mts,
+    y_features_train=y_features_train,
+    y_features_validation=y_features_validation,
+    y_features_test=y_features_test,
+    X_mts=original_timeseries,
+    y_mts=target_timeseries,
+    predicted_mts=generated_transformed_mts,
     original_mts_features=original_features,
-    predicted_mts_features=predicted_features_to_generated_mts_for,
-    transformed_mts_features=features_of_genereated_timeseries_mts,
-    target_mts_features=target_features,
+    mts_features_predicted_before_generation=predicted_features_to_generated_mts_for,
+    mts_features_of_genererated_mts=features_of_genereated_timeseries_mts,
+    target_for_predicted_mts_features=target_for_predicted_features,
 )
 
 
