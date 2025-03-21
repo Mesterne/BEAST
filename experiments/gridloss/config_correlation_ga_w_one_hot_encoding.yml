@@ -33,6 +33,7 @@ model_args:
     model_name: correlation_model
     use_one_hot_encoding: false
     training_args:
+    conditional_gen_model_args:
   forecasting_model_args:
     window_size: 168
     network_size:

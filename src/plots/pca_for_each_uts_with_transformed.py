@@ -146,3 +146,5 @@ def plot_pca_for_each_uts_with_transformed(
 
     plt.tight_layout()
     return fig
+    plt.tight_layout()
+    return fig

@@ -1,23 +1,26 @@
-from typing import List
-import pandas as pd
-import numpy as np
 import logging
+from typing import List
+
+import numpy as np
+import pandas as pd
+
+from src.models.cvae import MTSCVAE
+from src.models.cvae_wrapper import CVAEWrapper
 from src.models.feature_transformation_model import FeatureTransformationModel
-from src.models.naive_correlation import CorrelationModel
 from src.models.feedforward import FeedForwardFeatureModel
+from src.models.naive_correlation import CorrelationModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
+from src.utils.features import (
+    seasonal_strength,
+    trend_linearity,
+    trend_slope,
+    trend_strength,
+)
 from src.utils.generate_dataset import generate_windows_dataset
 from src.utils.transformations import (
     manipulate_seasonal_component,
     manipulate_trend_component,
 )
-from src.utils.features import (
-    trend_strength,
-    trend_slope,
-    trend_linearity,
-    seasonal_strength,
-)
-
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -94,8 +97,13 @@ def get_feature_model_by_type(
         nn = FeedForwardFeatureModel(model_params)
         model = NeuralNetworkWrapper(nn, training_params=training_params)
         return model
+    elif model_type == "mts_cvae":
+        cvae = MTSCVAE(model_params["conditional_gen_model_args"])
+        model = CVAEWrapper(cvae, training_params=training_params)
+        return model
     else:
         raise ValueError(f"Model type {model_type} not supported")
 
 
+# PLOTTING
 # PLOTTING

@@ -10,11 +10,12 @@ dataset_args:
     - grid1-loss
     - grid1-temp
   num_features_per_uts: 4
-  use_one_hot_encoding: true
+  use_one_hot_encoding: false
 stl_args:
   series_periodicity: 24
 model_args:
   genetic_algorithm_args:
+    num_runs: 1
     num_generations: 100
     num_parents_mating: 2
     solutions_per_population: 10
@@ -30,13 +31,10 @@ model_args:
       trend_lin_factor: [0.01, 10]
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
-    model_name: feedforward_neural_network
+    model_name: mts_cvae
+    input_size: 24
     output_size: 12
     hidden_network_sizes:
-      - 256
-      - 256
-      - 256
-      - 256
       - 256
     training_args:
       num_epochs: 50
@@ -44,6 +42,15 @@ model_args:
       learning_rate: 0.001
       early_stopping_patience: 25
     conditional_gen_model_args:
+      condition_type: "feature"
+      mts_size: 576
+      latent_size: 64
+      num_features: 12
+      use_feature_deltas: False
+      hidden_layers:
+        - [512, linear, relu]
+        - [256, linear, relu]
+        - [128, linear, relu]
   forecasting_model_args:
     window_size: 168
     network_size:
