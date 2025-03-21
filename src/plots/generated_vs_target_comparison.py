@@ -96,8 +96,7 @@ def create_and_save_plots_of_model_performances(
     )
 
     median_mse = np.median(total_mse_for_each_mts)
-    median_mts_index = np.where(total_mse_for_each_mts == median_mse)[0][0]
-    logger.info(f"Median genereated mts index: {median_mts_index}")
+    median_mts_index = np.argmin(np.abs(total_mse_for_each_mts - median_mse))
 
     ts_plot_of_median_generated_mts = plot_time_series_for_all_uts(
         original_mts=original_mts[median_mts_index],

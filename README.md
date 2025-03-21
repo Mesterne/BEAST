@@ -1,17 +1,19 @@
-# 🐉 BEAST: Multivariate Time Series What-If Scenario Generator
+# 🐉 BEAST: Benchmarking Enhanced Analysis of Shifting Time Series
 
-Welcome to **BEAST**! This powerful tool lets you generate insightful "what-if" scenarios for multivariate time series datasets. Whether you're analyzing climate patterns, financial trends, or sensor data, BEAST empowers your data explorations. 🚀
+Welcome to **BEAST**! This powerful tool leverages a database of existing multivariate time series to generate new, realistic time series. By simulating distribution shifts, BEAST helps assess model robustness and ensures forecasting models improve after retraining.
+
+---
 
 ## 🌟 Features
-- **Flexible Scenario Modeling:** Simulate hypothetical scenarios with ease.
-- **Multivariate Support:** Handle complex time series data.
-- **User-Friendly Interface:** Intuitive setup for data scientists.
 
+- **Realistic Distribution Shifts:** Generate time series data that mimic real-world changes.
+- **Multivariate Support:** Handle complex datasets with multiple variables.
+- **Scenario Simulation:** Test forecasting models against hypothetical shifts.
 ---
 
 ## 📦 Installation
 
-Clone the repository and create the Conda environment:
+Get started by cloning the repository and setting up the Conda environment:
 
 ```bash
 git clone https://github.com/Mesterne/BEAST.git
@@ -24,61 +26,42 @@ conda activate BEAST_ENV
 
 ## 🚀 Usage
 
-### 🔒 Setting Up Pre-Commit Hook
-To automatically format and lint your code before committing:
+### 🔧 Setting Up Pre-Commit Hook
+To maintain code quality, set up a pre-commit hook that automatically formats and checks your code before committing:
 
-1. Copy the pre-commit hook script to the Git hooks directory:
+1. Copy the pre-commit hook script:
 
    ```bash
    cp precommit_hook.sh .git/hooks/pre-commit
    chmod +x .git/hooks/pre-commit
    ```
 
-2. Now, every time you commit, Black and Flake8 checks will run automatically.
+2. Now, every time you commit, Black and Flake8 will run automatically to enforce coding standards.
 
-### Code Quality Checks
-Ensure code quality by running:
+### 🛠 Code Quality Checks
+Manually check formatting and linting by running:
 
 ```bash
-flake8 .
 black .
 ```
-
 
 ---
 
 ## 🛠️ Development
 
-To contribute to BEAST, install development dependencies:
+To contribute to BEAST, install the necessary development dependencies:
 
 ```bash
-conda install black flake8
+conda install black
 ```
 
-Ensure code quality by running:
+Ensure code consistency by running:
 
 ```bash
-flake8 .
 black .
 ```
 
 ---
 
-## 📄 License
 
-This project is licensed under the MIT License. See `LICENSE` for details.
-
----
-
-## 🤝 Contributions
-
-We welcome contributions from the community! Feel free to open issues and submit pull requests.
-
----
-
-## 📧 Contact
-
-For questions or support, please contact us at [your-email@example.com](mailto:your-email@example.com).
-
-Happy data exploring! 🌍📊
 
