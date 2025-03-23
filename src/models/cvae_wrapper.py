@@ -49,7 +49,6 @@ class CVAEWrapper(FeatureTransformationModel):
         loss_function = self.loss_function
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
-        print(X_train.shape, y_train.shape)
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
         y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
         X_validation_tensor = torch.tensor(X_val, dtype=torch.float32).to(device)

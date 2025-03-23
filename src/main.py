@@ -45,7 +45,7 @@ from src.utils.experiment_helper import (  # noqa: E402
     get_feature_model_by_type,
     get_mts_dataset,
 )
-from src.utils.features import decomp_and_features
+from src.utils.features import decomp_and_features, numpy_decomp_and_features
 from src.utils.forecasting_utils import compare_old_and_new_model
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import (  # noqa: E402
@@ -360,32 +360,34 @@ if is_conditional_gen_model:
     )
 
     logger.info("Preparing features")
-    target_features_train: np.ndarray = decomp_and_features(
+    target_features_train: np.ndarray = numpy_decomp_and_features(
         cgen_target_timeseries_train,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    target_features_validation: np.ndarray = decomp_and_features(
+    target_features_validation: np.ndarray = numpy_decomp_and_features(
         cgen_target_timeseries_validation,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    target_features_test: np.ndarray = decomp_and_features(
+    target_features_test: np.ndarray = numpy_decomp_and_features(
         cgen_target_timeseries_test,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
     # Need original features for plotting
-    original_features_validation: np.ndarray = decomp_and_features(
+    original_features_validation: np.ndarray = numpy_decomp_and_features(
         cgen_original_timeseries_validation,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    logger.info("Calculating MSE for features og generated time series using test set")
+    logger.info(
+        "Calculating MSE for features og generated time series using validation set"
+    )
     mse_values_for_each_feature = calculate_mse_for_each_feature(
         predicted_features=validation_predicted_features,
         target_features=target_features_validation,
