@@ -23,11 +23,10 @@ if project_root not in sys.path:
 import uuid
 
 import wandb
-
 from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
-)
+)  # noqa: E402
 from src.models.cvae_wrapper import prepare_cgen_data
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
@@ -37,6 +36,7 @@ from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.generated_vs_target_comparison import (
     create_and_save_plots_of_model_performances,
 )
+from src.utils.evaluation.evaluation import evaluate
 from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature,
     calculate_total_mse_for_each_mts,
@@ -82,6 +82,7 @@ step_size: int = config["dataset_args"]["step_size"]
 context_length: int = config["dataset_args"]["window_size"]
 num_features_per_uts: int = config["dataset_args"]["num_features_per_uts"]
 use_one_hot_encoding = config["dataset_args"]["use_one_hot_encoding"]
+test_set_sample_size = config["dataset_args"]["test_set_sample_size"]
 
 log_training_to_wandb: bool = config["training_args"]["log_to_wandb"]
 
@@ -160,14 +161,16 @@ logger.info("Successfully generated MTS PCA space")
     validation_features_supervised_dataset,
     test_features_supervised_dataset,
 ) = create_train_val_test_split(
-    mts_pca_array, mts_features_array, use_one_hot_encoding=use_one_hot_encoding
+    mts_pca_array,
+    mts_features_array,
+    use_one_hot_encoding=use_one_hot_encoding,
+    number_of_transformations_in_test_set=test_set_sample_size,
 )
 
 # Check if the feature model is a conditional generative model. If so, do necessary data preparation.
 is_conditional_gen_model: bool = (
     config["model_args"]["feature_model_args"]["conditional_gen_model_args"] is not None
 )
-print(is_conditional_gen_model)
 if is_conditional_gen_model:
     logger.info("Preparing data set for conditional generative model...")
     condition_type: str = config["model_args"]["feature_model_args"][
@@ -391,37 +394,32 @@ if is_conditional_gen_model:
         target_features=target_features_validation,
     )
 else:
-    # Due to limitations of runtime of GA, we only check for the set of transformations, where we only have one
-    # original time series, instead of multiple. This will limit the number of time series to generate to the size of
-    # the train indices.
-    prediction_indices: List[int] = validation_features_supervised_dataset[
-        ~validation_features_supervised_dataset["original_index"].duplicated()
-    ].index.tolist()
-    original_indices: List[int] = (
-        validation_features_supervised_dataset[
-            ~validation_features_supervised_dataset["original_index"].duplicated()
-        ]["original_index"]
-        .astype(int)
-        .tolist()
-    )
-    target_indices: List[int] = (
-        validation_features_supervised_dataset[
-            ~validation_features_supervised_dataset["original_index"].duplicated()
-        ]["target_index"]
-        .astype(int)
-        .tolist()
-    )
-
-    predicted_features_to_generated_mts_for: np.ndarray = validation_predicted_features[
-        prediction_indices
-    ]
-
     logger.info("Using generated features to generate new time series")
 
-    generated_transformed_mts, features_of_genereated_timeseries_mts = (
+    # TODO: Here we would like to infer new MTSs for both test and valdiation.
+    # This is done to evaluate later on. However, we should reduce the size of validation
+    # and test, as it becomes way to large. At a maximum, we should use around 200 transformations in each
+    original_indices_train = (
+        train_features_supervised_dataset["original_index"].astype(int).tolist()
+    )
+    original_indices_validation = (
+        validation_features_supervised_dataset["original_index"].astype(int).tolist()
+    )
+    original_indices_test = (
+        test_features_supervised_dataset["original_index"].astype(int).tolist()
+    )
+
+    inferred_mts_validation, features_of_genereated_timeseries_mts_validation = (
         generate_new_time_series(
-            original_indices=original_indices,
-            predicted_features=predicted_features_to_generated_mts_for,
+            original_indices=original_indices_validation,
+            predicted_features=validation_predicted_features,
+            ga=ga,
+        )
+    )
+    inferred_mts_test, features_of_genereated_timeseries_mts_test = (
+        generate_new_time_series(
+            original_indices=original_indices_test,
+            predicted_features=test_predicted_features,
             ga=ga,
         )
     )
@@ -438,13 +436,13 @@ else:
     original_timeseries: np.ndarray = mts_dataset_array[original_indices]
     target_timeseries: np.ndarray = mts_dataset_array[target_indices]
 
-    features_of_genereated_timeseries_mts: np.ndarray = np.array(
-        features_of_genereated_timeseries_mts
+    features_of_genereated_timeseries_mts_validation: np.ndarray = np.array(
+        features_of_genereated_timeseries_mts_validation
     ).reshape(-1, num_features_per_uts * num_uts_in_mts)
 
     ## Evaluation of MTS generation
     mse_values_for_each_feature = calculate_mse_for_each_feature(
-        predicted_features=features_of_genereated_timeseries_mts,
+        predicted_features=features_of_genereated_timeseries_mts_validation,
         target_features=target_for_predicted_features,
     )
 
@@ -452,6 +450,15 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
 )
 
+# TODO:
+evaluate(
+    X_mts_validation=X_mts_validation,
+    X_mts_test=X_mts_test,
+    y_mts_validation=y_mts_validation,
+    y_mts_test=y_mts_test,
+    inferred_mts_validation=generated_transformed_mts,
+    inferred_mts_test=generated_transformed_mts,
+)
 
 # NOTE: We pass y for features, as these will contain all series
 create_and_save_plots_of_model_performances(
@@ -494,7 +501,7 @@ create_and_save_plots_of_model_performances(
         else validation_predicted_features
     ),
     mts_features_of_genererated_mts=(
-        features_of_genereated_timeseries_mts
+        features_of_genereated_timeseries_mts_validation
         if not is_conditional_gen_model
         else validation_predicted_features
     ),
