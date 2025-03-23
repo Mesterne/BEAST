@@ -3,7 +3,8 @@ import logging
 import os
 import random
 import sys
-from typing import Any, Dict, List
+from ast import Tuple
+from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -166,6 +167,36 @@ logger.info("Successfully generated MTS PCA space")
     use_one_hot_encoding=use_one_hot_encoding,
     number_of_transformations_in_test_set=test_set_sample_size,
 )
+
+original_indices_train = (
+    train_features_supervised_dataset["original_index"].astype(int).tolist()
+)
+original_indices_validation = (
+    validation_features_supervised_dataset["original_index"].astype(int).tolist()
+)
+original_indices_test = (
+    test_features_supervised_dataset["original_index"].astype(int).tolist()
+)
+
+target_indices_train = (
+    train_features_supervised_dataset["target_index"].astype(int).tolist()
+)
+target_indices_validation = (
+    validation_features_supervised_dataset["target_index"].astype(int).tolist()
+)
+target_indices_test = (
+    test_features_supervised_dataset["target_index"].astype(int).tolist()
+)
+
+train_transformation_indices: np.ndarray = np.array(
+    [original_indices_train, target_indices_train]
+).T
+validation_transformation_indices: np.ndarray = np.array(
+    [original_indices_validation, target_indices_validation]
+).T
+test_transformation_indices: np.ndarray = np.array(
+    [original_indices_test, target_indices_test]
+).T
 
 # Check if the feature model is a conditional generative model. If so, do necessary data preparation.
 is_conditional_gen_model: bool = (
@@ -396,9 +427,6 @@ if is_conditional_gen_model:
 else:
     logger.info("Using generated features to generate new time series")
 
-    # TODO: Here we would like to infer new MTSs for both test and valdiation.
-    # This is done to evaluate later on. However, we should reduce the size of validation
-    # and test, as it becomes way to large. At a maximum, we should use around 200 transformations in each
     original_indices_train = (
         train_features_supervised_dataset["original_index"].astype(int).tolist()
     )
@@ -409,115 +437,122 @@ else:
         test_features_supervised_dataset["original_index"].astype(int).tolist()
     )
 
-    inferred_mts_validation, features_of_genereated_timeseries_mts_validation = (
+    target_indices_train = (
+        train_features_supervised_dataset["target_index"].astype(int).tolist()
+    )
+    target_indices_validation = (
+        validation_features_supervised_dataset["target_index"].astype(int).tolist()
+    )
+    target_indices_test = (
+        test_features_supervised_dataset["target_index"].astype(int).tolist()
+    )
+
+    inferred_mts_validation, inferred_mts_features_validation = (
         generate_new_time_series(
             original_indices=original_indices_validation,
             predicted_features=validation_predicted_features,
             ga=ga,
         )
     )
-    inferred_mts_test, features_of_genereated_timeseries_mts_test = (
-        generate_new_time_series(
-            original_indices=original_indices_test,
-            predicted_features=test_predicted_features,
-            ga=ga,
-        )
+    inferred_mts_test, inferred_mts_features_test = generate_new_time_series(
+        original_indices=original_indices_test,
+        predicted_features=test_predicted_features,
+        ga=ga,
     )
 
     # Generation of new time series based on newly inferred features
     # We have to remove the delta values
-    original_features: np.ndarray = X_features_validation[
-        prediction_indices, : len(COLUMN_NAMES)
+    original_features_validation: np.ndarray = X_features_validation[
+        :, : len(COLUMN_NAMES)
     ]
-    target_for_predicted_features: np.ndarray = y_features_validation[
-        prediction_indices
+    target_for_predicted_features_validation: np.ndarray = y_features_validation
+
+    original_timeseries_validation: np.ndarray = mts_dataset_array[
+        original_indices_validation
+    ]
+    target_timeseries_validation: np.ndarray = mts_dataset_array[
+        target_indices_validation
     ]
 
-    original_timeseries: np.ndarray = mts_dataset_array[original_indices]
-    target_timeseries: np.ndarray = mts_dataset_array[target_indices]
-
-    features_of_genereated_timeseries_mts_validation: np.ndarray = np.array(
-        features_of_genereated_timeseries_mts_validation
+    inferred_mts_features_validation: np.ndarray = np.array(
+        inferred_mts_features_validation
     ).reshape(-1, num_features_per_uts * num_uts_in_mts)
 
     ## Evaluation of MTS generation
     mse_values_for_each_feature = calculate_mse_for_each_feature(
-        predicted_features=features_of_genereated_timeseries_mts_validation,
-        target_features=target_for_predicted_features,
+        predicted_features=inferred_mts_features_validation,
+        target_features=target_for_predicted_features_validation,
     )
 
 total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
 )
 
+
 # TODO:
 evaluate(
-    X_mts_validation=X_mts_validation,
-    X_mts_test=X_mts_test,
-    y_mts_validation=y_mts_validation,
-    y_mts_test=y_mts_test,
-    inferred_mts_validation=generated_transformed_mts,
-    inferred_mts_test=generated_transformed_mts,
+    mts_array=mts_dataset_array,
+    train_transformation_indices=train_transformation_indices,
+    validation_transformation_indices=validation_transformation_indices,
+    test_transformation_indices=test_transformation_indices,
+    inferred_mts_validation=inferred_mts_validation,
+    inferred_mts_test=inferred_mts_test,
 )
 
 # NOTE: We pass y for features, as these will contain all series
-create_and_save_plots_of_model_performances(
-    total_mse_for_each_mts=total_mse_for_each_uts,
-    mse_per_feature=mse_values_for_each_feature,
-    y_features_train=(
-        y_features_train if not is_conditional_gen_model else target_features_train
-    ),
-    y_features_validation=(
-        y_features_validation
-        if not is_conditional_gen_model
-        else target_features_validation
-    ),
-    y_features_test=(
-        y_features_test if not is_conditional_gen_model else target_features_test
-    ),
-    X_mts=(
-        original_timeseries
-        if not is_conditional_gen_model
-        else uts_wise_cgen_original_timeseries
-    ),
-    y_mts=(
-        target_timeseries
-        if not is_conditional_gen_model
-        else uts_wise_cgen_target_timeseries
-    ),
-    predicted_mts=(
-        generated_transformed_mts
-        if not is_conditional_gen_model
-        else uts_wise_predicted_mts
-    ),
-    original_mts_features=(
-        original_features
-        if not is_conditional_gen_model
-        else original_features_validation
-    ),
-    mts_features_predicted_before_generation=(
-        predicted_features_to_generated_mts_for
-        if not is_conditional_gen_model
-        else validation_predicted_features
-    ),
-    mts_features_of_genererated_mts=(
-        features_of_genereated_timeseries_mts_validation
-        if not is_conditional_gen_model
-        else validation_predicted_features
-    ),
-    target_for_predicted_mts_features=(
-        target_for_predicted_features
-        if not is_conditional_gen_model
-        else target_features_validation
-    ),
-)
+# create_and_save_plots_of_model_performances(
+#     total_mse_for_each_mts=total_mse_for_each_uts,
+#     mse_per_feature=mse_values_for_each_feature,
+#     y_features_train=(
+#         y_features _train if not is_conditional_gen_model else target_features_train
+#     ),
+#     y_features_validation=(
+#         y_features_validation
+#         if not is_conditional_gen_model
+#         else target_features_validation
+#     ),
+#     y_features_test=(
+#         y_features_test if not is_conditional_gen_model else target_features_test
+#     ),
+#     X_mts=(
+#         original_timeseries_validation
+#         if not is_conditional_gen_model
+#         else uts_wise_cgen_original_timeseries
+#     ),
+#     y_mts=(
+#         target_timeseries_validation
+#         if not is_conditional_gen_model
+#         else uts_wise_cgen_target_timeseries
+#     ),
+#     predicted_mts=(
+#         inferred_mts_validation
+#         if not is_conditional_gen_model
+#         else uts_wise_predicted_mts
+#     ),
+#     original_mts_features=(
+#         original_features_validation
+#         if not is_conditional_gen_model
+#         else original_features_validation
+#     ),
+#     mts_features_predicted_before_generation=(validation_predicted_features),
+#     mts_features_of_genererated_mts=(
+#         inferred_mts_features_validation
+#         if not is_conditional_gen_model
+#         else validation_predicted_features
+#     ),
+#     target_for_predicted_mts_features=(
+#         target_for_predicted_features_validation
+#         if not is_conditional_gen_model
+#         else target_features_validation
+#     ),
+# )
 
 (
     X_transformed,
     y_transformed,
 ) = create_training_windows_from_mts(
     mts=(
-        generated_transformed_mts
+        inferred_mts_validation
         if not is_conditional_gen_model
         else uts_wise_predicted_mts
     ),
