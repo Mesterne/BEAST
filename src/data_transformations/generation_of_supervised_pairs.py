@@ -62,6 +62,7 @@ def create_train_val_test_split(
     pca_array: np.ndarray,  # Shape (number of mts, 2)
     mts_feature_array: np.ndarray,  # Shape (number of mts, number of uts * number of features in uts)
     use_one_hot_encoding: bool,
+    number_of_transformations_in_test_set: int = 200,
 ):
     """
     Generate X and y list for train, validation and testing supervised datasets.
@@ -169,6 +170,16 @@ def create_train_val_test_split(
         test_supervised_dataset = create_all_delta_supervised_original_target_dataset(
             train_features, test_features
         )
+
+    # NOTE: We sample the validation and test set to reduce the number of MTS inferred we have
+    # to evaluate.
+
+    validation_supervised_dataset = validation_supervised_dataset.sample(
+        n=number_of_transformations_in_test_set
+    )
+    test_supervised_dataset = test_supervised_dataset.sample(
+        n=number_of_transformations_in_test_set
+    )
 
     logger.info(f"Generating X,y pairs for training dataset...")
     X_train, y_train = _generate_X_y_pairs_from_df(
