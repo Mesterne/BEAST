@@ -309,8 +309,25 @@ forecasting_model_wrapper.train(
 TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 logger.info("Running inference on validation set...")
 if is_conditional_gen_model:
+    # FIXME: Quick fix to reduce number of samples in inference
+    validation_sample_size = config["model_args"]["feature_model_args"][
+        "conditional_gen_model_args"
+    ]["inference_sample_sizes"]
+    validation_inference_input = X_y_pairs_cgen_validation[0]
+    if validation_sample_size is not None:
+        validation_inference_indices = np.random.choice(
+            X_y_pairs_cgen_validation[0].shape[0],
+            validation_sample_size[0],
+            replace=False,
+        )
+        print("Total num indices: ", X_y_pairs_cgen_validation[0].shape[0])
+        print("Sample size: ", validation_sample_size[0])
+        print(validation_inference_indices)
+        validation_inference_input = X_y_pairs_cgen_validation[0][
+            validation_inference_indices
+        ]
     validation_predicted_mts, validation_predicted_features = feature_model.infer(
-        X_y_pairs_cgen_validation[0],
+        validation_inference_input,
         num_uts_in_mts=num_uts_in_mts,
         num_features_per_uts=num_features_per_uts,
         seasonal_period=seasonal_period,
@@ -322,8 +339,18 @@ else:
 
 logger.info("Running inference on test set...")
 if is_conditional_gen_model:
+    # FIXME: Quick fix to reduce number of samples in inference
+    test_sample_size = config["model_args"]["feature_model_args"][
+        "conditional_gen_model_args"
+    ]["inference_sample_sizes"]
+    test_inference_input = X_y_pairs_cgen_test[0]
+    if test_sample_size is not None:
+        test_inference_indices = np.random.choice(
+            X_y_pairs_cgen_test[0].shape[0], test_sample_size[1], replace=False
+        )
+        test_inference_input = X_y_pairs_cgen_test[0][test_inference_indices]
     test_predicted_mts, test_predicted_features = feature_model.infer(
-        X_y_pairs_cgen_test[0],
+        test_inference_input,
         num_uts_in_mts=num_uts_in_mts,
         num_features_per_uts=num_features_per_uts,
         seasonal_period=seasonal_period,

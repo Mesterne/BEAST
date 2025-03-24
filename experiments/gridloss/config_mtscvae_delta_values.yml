@@ -51,6 +51,8 @@ model_args:
         - [512, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]
+      inference_sample_sizes:
+        - [402, 639] # Sizes for feature version
   forecasting_model_args:
     window_size: 168
     network_size:

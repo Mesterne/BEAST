@@ -37,7 +37,7 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 1 # 1, 50
+      num_epochs: 50 # 1, 50
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
@@ -51,6 +51,7 @@ model_args:
         - [512, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]
+      inference_sample_sizes: [30, 50] # Sizes for feature version
   forecasting_model_args:
     window_size: 168
     network_size:
