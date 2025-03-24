@@ -397,9 +397,14 @@ if is_conditional_gen_model:
         -1, num_uts_in_mts, mts_size // num_uts_in_mts
     )
 
+    # FIXME: Quick fix to reduce number of samples in in case of delta version
     logger.info("Preparing features")
     target_features_train: np.ndarray = numpy_decomp_and_features(
-        cgen_target_timeseries_train,
+        (
+            cgen_target_timeseries_train
+            if condition_type == "feature"
+            else cgen_target_timeseries_train[train_indices]
+        ),
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
