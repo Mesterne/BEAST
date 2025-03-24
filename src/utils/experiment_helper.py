@@ -11,11 +11,17 @@ from src.models.feedforward import FeedForwardFeatureModel
 from src.models.naive_correlation import CorrelationModel
 from src.models.naive_covariance import CovarianceModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.utils.features import (seasonal_strength, trend_linearity,
-                                trend_slope, trend_strength)
+from src.utils.features import (
+    seasonal_strength,
+    trend_linearity,
+    trend_slope,
+    trend_strength,
+)
 from src.utils.generate_dataset import generate_windows_dataset
-from src.utils.transformations import (manipulate_seasonal_component,
-                                       manipulate_trend_component)
+from src.utils.transformations import (
+    manipulate_seasonal_component,
+    manipulate_trend_component,
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

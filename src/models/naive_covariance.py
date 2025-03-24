@@ -1,3 +1,4 @@
+from tracemalloc import start
 from typing import List, Tuple
 
 import numpy as np
@@ -30,6 +31,9 @@ class CovarianceModel(FeatureTransformationModel):
         return [], []
 
     def infer(self, X: np.ndarray) -> np.ndarray:
+        """
+        Uses the covariance_matrix, mean vector and input X to infer new featues using gaussian updates.
+        """
         # Extract feature, delta, and one-hot encoding parts
         features = X[
             :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
@@ -55,5 +59,14 @@ class CovarianceModel(FeatureTransformationModel):
 
             start_idx = activated_uts_index * num_features
             end_idx = start_idx + num_features
+            changed_feature_values = feature_vector[start_idx:end_idx]
+            new_feature_values = (
+                changed_feature_values + delta_vector
+            )  # If the delta vector is of size 4, this will have size 4. However, predicted_features should be of size 12 since number_of_uts_in_mts is 3
+
+            # TODO: Use covariance_matrix, mean_vector and new feature values to calculate predicted_features
+            predicted_features[row_index, 0:start_idx] = 0
+            predicted_features[row_index, start_idx:end_idx] = new_feature_values
+            predicted_features[row_index, end_idx:-1] = 0
 
         return predicted_features
