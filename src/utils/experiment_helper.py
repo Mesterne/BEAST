@@ -9,6 +9,7 @@ from src.models.cvae_wrapper import CVAEWrapper
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.feedforward import FeedForwardFeatureModel
 from src.models.naive_correlation import CorrelationModel
+from src.models.naive_covariance import CovarianceModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.features import (
     seasonal_strength,
@@ -93,6 +94,8 @@ def get_feature_model_by_type(
 ) -> FeatureTransformationModel:
     if model_type == "correlation_model":
         return CorrelationModel(model_params)
+    elif model_type == "covariance_model":
+        return CovarianceModel(params=model_params)
     elif model_type == "feedforward_neural_network":
         nn = FeedForwardFeatureModel(model_params)
         model = NeuralNetworkWrapper(nn, training_params=training_params)
