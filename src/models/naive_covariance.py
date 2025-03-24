@@ -59,14 +59,59 @@ class CovarianceModel(FeatureTransformationModel):
 
             start_idx = activated_uts_index * num_features
             end_idx = start_idx + num_features
-            changed_feature_values = feature_vector[start_idx:end_idx]
-            new_feature_values = (
-                changed_feature_values + delta_vector
-            )  # If the delta vector is of size 4, this will have size 4. However, predicted_features should be of size 12 since number_of_uts_in_mts is 3
+            known_features = feature_vector[start_idx:end_idx] + delta_vector
 
-            # TODO: Use covariance_matrix, mean_vector and new feature values to calculate predicted_features
-            predicted_features[row_index, 0:start_idx] = 0
-            predicted_features[row_index, start_idx:end_idx] = new_feature_values
-            predicted_features[row_index, end_idx:-1] = 0
+            # 1 = Unknown
+            # 2 = Known
+            # Extract mean values for known and unknown features.
+            mu_2 = self.mean_vector[start_idx:end_idx]
+            mu_1 = np.concatenate(
+                [self.mean_vector[:start_idx], self.mean_vector[end_idx:]]
+            )
+
+            # Extract parts of covariance matrix used for later calculations
+            # Each matrix essential extracts its own parts of the covariance matrix.
+            # These are then used to calculated conditional mean and covariances. See pg. 84 of Murphy et. al. for complete formula and derivations
+            sigma_22 = self.covariance_matrixriance_matrix[
+                start_idx:end_idx, start_idx:end_idx
+            ]
+            sigma_12 = np.vstack(
+                [
+                    self.covariance_matrix[:start_idx, start_idx:end_idx],
+                    self.covariance_matrix[end_idx:, start_idx:end_idx],
+                ]
+            )
+            sigma_21 = np.hstack(
+                [
+                    self.covariance_matrix[start_idx:end_idx, :start_idx],
+                    self.covariance_matrix[start_idx:end_idx, end_idx:],
+                ]
+            )
+            sigma_11 = np.block(
+                [
+                    [
+                        self.covariance_matrix[:start_idx, :start_idx],
+                        self.covariance_matrix[:start_idx, end_idx:],
+                    ],
+                    [
+                        self.covariance_matrix[end_idx:, :start_idx],
+                        self.covariance_matrix[end_idx:, end_idx:],
+                    ],
+                ]
+            )
+
+            # Compute conditional mean and covariance
+            sigma_22_inv = np.linalg.pinv(sigma_22)  # Inverse of known covariance
+            mean_1_given_2 = mu_1 + sigma_12 @ sigma_22_inv @ (known_features - mu_2)
+            sigma_1_given_2 = sigma_11 - sigma_12 @ sigma_22_inv @ sigma_21
+
+            # Sample from multivariate normal distribution, using the conditional mean and covariance_matrix calculated earlier
+            sampled_values = np.random.multivariate_normal(
+                mean_1_given_2, sigma_1_given_2
+            )
+
+            predicted_features[row_index, :start_idx] = sampled_values[:start_idx]
+            predicted_features[row_index, start_idx:end_idx] = known_features
+            predicted_features[row_index, end_idx:] = sampled_values[start_idx:]
 
         return predicted_features
