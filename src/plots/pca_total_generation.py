@@ -1,11 +1,13 @@
 from typing import List
+
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from matplotlib.figure import Figure
-from src.utils.pca import PCAWrapper
+
 from src.data.constants import COLUMN_NAMES, UTS_NAMES
+from src.utils.pca import PCAWrapper
 
 
 def plot_pca_for_all_generated_mts(
@@ -26,12 +28,11 @@ def plot_pca_for_all_generated_mts(
     ax = axes[0]
     pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
 
-    train_pca: np.ndarray = pca_transformer.fit_transform(mts_features_train)
-    validation_pca: np.ndarray = pca_transformer.transform(mts_features_validation)
-    test_pca: np.ndarray = pca_transformer.transform(mts_features_test)
+    mts_features_all = np.vstack(
+        [mts_features_train, mts_features_validation, mts_features_test]
+    )
 
-    # We add all data points to one array
-    mts_all_pca: np.ndarray = np.vstack([train_pca, validation_pca, test_pca])
+    mts_all_pca: np.ndarray = pca_transformer.fit_transform(mts_features_all)
 
     predicted_pca: np.ndarray = pca_transformer.transform(mts_generated_features)
 
