@@ -88,7 +88,7 @@ class MTSCVAE(nn.Module):
             device
         )
         latent_vector = randn(feature_values.shape[0], self.latent_size).to(device)
-        # FIXME: Make sure this works regardless of device value
+        # NOTE: Necessary to move tensor to cpu before converting to numpy
         cpu_mts = self.decoder(tensor_feature_values, latent_vector).cpu()
         return cpu_mts.detach().numpy()
 
@@ -105,7 +105,7 @@ class MTSCVAE(nn.Module):
         latent_vector = self.reparamterization_trick(latent_mean, latent_log_var).to(
             device
         )
-        # FIXME: Make sure this works regardless of device value
+        # NOTE: Necessary to move tensor to cpu before converting to numpy
         cpu_mts = self.decoder(tensor_feature_deltas, latent_vector).cpu()
         return cpu_mts.detach().numpy()
 

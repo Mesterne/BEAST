@@ -326,12 +326,16 @@ if is_conditional_gen_model:
         validation_inference_indices
     ]
 
+    print("INFERENCE INPUT SHAPE", validation_inference_input.shape)
+
     validation_predicted_mts, validation_predicted_features = feature_model.infer(
         validation_inference_input,
         num_uts_in_mts=num_uts_in_mts,
         num_features_per_uts=num_features_per_uts,
         seasonal_period=seasonal_period,
     )
+    print("VALIDATION PREDICTED MTS SHAPE", validation_predicted_mts.shape)
+    print("VALIDATION PREDICTED FEATURES SHAPE", validation_predicted_features.shape)
 else:
     validation_predicted_features: np.ndarray = feature_model.infer(
         X_features_validation
