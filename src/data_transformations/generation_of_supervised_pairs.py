@@ -204,6 +204,33 @@ def create_train_val_test_split(
             y_test: {y_test.shape}
     """
     )
+
+    original_indices_train = (
+        train_supervised_dataset["original_index"].astype(int).tolist()
+    )
+    original_indices_validation = (
+        validation_supervised_dataset["original_index"].astype(int).tolist()
+    )
+    original_indices_test = (
+        test_supervised_dataset["original_index"].astype(int).tolist()
+    )
+
+    target_indices_train = train_supervised_dataset["target_index"].astype(int).tolist()
+    target_indices_validation = (
+        validation_supervised_dataset["target_index"].astype(int).tolist()
+    )
+    target_indices_test = test_supervised_dataset["target_index"].astype(int).tolist()
+
+    train_transformation_indices: np.ndarray = np.array(
+        [original_indices_train, target_indices_train]
+    ).T
+    validation_transformation_indices: np.ndarray = np.array(
+        [original_indices_validation, target_indices_validation]
+    ).T
+    test_transformation_indices: np.ndarray = np.array(
+        [original_indices_test, target_indices_test]
+    ).T
+
     return (
         X_train,
         y_train,
@@ -214,6 +241,9 @@ def create_train_val_test_split(
         train_supervised_dataset,
         validation_supervised_dataset,
         test_supervised_dataset,
+        train_transformation_indices,
+        validation_transformation_indices,
+        test_transformation_indices,
     )
 
 

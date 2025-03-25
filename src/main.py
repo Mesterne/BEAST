@@ -34,19 +34,11 @@ from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.plots.feature_distribution import plot_feature_distribution
-from src.plots.generated_vs_target_comparison import (
-    create_and_save_plots_of_model_performances,
-)
 from src.utils.evaluation.evaluation import evaluate
-from src.utils.evaluation.feature_space_evaluation import (
-    calculate_mse_for_each_feature,
-    calculate_total_mse_for_each_mts,
-)
 from src.utils.experiment_helper import (  # noqa: E402
     get_feature_model_by_type,
     get_mts_dataset,
 )
-from src.utils.features import decomp_and_features
 from src.utils.forecasting_utils import compare_old_and_new_model
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import (  # noqa: E402
@@ -161,42 +153,15 @@ logger.info("Successfully generated MTS PCA space")
     train_features_supervised_dataset,
     validation_features_supervised_dataset,
     test_features_supervised_dataset,
+    train_transformation_indices,
+    validation_transformation_indices,
+    test_transformation_indices,
 ) = create_train_val_test_split(
     mts_pca_array,
     mts_features_array,
     use_one_hot_encoding=use_one_hot_encoding,
     number_of_transformations_in_test_set=test_set_sample_size,
 )
-
-original_indices_train = (
-    train_features_supervised_dataset["original_index"].astype(int).tolist()
-)
-original_indices_validation = (
-    validation_features_supervised_dataset["original_index"].astype(int).tolist()
-)
-original_indices_test = (
-    test_features_supervised_dataset["original_index"].astype(int).tolist()
-)
-
-target_indices_train = (
-    train_features_supervised_dataset["target_index"].astype(int).tolist()
-)
-target_indices_validation = (
-    validation_features_supervised_dataset["target_index"].astype(int).tolist()
-)
-target_indices_test = (
-    test_features_supervised_dataset["target_index"].astype(int).tolist()
-)
-
-train_transformation_indices: np.ndarray = np.array(
-    [original_indices_train, target_indices_train]
-).T
-validation_transformation_indices: np.ndarray = np.array(
-    [original_indices_validation, target_indices_validation]
-).T
-test_transformation_indices: np.ndarray = np.array(
-    [original_indices_test, target_indices_test]
-).T
 
 # Check if the feature model is a conditional generative model. If so, do necessary data preparation.
 is_conditional_gen_model: bool = (
@@ -207,6 +172,7 @@ if is_conditional_gen_model:
     condition_type: str = config["model_args"]["feature_model_args"][
         "conditional_gen_model_args"
     ]["condition_type"]
+    # TODO: Fjerne supervised dataset
     (
         X_y_pairs_cgen_train,
         X_y_pairs_cgen_validation,
@@ -278,8 +244,6 @@ feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 feature_model_params["number_of_features_per_uts"] = num_features_per_uts
 feature_model_params["input_size"] = X_features_train.shape[1]
 
-print(f"Shape of X: {X_features_train.shape}")
-
 ########### MODEL INITIALIZATION
 feature_model: FeatureTransformationModel = get_feature_model_by_type(
     model_type=model_type,
@@ -350,19 +314,17 @@ if is_conditional_gen_model:
         seasonal_period=seasonal_period,
     )
     inferred_mts_validation = inferred_mts_validation.reshape(-1, num_uts_in_mts, 192)
-    print(f"Shape of inferred_mts_validation CVAE: {inferred_mts_validation.shape}")
 else:
     validation_predicted_features: np.ndarray = feature_model.infer(
         X_features_validation
     )
     inferred_mts_validation, inferred_mts_features_validation = (
         generate_new_time_series(
-            original_indices=original_indices_validation,
+            original_indices=validation_transformation_indices[:, 0],
             predicted_features=validation_predicted_features,
             ga=ga,
         )
     )
-    print(f"Shape of inferred_mts_validation GA: {inferred_mts_validation.shape}")
 
 logger.info("Running inference on test set...")
 if is_conditional_gen_model:
@@ -376,7 +338,7 @@ if is_conditional_gen_model:
 else:
     test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
     inferred_mts_test, inferred_mts_features_test = generate_new_time_series(
-        original_indices=original_indices_test,
+        original_indices=test_transformation_indices[:, 0],
         predicted_features=test_predicted_features,
         ga=ga,
     )

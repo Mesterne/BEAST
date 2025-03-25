@@ -36,11 +36,9 @@ def plot_time_series_for_all_uts(
 
     fig, axes = plt.subplots(nrows=num_uts, ncols=4, figsize=(30, 5 * num_uts))
 
-    print(transformed_mts_features.shape)
     transformed_mts_features = transformed_mts_features.squeeze()
     time_index = np.arange(num_time_steps)  # Time steps for x-axis
 
-    print(transformed_mts_features.shape)
     original_mts_features = original_mts_features.reshape((num_uts, num_features))
     target_mts_features = target_mts_features.reshape((num_uts, num_features))
     transformed_mts_features = transformed_mts_features.reshape((num_uts, num_features))
