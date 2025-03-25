@@ -23,11 +23,10 @@ if project_root not in sys.path:
 import uuid
 
 import wandb
-
 from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
-)
+)  # noqa: E402
 from src.models.cvae_wrapper import prepare_cgen_data
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
@@ -426,6 +425,7 @@ else:
         )
     )
 
+    print("Calculating MSE values")
     # Generation of new time series based on newly inferred features
     # We have to remove the delta values
     original_features: np.ndarray = X_features_validation[
@@ -452,7 +452,7 @@ total_mse_for_each_uts = calculate_total_mse_for_each_mts(
     mse_per_feature=mse_values_for_each_feature
 )
 
-
+print("Creating plots..")
 # NOTE: We pass y for features, as these will contain all series
 create_and_save_plots_of_model_performances(
     total_mse_for_each_mts=total_mse_for_each_uts,
