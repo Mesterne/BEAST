@@ -64,12 +64,15 @@ class GeneticAlgorithm:
 
             # NOTE: The factor m is excluded from solution for now.
             # It caused some issues when included.
-            # FIXME: The trend trend_linearity component is excluded for now (h=0)
             solution_trend = manipulate_trend_component(
-                original_trend, solution[0], solution[1], h=solution[2], m=0
+                trend_comp=original_trend,
+                trend_determination=solution[0],
+                trend_slope=solution[1],
+                trend_linerarity=solution[2],
+                additional_trend=solution[3],
             )
             solution_seasonal = manipulate_seasonal_component(
-                original_seasonal, solution[3]
+                original_seasonal, solution[4]
             )
 
             solution_features = np.array(

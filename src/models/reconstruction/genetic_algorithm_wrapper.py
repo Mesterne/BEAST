@@ -73,6 +73,8 @@ class GeneticAlgorithmWrapper:
         ][1]
         trend_lin_factor_low = self.model_params["legal_values"]["trend_lin_factor"][0]
         trend_lin_factor_high = self.model_params["legal_values"]["trend_lin_factor"][1]
+        m_low = self.model_params["legal_values"]["m"][0]
+        m_high = self.model_params["legal_values"]["m"][1]
         seasonal_det_factor_low = self.model_params["legal_values"][
             "seasonal_det_factor"
         ][0]
@@ -80,13 +82,14 @@ class GeneticAlgorithmWrapper:
             "seasonal_det_factor"
         ][1]
 
-        num_genes = self.num_features_per_uts
+        num_genes = self.num_features_per_uts + 1
 
         # Constraint on GA solutions
         legal_factor_values = [
             np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
             np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
             np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
+            np.linspace(m_low, m_high, 100),
             np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
         ]
 
@@ -142,7 +145,7 @@ class GeneticAlgorithmWrapper:
                     factors[0],
                     factors[1],
                     factors[2],
-                    m=0,
+                    additional_trend=0,
                 )
                 transformed_seasonal = manipulate_seasonal_component(
                     univariate_decomps.seasonal, factors[3]
