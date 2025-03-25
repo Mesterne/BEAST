@@ -45,7 +45,7 @@ from src.utils.experiment_helper import (  # noqa: E402
     get_feature_model_by_type,
     get_mts_dataset,
 )
-from src.utils.features import decomp_and_features
+from src.utils.features import decomp_and_features, numpy_decomp_and_features
 from src.utils.forecasting_utils import compare_old_and_new_model
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import (  # noqa: E402
@@ -309,12 +309,33 @@ forecasting_model_wrapper.train(
 TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 logger.info("Running inference on validation set...")
 if is_conditional_gen_model:
+    # FIXME: Quick fix to reduce number of samples in inference
+    validation_sample_size = config["model_args"]["feature_model_args"][
+        "conditional_gen_model_args"
+    ]["inference_sample_sizes"]
+    validation_inference_indices = (
+        np.random.choice(
+            X_y_pairs_cgen_validation[0].shape[0],
+            validation_sample_size[0],
+            replace=False,
+        )
+        if validation_sample_size is not None
+        else np.arange(X_y_pairs_cgen_validation[0].shape[0])
+    )
+    validation_inference_input = X_y_pairs_cgen_validation[0][
+        validation_inference_indices
+    ]
+
+    print("INFERENCE INPUT SHAPE", validation_inference_input.shape)
+
     validation_predicted_mts, validation_predicted_features = feature_model.infer(
-        X_y_pairs_cgen_validation[0],
+        validation_inference_input,
         num_uts_in_mts=num_uts_in_mts,
         num_features_per_uts=num_features_per_uts,
         seasonal_period=seasonal_period,
     )
+    print("VALIDATION PREDICTED MTS SHAPE", validation_predicted_mts.shape)
+    print("VALIDATION PREDICTED FEATURES SHAPE", validation_predicted_features.shape)
 else:
     validation_predicted_features: np.ndarray = feature_model.infer(
         X_features_validation
@@ -322,8 +343,23 @@ else:
 
 logger.info("Running inference on test set...")
 if is_conditional_gen_model:
+    # FIXME: Quick fix to reduce number of samples in inference
+    test_sample_size = config["model_args"]["feature_model_args"][
+        "conditional_gen_model_args"
+    ]["inference_sample_sizes"]
+    test_inference_indices = (
+        np.random.choice(
+            X_y_pairs_cgen_test[0].shape[0],
+            test_sample_size[1],
+            replace=False,
+        )
+        if test_sample_size is not None
+        else np.arange(X_y_pairs_cgen_test[0].shape[0])
+    )
+    test_inference_input = X_y_pairs_cgen_test[0][test_inference_indices]
+
     test_predicted_mts, test_predicted_features = feature_model.infer(
-        X_y_pairs_cgen_test[0],
+        test_inference_input,
         num_uts_in_mts=num_uts_in_mts,
         num_features_per_uts=num_features_per_uts,
         seasonal_period=seasonal_period,
@@ -344,10 +380,16 @@ if is_conditional_gen_model:
     cgen_target_timeseries_train: np.ndarray = X_y_pairs_cgen_train[1]
     cgen_original_timeseries_validation: np.ndarray = X_y_pairs_cgen_validation[0][
         :, :mts_size
+    ][validation_inference_indices]
+    cgen_target_timeseries_validation: np.ndarray = X_y_pairs_cgen_validation[1][
+        validation_inference_indices
     ]
-    cgen_target_timeseries_validation: np.ndarray = X_y_pairs_cgen_validation[1]
-    cgen_original_timeseries_test: np.ndarray = X_y_pairs_cgen_test[0][:, :mts_size]
-    cgen_target_timeseries_test: np.ndarray = X_y_pairs_cgen_test[1]
+    cgen_original_timeseries_test: np.ndarray = X_y_pairs_cgen_test[0][:, :mts_size][
+        test_inference_indices
+    ]
+    cgen_target_timeseries_test: np.ndarray = X_y_pairs_cgen_test[1][
+        test_inference_indices
+    ]
 
     uts_wise_cgen_original_timeseries = cgen_original_timeseries_validation.reshape(
         -1, num_uts_in_mts, mts_size // num_uts_in_mts
@@ -359,33 +401,40 @@ if is_conditional_gen_model:
         -1, num_uts_in_mts, mts_size // num_uts_in_mts
     )
 
+    # FIXME: Quick fix to reduce number of samples in in case of delta version
     logger.info("Preparing features")
-    target_features_train: np.ndarray = decomp_and_features(
-        cgen_target_timeseries_train,
+    target_features_train: np.ndarray = numpy_decomp_and_features(
+        (
+            cgen_target_timeseries_train
+            if condition_type == "feature"
+            else cgen_target_timeseries_train[train_indices]
+        ),
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    target_features_validation: np.ndarray = decomp_and_features(
+    target_features_validation: np.ndarray = numpy_decomp_and_features(
         cgen_target_timeseries_validation,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    target_features_test: np.ndarray = decomp_and_features(
+    target_features_test: np.ndarray = numpy_decomp_and_features(
         cgen_target_timeseries_test,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
     # Need original features for plotting
-    original_features_validation: np.ndarray = decomp_and_features(
+    original_features_validation: np.ndarray = numpy_decomp_and_features(
         cgen_original_timeseries_validation,
         num_uts_in_mts,
         num_features_per_uts,
         seasonal_period,
     )[1]
-    logger.info("Calculating MSE for features og generated time series using test set")
+    logger.info(
+        "Calculating MSE for features og generated time series using validation set"
+    )
     mse_values_for_each_feature = calculate_mse_for_each_feature(
         predicted_features=validation_predicted_features,
         target_features=target_features_validation,
