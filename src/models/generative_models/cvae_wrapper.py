@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 import wandb
-from src.models.cvae import MTSCVAE
 from src.models.feature_transformation_model import FeatureTransformationModel
+from src.models.generative_models.cvae import MTSCVAE
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 

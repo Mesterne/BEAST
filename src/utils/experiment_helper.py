@@ -1,13 +1,12 @@
 import logging
-from typing import List
 
 import numpy as np
 import pandas as pd
 
-from src.models.cvae import MTSCVAE
-from src.models.cvae_wrapper import CVAEWrapper
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.feedforward import FeedForwardFeatureModel
+from src.models.generative_models.cvae import MTSCVAE
+from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.naive_correlation import CorrelationModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.features import (

@@ -3,8 +3,7 @@ import logging
 import os
 import random
 import sys
-from ast import Tuple
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,9 +27,9 @@ from src.data.constants import COLUMN_NAMES, OUTPUT_DIR
 from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
 )  # noqa: E402
-from src.models.cvae_wrapper import prepare_cgen_data
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
+from src.models.generative_models.cvae_wrapper import prepare_cgen_data
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.plots.feature_distribution import plot_feature_distribution
@@ -94,6 +93,11 @@ forecasting_model_training_params: Dict[str, Any] = forecasting_model_params[
     "training_args"
 ]
 training_params: Dict[str, Any] = feature_model_params["training_args"]
+
+# Check if the feature model is a conditional generative model. If so, do necessary data preparation.
+config["is_conditional_gen_model"]: bool = (
+    config["model_args"]["feature_model_args"]["conditional_gen_model_args"] is not None
+)
 
 # Set up logging to wandb
 if log_training_to_wandb:
@@ -163,11 +167,7 @@ logger.info("Successfully generated MTS PCA space")
     number_of_transformations_in_test_set=test_set_sample_size,
 )
 
-# Check if the feature model is a conditional generative model. If so, do necessary data preparation.
-is_conditional_gen_model: bool = (
-    config["model_args"]["feature_model_args"]["conditional_gen_model_args"] is not None
-)
-if is_conditional_gen_model:
+if config["is_conditional_gen_model"]:
     logger.info("Preparing data set for conditional generative model...")
     condition_type: str = config["model_args"]["feature_model_args"][
         "conditional_gen_model_args"
@@ -275,19 +275,23 @@ logger.info("Successfully initialized the genetic algorithm")
 logger.info("Training feature model...")
 feature_model.train(
     X_train=(
-        X_features_train if not is_conditional_gen_model else X_y_pairs_cgen_train[0]
+        X_features_train
+        if not config["is_conditional_gen_model"]
+        else X_y_pairs_cgen_train[0]
     ),
     y_train=(
-        y_features_train if not is_conditional_gen_model else X_y_pairs_cgen_train[1]
+        y_features_train
+        if not config["is_conditional_gen_model"]
+        else X_y_pairs_cgen_train[1]
     ),
     X_val=(
         X_features_validation
-        if not is_conditional_gen_model
+        if not config["is_conditional_gen_model"]
         else X_y_pairs_cgen_validation[0]
     ),
     y_val=(
         y_features_validation
-        if not is_conditional_gen_model
+        if not config["is_conditional_gen_model"]
         else X_y_pairs_cgen_validation[1]
     ),
     log_to_wandb=False,
@@ -306,7 +310,7 @@ forecasting_model_wrapper.train(
 ############ INFERENCE
 TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 logger.info("Running inference on validation set...")
-if is_conditional_gen_model:
+if config["is_conditional_gen_model"]:
     inferred_mts_validation, inferred_mts_features_validation = feature_model.infer(
         X_y_pairs_cgen_validation[0],
         num_uts_in_mts=num_uts_in_mts,
@@ -327,7 +331,7 @@ else:
     )
 
 logger.info("Running inference on test set...")
-if is_conditional_gen_model:
+if config["is_conditional_gen_model"]:
     inferred_mts_test, inferred_mts_features_test = feature_model.infer(
         X_y_pairs_cgen_test[0],
         num_uts_in_mts=num_uts_in_mts,
