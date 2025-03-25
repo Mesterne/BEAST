@@ -72,9 +72,7 @@ class CovarianceModel(FeatureTransformationModel):
             # Extract parts of covariance matrix used for later calculations
             # Each matrix essential extracts its own parts of the covariance matrix.
             # These are then used to calculated conditional mean and covariances. See pg. 84 of Murphy et. al. for complete formula and derivations
-            sigma_22 = self.covariance_matrixriance_matrix[
-                start_idx:end_idx, start_idx:end_idx
-            ]
+            sigma_22 = self.covariance_matrix[start_idx:end_idx, start_idx:end_idx]
             sigma_12 = np.vstack(
                 [
                     self.covariance_matrix[:start_idx, start_idx:end_idx],
