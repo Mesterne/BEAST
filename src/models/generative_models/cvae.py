@@ -83,19 +83,31 @@ class MTSCVAE(nn.Module):
     def generate_mts(self, feature_values: np.ndarray) -> np.ndarray:
         """Generate MTS data given feature values as condition."""
         print("FEATURE INFO", feature_values.shape)
-        tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32)
-        latent_vector = randn(feature_values.shape[0], self.latent_size)
-        return self.decoder(tensor_feature_values, latent_vector).detach().numpy()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32).to(
+            device
+        )
+        latent_vector = randn(feature_values.shape[0], self.latent_size).to(device)
+        # NOTE: Necessary to move tensor to cpu before converting to numpy
+        cpu_mts = self.decoder(tensor_feature_values, latent_vector).cpu()
+        return cpu_mts.detach().numpy()
 
     def transform_mts_from_original(
         self, mts: np.ndarray, feature_deltas: np.ndarray
     ) -> np.ndarray:
         """Transform MTS data given feature deltas as condition."""
-        tensor_mts = torch.tensor(mts, dtype=torch.float32)
-        tensor_feature_deltas = torch.tensor(feature_deltas, dtype=torch.float32)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        tensor_mts = torch.tensor(mts, dtype=torch.float32).to(device)
+        tensor_feature_deltas = torch.tensor(feature_deltas, dtype=torch.float32).to(
+            device
+        )
         latent_mean, latent_log_var = self.encoder(tensor_mts, tensor_feature_deltas)
-        latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
-        return self.decoder(tensor_feature_deltas, latent_vector).detach().numpy()
+        latent_vector = self.reparamterization_trick(latent_mean, latent_log_var).to(
+            device
+        )
+        # NOTE: Necessary to move tensor to cpu before converting to numpy
+        cpu_mts = self.decoder(tensor_feature_deltas, latent_vector).cpu()
+        return cpu_mts.detach().numpy()
 
 
 class Encoder(nn.Module):
@@ -226,7 +238,9 @@ class Decoder(nn.Module):
             latent.shape[1] == self.latent_size
         ), f"Latent size mismatch. Expected {self.latent_size}, got {latent.shape[1]}"
 
-        input = cat((latent, feature_info), dim=1)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        input = cat((latent, feature_info), dim=1).to(device)
         hidden_layer_input = self.input_layer(input)
         for i in range(len(self.hidden_layers)):
             if i == 0:

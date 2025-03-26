@@ -10,7 +10,6 @@ from tqdm import tqdm
 import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
-from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
 
@@ -49,7 +48,6 @@ class CVAEWrapper(FeatureTransformationModel):
         loss_function = self.loss_function
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
 
-        print(X_train.shape, y_train.shape)
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
         y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
         X_validation_tensor = torch.tensor(X_val, dtype=torch.float32).to(device)
@@ -141,7 +139,7 @@ class CVAEWrapper(FeatureTransformationModel):
                 input_mts, input_feature_deltas
             )
 
-        features_of_generated_mts = decomp_and_features(
+        features_of_generated_mts = numpy_decomp_and_features(
             generated_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
         )[1]
         return generated_mts, features_of_generated_mts
