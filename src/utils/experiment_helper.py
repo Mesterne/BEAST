@@ -1,3 +1,5 @@
+# TODO: Fullføre model handler. En del som må gjøres der fremdeles
+
 import logging
 
 import numpy as np

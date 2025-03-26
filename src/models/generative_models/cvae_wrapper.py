@@ -296,12 +296,6 @@ def get_delta_conditioned_dataset(
 def prepare_cgen_data(
     condition_type: str,
     mts_array: list,
-    X_features_train: np.ndarray,
-    y_features_train: np.ndarray,
-    X_features_validation: np.ndarray,
-    y_features_validation: np.ndarray,
-    X_features_test: np.ndarray,
-    y_features_test: np.ndarray,
     train_features_supervised_dataset: pd.DataFrame,
     validation_features_supervised_dataset: pd.DataFrame,
     test_features_supervised_dataset: pd.DataFrame,
