@@ -5,7 +5,7 @@ import numpy as np
 
 
 class TimeseriesTransformationModel(ABC):
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: Dict[str, any]) -> None:
         super().__init__()
         self.model = None
 

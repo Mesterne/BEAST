@@ -1,4 +1,6 @@
-from typing import override
+from typing import Dict, List, Tuple, override
+
+import numpy as np
 
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import CVAEWrapper, prepare_cgen_data
@@ -6,15 +8,15 @@ from src.models.timeseries_transformation_model import TimeseriesTransformationM
 
 
 class GenerativeModel(TimeseriesTransformationModel):
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: Dict[str, any]) -> None:
         super().__init__()
         self.model = self._choose_underlying_model_based_on_config(config)
 
-    def _choose_underlying_model_based_on_config(self, config: Dict[str, Any]):
-        model_params: Dict[str, Any] = config["model_args"]["feature_model_args"][
+    def _choose_underlying_model_based_on_config(self, config: Dict[str, any]):
+        model_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "conditional_gen_model_args"
         ]
-        training_params: Dict[str, Any] = model_params["training_params"]
+        training_params: Dict[str, any] = model_params["training_params"]
         cvae = MTSCVAE(model_params=model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
         return model

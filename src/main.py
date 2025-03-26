@@ -30,6 +30,7 @@ from src.data_transformations.generation_of_supervised_pairs import (
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.generative_models.cvae_wrapper import prepare_cgen_data
+from src.models.model_handler import ModelHandler
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.plots.feature_distribution import plot_feature_distribution
@@ -39,7 +40,6 @@ from src.utils.experiment_helper import (  # noqa: E402
     get_mts_dataset,
 )
 from src.utils.forecasting_utils import compare_old_and_new_model
-from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import (  # noqa: E402
     create_training_windows_from_mts,
     generate_feature_dataframe,
@@ -209,6 +209,7 @@ validation_mts_array: np.ndarray = np.array(
 )
 test_mts_array: np.ndarray = np.array([mts_dataset_array[i] for i in test_indices])
 
+
 (
     X_mts_train,
     y_mts_train,
@@ -240,6 +241,12 @@ logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shap
 )
 logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
+config["model_args"]["feature_model_args"]["number_of_uts_in_mts"] = num_uts_in_mts
+config["model_args"]["feature_model_args"][
+    "number_of_features_per_uts"
+] = num_features_per_uts
+config["model_args"]["feature_model_args"]["input_size"] = X_features_train.shape[1]
+# TODO :Delete
 feature_model_params["number_of_uts_in_mts"] = num_uts_in_mts
 feature_model_params["number_of_features_per_uts"] = num_features_per_uts
 feature_model_params["input_size"] = X_features_train.shape[1]
@@ -260,6 +267,15 @@ forecasting_model_wrapper: NeuralNetworkWrapper = NeuralNetworkWrapper(
     model=forecasting_model, training_params=forecasting_model_training_params
 )
 logging.info("Successfully initialized the forecasting model")
+
+
+model_handler = ModelHandler(config)
+model_handler.choose_model_category()
+model_handler.train(
+    mts_dataset=mts_dataset_array,
+    train_transformation_indices=train_transformation_indices,
+    validation_transformation_indices=validation_transformation_indices,
+)
 
 ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
     ga_params=genetic_algorithm_params,
@@ -338,15 +354,9 @@ if config["is_conditional_gen_model"]:
     )
     inferred_mts_validation = inferred_mts_validation.reshape(-1, num_uts_in_mts, 192)
 else:
-    validation_predicted_features: np.ndarray = feature_model.infer(
-        X_features_validation
-    )
-    inferred_mts_validation, inferred_mts_features_validation = (
-        generate_new_time_series(
-            original_indices=validation_transformation_indices[:, 0],
-            predicted_features=validation_predicted_features,
-            ga=ga,
-        )
+    inferred_mts_validation = model_handler.infer(
+        mts_dataset=mts_dataset_array,
+        evaluation_set_indinces=validation_transformation_indices,
     )
 
 logger.info("Running inference on test set...")
@@ -374,11 +384,9 @@ if config["is_conditional_gen_model"]:
     )
     inferred_mts_test = inferred_mts_test.reshape(-1, num_uts_in_mts, 192)
 else:
-    test_predicted_features: np.ndarray = feature_model.infer(X_features_test)
-    inferred_mts_test, inferred_mts_features_test = generate_new_time_series(
-        original_indices=test_transformation_indices[:, 0],
-        predicted_features=test_predicted_features,
-        ga=ga,
+    inferred_mts_test = model_handler.infer(
+        mts_dataset=mts_dataset_array,
+        evaluation_set_indinces=test_transformation_indices,
     )
 
 logger.info("Successfully ran inference on validation and test sets")

@@ -1,3 +1,4 @@
+from turtle import st
 from typing import List
 
 import numpy as np
@@ -314,6 +315,79 @@ def create_one_hot_encoded_supervised_original_target_delta_dataset(
     expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
 
     return expanded_dataset
+
+
+def concat_delta_values_to_features(
+    X_features: np.ndarray,
+    y_features: np.ndarray,
+    use_one_hot_encoding: bool,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
+):
+    expanded_x_rows: List = []
+    expanded_y_rows: List = []
+    for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):
+        X_row = X_features[row_index]
+        y_row = y_features[row_index]
+        for uts_index in range(0, number_of_uts_in_mts):
+            new_row = X_row.copy()
+            if not use_one_hot_encoding:
+                delta = [0] * len(y_row)
+                start_index = uts_index * number_of_uts_in_mts
+                end_index = start_index + number_of_features_in_mts
+                delta[start_index:end_index] = (
+                    y_row[start_index:end_index] - X_row[start_index:end_index]
+                )
+                new_row = np.concatenate((new_row, delta))
+            else:
+                delta = y_row[start_index:end_index] - X_row[start_index:end_index]
+                new_row = np.concatenate((new_row, delta))
+
+            if use_one_hot_encoding:
+                one_hot_encoding = [0] * number_of_uts_in_mts
+                one_hot_encoding[uts_index] = 1
+                new_row = np.concatenate((new_row, one_hot_encoding))
+            expanded_x_rows.append(new_row)
+            expanded_y_rows.append(y_row)
+
+    return np.array(expanded_x_rows), np.array(expanded_y_rows)
+
+
+# Pick random UTS to deactivate. Done to prevent explosion in validation, test set
+def concat_delta_values_to_features_for_inference(
+    X_features: np.ndarray,
+    y_features: np.ndarray,
+    use_one_hot_encoding: bool,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
+):
+    expanded_x_rows: List = []
+    expanded_y_rows: List = []
+    for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):
+        X_row = X_features[row_index]
+        y_row = y_features[row_index]
+        uts_index = np.random.choice(range(0, number_of_uts_in_mts))
+        new_row = X_row.copy()
+        if not use_one_hot_encoding:
+            delta = [0] * len(y_row)
+            start_index = uts_index * number_of_uts_in_mts
+            end_index = start_index + number_of_features_in_mts
+            delta[start_index:end_index] = (
+                y_row[start_index:end_index] - X_row[start_index:end_index]
+            )
+            new_row = np.concatenate((new_row, delta))
+        else:
+            delta = y_row[start_index:end_index] - X_row[start_index:end_index]
+            new_row = np.concatenate((new_row, delta))
+
+        if use_one_hot_encoding:
+            one_hot_encoding = [0] * number_of_uts_in_mts
+            one_hot_encoding[uts_index] = 1
+            new_row = np.concatenate((new_row, one_hot_encoding))
+        expanded_x_rows.append(new_row)
+        expanded_y_rows.append(y_row)
+
+    return np.array(expanded_x_rows), np.array(expanded_y_rows)
 
 
 def create_all_delta_supervised_original_target_dataset(

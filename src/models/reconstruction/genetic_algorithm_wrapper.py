@@ -95,7 +95,9 @@ class GeneticAlgorithmWrapper:
         # Reshape predicted features to have the right shape for each MTS
         # (num_mts, num_uts_in_mts, num_features_per_uts)
         predicted_features_reshape = predicted_features.reshape(
-            number_of_mts, self.num_uts_in_mts, self.num_features_per_uts
+            number_of_mts,
+            self.num_uts_in_mts,
+            self.num_features_per_uts,
         )
 
         all_mts_transformed = []
