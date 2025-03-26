@@ -331,10 +331,10 @@ def concat_delta_values_to_features(
         y_row = y_features[row_index]
         for uts_index in range(0, number_of_uts_in_mts):
             new_row = X_row.copy()
+            start_index = uts_index * number_of_uts_in_mts
+            end_index = start_index + number_of_features_in_mts
             if not use_one_hot_encoding:
                 delta = [0] * len(y_row)
-                start_index = uts_index * number_of_uts_in_mts
-                end_index = start_index + number_of_features_in_mts
                 delta[start_index:end_index] = (
                     y_row[start_index:end_index] - X_row[start_index:end_index]
                 )
@@ -368,10 +368,10 @@ def concat_delta_values_to_features_for_inference(
         y_row = y_features[row_index]
         uts_index = np.random.choice(range(0, number_of_uts_in_mts))
         new_row = X_row.copy()
+        start_index = uts_index * number_of_uts_in_mts
+        end_index = start_index + number_of_features_in_mts
         if not use_one_hot_encoding:
             delta = [0] * len(y_row)
-            start_index = uts_index * number_of_uts_in_mts
-            end_index = start_index + number_of_features_in_mts
             delta[start_index:end_index] = (
                 y_row[start_index:end_index] - X_row[start_index:end_index]
             )
