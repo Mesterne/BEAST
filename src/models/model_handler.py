@@ -2,11 +2,11 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from src.models.feature_optimization_models.feature_optimization_model import (
-    FeatureOptimizationModel,
-)
+from src.models.feature_optimization_models.feature_optimization_model import \
+    FeatureOptimizationModel
 from src.models.generative_models.generative_model import GenerativeModel
-from src.models.timeseries_transformation_model import TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import \
+    TimeseriesTransformationModel
 from src.utils.logging_config import logger
 
 
@@ -88,4 +88,7 @@ class ModelHandler:
         logger.info("Running inference...")
         predicted_y, intermediate_features = self.model.infer(X)
 
-        return predicted_y, np.array(intermediate_features)
+        if intermediate_features is not None:
+            intermediate_features = np.array(intermediate_features())
+
+        return predicted_y, intermediate_features
