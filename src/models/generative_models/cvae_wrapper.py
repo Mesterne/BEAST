@@ -121,9 +121,6 @@ class CVAEWrapper(FeatureTransformationModel):
     def infer(
         self,
         X,
-        num_uts_in_mts: int = None,
-        num_features_per_uts: int = None,
-        seasonal_period: int = None,
     ) -> np.ndarray:
         # If the model is conditioned on features, X should be only the features
         if self.model.condition_type == "feature":
@@ -140,10 +137,7 @@ class CVAEWrapper(FeatureTransformationModel):
                 input_mts, input_feature_deltas
             )
 
-        features_of_generated_mts = numpy_decomp_and_features(
-            generated_mts, num_uts_in_mts, num_features_per_uts, seasonal_period
-        )[1]
-        return generated_mts, features_of_generated_mts
+        return generated_mts
 
 
 def mask_feature_values(
@@ -162,9 +156,10 @@ def mask_feature_values(
     return masked_values.flatten()
 
 
-def create_feature_conditioned_dataset(
+def create_conditioned_dataset_for_training(
     mts_array: np.ndarray,
     mts_features: np.ndarray,
+    condition_type: str,
     transformation_indices: np.ndarray,
     number_of_uts_in_mts: int,
     number_of_features_in_mts: int,
@@ -177,38 +172,7 @@ def create_feature_conditioned_dataset(
 
     X = []
     y = []
-    for mts_index, mts in enumerate(X_mts):
-        original_mts = X_mts[mts_index].flatten()
-        target_mts = y_mts[mts_index].flatten()
-        target_features_for_X = y_features[mts_index]
-        for uts_index in range(0, number_of_uts_in_mts):
-            start_index = uts_index * number_of_features_in_mts
-            end_index = start_index + number_of_features_in_mts
-            conditions = [0] * len(target_features_for_X)
-            conditions[start_index:end_index] = target_features_for_X[
-                start_index:end_index
-            ]
-            X.append(np.concatenate((original_mts, conditions)))
-            y.append(target_mts)
-    return np.array(X), np.array(y)
-
-
-def create_delta_conditioned_dataset(
-    mts_array: np.ndarray,
-    mts_features: np.ndarray,
-    transformation_indices: np.ndarray,
-    number_of_uts_in_mts: int,
-    number_of_features_in_mts: int,
-) -> Tuple[np.ndarray, np.ndarray]:
-    X_features = mts_features[transformation_indices[:, 0]]
-    y_features = mts_features[transformation_indices[:, 1]]
-
-    X_mts = mts_array[transformation_indices[:, 0]]
-    y_mts = mts_array[transformation_indices[:, 1]]
-
-    X = []
-    y = []
-    for mts_index, mts in enumerate(X_mts):
+    for mts_index, _ in enumerate(X_mts):
         original_mts = X_mts[mts_index].flatten()
         target_mts = y_mts[mts_index].flatten()
         original_features_for_X = X_features[mts_index]
@@ -217,164 +181,55 @@ def create_delta_conditioned_dataset(
             start_index = uts_index * number_of_features_in_mts
             end_index = start_index + number_of_features_in_mts
             conditions = [0] * len(target_features_for_X)
-            conditions[start_index:end_index] = (
-                target_features_for_X[start_index:end_index]
-                - original_features_for_X[start_index:end_index]
-            )
+            if condition_type == "feature_delta":
+                conditions[start_index:end_index] = (
+                    target_features_for_X[start_index:end_index]
+                    - original_features_for_X[start_index:end_index]
+                )
+            elif conditon_type == "feature":
+                conditions[start_index:end_index] = target_features_for_X[
+                    start_index:end_index
+                ]
             X.append(np.concatenate((original_mts, conditions)))
             y.append(target_mts)
     return np.array(X), np.array(y)
 
 
-def get_feature_conditioned_dataset(
-    mts_array: list,  # List of MTS (num mts, num timesteps x num uts)
-    train_features_supervised_dataset: pd.DataFrame,  # Connects the features to the MTS
-    validation_features_supervised_dataset: pd.DataFrame,
-    test_features_supervised_dataset: pd.DataFrame,
-) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]]:
-    # Train, validation and test datasets
-    dataset_list = [[], [], []]
-    df_list = [
-        train_features_supervised_dataset,
-        validation_features_supervised_dataset,
-        test_features_supervised_dataset,
-    ]
-
-    # NOTE: mts_array is a list of MTS where each mts is a numpy array of shape (num_uts, num_timesteps)
-    # The MTS is NOT FLATTENED.
-    num_uts = mts_array[0].shape[0]
-
-    # Get all columns starting with original_ and target_ prefix
-    orig_cols = [
-        col for col in df_list[0].columns if "original_" in col and "index" not in col
-    ]
-    target_cols = [
-        col for col in df_list[0].columns if "target_" in col and "index" not in col
-    ]
-    logger.info("Generating feature conditioned dataset (train, validation, test)")
-    for df_idx, df in enumerate(df_list):
-
-        # NOTE: Check if the dataset is train or not. Decides if the original or target index should be used
-        # Assuming first df is train dataset
-        is_train: bool = df_idx == 0
-
-        # Get first instance of each relevant MTS index
-        df = (
-            df.drop_duplicates(subset="original_index")
-            if is_train
-            else df.drop_duplicates(subset="target_index")
-        )
-
-        X_list = []
-        y_list = []
-        for _, row in tqdm(df.iterrows(), total=len(df)):
-            mts_idx = (
-                int(row["original_index"]) if is_train else int(row["target_index"])
-            )
-            mts_flattened = mts_array[mts_idx].flatten()
-            # Mask different subset of features for each UTS
-            for uts_idx in range(num_uts):
-                feature_values = (
-                    row[orig_cols].values if is_train else row[target_cols].values
-                )
-
-                # Feature values are masked based on delta values
-                masked_feature_values = mask_feature_values(
-                    feature_values, num_uts, uts_idx
-                )
-                dataset_entry_X = np.hstack((mts_flattened, masked_feature_values))
-                dataset_entry_y = mts_flattened.copy()
-                X_list.append(dataset_entry_X)
-                y_list.append(dataset_entry_y)
-        dataset_list[df_idx] = (np.array(X_list), np.array(y_list))
-    train_array = dataset_list[0]
-    validation_array = dataset_list[1]
-    test_array = dataset_list[2]
-
-    return train_array, validation_array, test_array
-
-
-def get_delta_conditioned_dataset(
-    mts_array: list,
-    train_features_supervised_dataset: pd.DataFrame,
-    validation_features_supervised_dataset: pd.DataFrame,
-    test_features_supervised_dataset: pd.DataFrame,
-) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]]:
-    dataset_list = [[], [], []]
-    df_list = [
-        train_features_supervised_dataset,
-        validation_features_supervised_dataset,
-        test_features_supervised_dataset,
-    ]
-
-    # Need the column number for the original index, target index, and delta values
-    columns = df_list[0].columns
-    original_index = [
-        idx for idx, col in enumerate(columns) if "original" in col and "index" in col
-    ][0]
-    target_index = [
-        idx for idx, col in enumerate(columns) if "target" in col and "index" in col
-    ][0]
-    delta_value_indices = [
-        idx for idx, col in enumerate(columns) if "delta" in col and "index" not in col
-    ]
-
-    for df_idx, df in enumerate(df_list):
-        # NOTE: Convert to numpy array for faster indexing
-        numpy_df = df.to_numpy()
-
-        # Get original and target MTS
-        original_mts_indices = numpy_df[:, original_index].astype(int)
-        target_mts_indices = numpy_df[:, target_index].astype(int)
-        num_uts = mts_array.shape[1]
-        uts_length = mts_array.shape[2]
-        X_mts_array = mts_array[original_mts_indices].reshape(-1, num_uts * uts_length)
-        y_mts_array = mts_array[target_mts_indices].reshape(-1, num_uts * uts_length)
-
-        # Get delta values
-        delta_values = numpy_df[:, delta_value_indices]
-
-        print(X_mts_array.shape, delta_values.shape)
-
-        X = np.hstack((X_mts_array, delta_values))
-        y = y_mts_array
-
-        assert X.shape[0] == y.shape[0], f"X shape: {X.shape}, y shape: {y.shape}"
-        assert (
-            X.shape[0] == delta_values.shape[0]
-        ), f"X shape: {X.shape}, delta shape: {delta_values.shape}"
-        assert (
-            X.shape[1] == y.shape[1] + delta_values.shape[1]
-        ), f"X shape: {X.shape}, y shape: {y.shape}, delta shape: {delta_values.shape}"
-        assert X.shape[0] == len(df), f"X shape: {X.shape}, df shape: {df.shape}"
-
-        dataset_list[df_idx] = (X, y)
-
-    train_array = dataset_list[0]
-    validation_array = dataset_list[1]
-    test_array = dataset_list[2]
-    return train_array, validation_array, test_array
-
-
-def prepare_cgen_data(
+def create_conditioned_dataset_for_inference(
+    mts_array: np.ndarray,
+    mts_features: np.ndarray,
     condition_type: str,
-    mts_array: list,
-    train_features_supervised_dataset: pd.DataFrame,
-    validation_features_supervised_dataset: pd.DataFrame,
-    test_features_supervised_dataset: pd.DataFrame,
-) -> Tuple[Tuple[np.ndarray], Tuple[np.ndarray], Tuple[np.ndarray]] | None:
-    if condition_type == "feature":
-        return get_feature_conditioned_dataset(
-            mts_array,
-            train_features_supervised_dataset,
-            validation_features_supervised_dataset,
-            test_features_supervised_dataset,
-        )
-    if condition_type == "feature_delta":
-        return get_delta_conditioned_dataset(
-            mts_array,
-            train_features_supervised_dataset,
-            validation_features_supervised_dataset,
-            test_features_supervised_dataset,
-        )
-    return None
+    transformation_indices: np.ndarray,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    X_features = mts_features[transformation_indices[:, 0]]
+    y_features = mts_features[transformation_indices[:, 1]]
+
+    X_mts = mts_array[transformation_indices[:, 0]]
+    y_mts = mts_array[transformation_indices[:, 1]]
+
+    X = []
+    y = []
+    for mts_index, _ in enumerate(X_mts):
+        original_mts = X_mts[mts_index].flatten()
+        target_mts = y_mts[mts_index].flatten()
+        original_features_for_X = X_features[mts_index]
+        target_features_for_X = y_features[mts_index]
+        uts_index = np.random.choice(range(0, number_of_uts_in_mts))
+        start_index = uts_index * number_of_features_in_mts
+        end_index = start_index + number_of_features_in_mts
+        conditions = [0] * len(target_features_for_X)
+        if condition_type == "feature_delta":
+            conditions[start_index:end_index] = (
+                target_features_for_X[start_index:end_index]
+                - original_features_for_X[start_index:end_index]
+            )
+        elif conditon_type == "feature":
+            conditions[start_index:end_index] = target_features_for_X[
+                start_index:end_index
+            ]
+
+        X.append(np.concatenate((original_mts, conditions)))
+        y.append(target_mts)
+    return np.array(X), np.array(y)

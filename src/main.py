@@ -29,7 +29,6 @@ from src.data_transformations.generation_of_supervised_pairs import (
 )  # noqa: E402
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.forecasting.feedforward import FeedForwardForecaster
-from src.models.generative_models.cvae_wrapper import prepare_cgen_data
 from src.models.model_handler import ModelHandler
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
@@ -253,41 +252,8 @@ model_handler.train(
     validation_transformation_indices=validation_transformation_indices,
 )
 
-ga: GeneticAlgorithmWrapper = GeneticAlgorithmWrapper(
-    ga_params=genetic_algorithm_params,
-    mts_dataset=mts_dataset_array,
-    mts_decomp=mts_decomps,
-    num_uts_in_mts=num_uts_in_mts,
-    num_features_per_uts=num_features_per_uts,
-)
-logger.info("Successfully initialized the genetic algorithm")
-
 
 ############ TRAINING
-logger.info("Training feature model...")
-feature_model.train(
-    X_train=(
-        X_features_train
-        if not config["is_conditional_gen_model"]
-        else X_y_pairs_cgen_train[0]
-    ),
-    y_train=(
-        y_features_train
-        if not config["is_conditional_gen_model"]
-        else X_y_pairs_cgen_train[1]
-    ),
-    X_val=(
-        X_features_validation
-        if not config["is_conditional_gen_model"]
-        else X_y_pairs_cgen_validation[0]
-    ),
-    y_val=(
-        y_features_validation
-        if not config["is_conditional_gen_model"]
-        else X_y_pairs_cgen_validation[1]
-    ),
-    log_to_wandb=False,
-)
 
 logger.info("Training forecasting model...")
 forecasting_model_wrapper.train(
@@ -302,71 +268,22 @@ forecasting_model_wrapper.train(
 ############ INFERENCE
 TARGET_NAMES = [f"target_{name}" for name in COLUMN_NAMES]
 logger.info("Running inference on validation set...")
-if config["is_conditional_gen_model"]:
-    # FIXME: Quick fix to reduce number of samples in inference
-    validation_sample_size = config["model_args"]["feature_model_args"][
-        "conditional_gen_model_args"
-    ]["inference_sample_sizes"]
-    validation_inference_indices = (
-        np.random.choice(
-            X_y_pairs_cgen_validation[0].shape[0],
-            validation_sample_size[0],
-            replace=False,
-        )
-        if validation_sample_size is not None
-        else np.arange(X_y_pairs_cgen_validation[0].shape[0])
-    )
-    validation_inference_input = X_y_pairs_cgen_validation[0][
-        validation_inference_indices
-    ]
-
-    print("INFERENCE INPUT SHAPE", validation_inference_input.shape)
-
-    inferred_mts_validation, inferred_mts_features_validation = feature_model.infer(
-        validation_inference_input,
-        num_uts_in_mts=num_uts_in_mts,
-        num_features_per_uts=num_features_per_uts,
-        seasonal_period=seasonal_period,
-    )
-    inferred_mts_validation = inferred_mts_validation.reshape(-1, num_uts_in_mts, 192)
-else:
-    inferred_mts_validation = model_handler.infer(
-        mts_dataset=mts_dataset_array,
-        evaluation_set_indinces=validation_transformation_indices,
-    )
+inferred_mts_validation = model_handler.infer(
+    mts_dataset=mts_dataset_array,
+    evaluation_set_indinces=validation_transformation_indices,
+)
 
 logger.info("Running inference on test set...")
-if config["is_conditional_gen_model"]:
-    # FIXME: Quick fix to reduce number of samples in inference
-    test_sample_size = config["model_args"]["feature_model_args"][
-        "conditional_gen_model_args"
-    ]["inference_sample_sizes"]
-    test_inference_indices = (
-        np.random.choice(
-            X_y_pairs_cgen_test[0].shape[0],
-            test_sample_size[1],
-            replace=False,
-        )
-        if test_sample_size is not None
-        else np.arange(X_y_pairs_cgen_test[0].shape[0])
-    )
-    test_inference_input = X_y_pairs_cgen_test[0][test_inference_indices]
-
-    inferred_mts_test, inferred_mts_features_test = feature_model.infer(
-        test_inference_input,
-        num_uts_in_mts=num_uts_in_mts,
-        num_features_per_uts=num_features_per_uts,
-        seasonal_period=seasonal_period,
-    )
-    inferred_mts_test = inferred_mts_test.reshape(-1, num_uts_in_mts, 192)
-else:
-    inferred_mts_test = model_handler.infer(
-        mts_dataset=mts_dataset_array,
-        evaluation_set_indinces=test_transformation_indices,
-    )
+inferred_mts_test = model_handler.infer(
+    mts_dataset=mts_dataset_array,
+    evaluation_set_indinces=test_transformation_indices,
+)
 
 logger.info("Successfully ran inference on validation and test sets")
 
+
+print(f"Shape of inferred_mts_validation {inferred_mts_validation.shape}")
+print(f"Shape of inferred_mts_test {inferred_mts_test.shape}")
 
 evaluate(
     mts_array=mts_dataset_array,

@@ -1,16 +1,12 @@
-from typing import Dict, List, Tuple, override
+from typing import Dict, override
 
 import numpy as np
 
-from src.data_transformations.generation_of_supervised_pairs import (
-    concat_delta_values_to_features,
-)
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import (
     CVAEWrapper,
-    create_delta_conditioned_dataset,
-    create_feature_conditioned_dataset,
-    prepare_cgen_data,
+    create_conditioned_dataset_for_inference,
+    create_conditioned_dataset_for_training,
 )
 from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 from src.utils.generate_dataset import generate_feature_dataframe
@@ -55,39 +51,22 @@ class GenerativeModel(TimeseriesTransformationModel):
             num_features_per_uts=self.config["dataset_args"]["num_features_per_uts"],
         )
 
-        # TODO: Unsure if this function works as inteded now
-        if condition_type == "feature":
-            X_train, y_train = create_feature_conditioned_dataset(
-                mts_array=mts_dataset,
-                mts_features=mts_features_array,
-                transformation_indices=train_transformation_indices,
-                number_of_uts_in_mts=num_uts_in_mts,
-                number_of_features_in_mts=num_features_per_uts,
-            )
-            X_validation, y_validation = create_feature_conditioned_dataset(
-                mts_array=mts_dataset,
-                mts_features=mts_features_array,
-                transformation_indices=validation_transformation_indices,
-                number_of_uts_in_mts=num_uts_in_mts,
-                number_of_features_in_mts=num_features_per_uts,
-            )
-        elif condition_type == "feature_delta":
-            X_train, y_train = create_delta_conditioned_dataset(
-                mts_array=mts_dataset,
-                mts_features=mts_features_array,
-                transformation_indices=train_transformation_indices,
-                number_of_uts_in_mts=num_uts_in_mts,
-                number_of_features_in_mts=num_features_per_uts,
-            )
-            X_validation, y_validation = create_delta_conditioned_dataset(
-                mts_array=mts_dataset,
-                mts_features=mts_features_array,
-                transformation_indices=validation_transformation_indices,
-                number_of_uts_in_mts=num_uts_in_mts,
-                number_of_features_in_mts=num_features_per_uts,
-            )
-        else:
-            raise ValueError("Condition type can only be: feature or feature_delta")
+        X_train, y_train = create_conditioned_dataset_for_training(
+            mts_array=mts_dataset,
+            mts_features=mts_features_array,
+            condition_type=condition_type,
+            transformation_indices=train_transformation_indices,
+            number_of_uts_in_mts=num_uts_in_mts,
+            number_of_features_in_mts=num_features_per_uts,
+        )
+        X_validation, y_validation = create_conditioned_dataset_for_training(
+            mts_array=mts_dataset,
+            mts_features=mts_features_array,
+            condition_type=condition_type,
+            transformation_indices=validation_transformation_indices,
+            number_of_uts_in_mts=num_uts_in_mts,
+            number_of_features_in_mts=num_features_per_uts,
+        )
 
         return X_train, y_train, X_validation, y_validation
 
@@ -108,14 +87,42 @@ class GenerativeModel(TimeseriesTransformationModel):
             log_to_wandb=False,
         )
 
-    # TODO:
     @override
     def create_inference_data(
         self, mts_dataset: np.ndarray, evaluation_set_indices: np.ndarray
     ):
-        return super().create_inference_data(evaluation_set_indices)
+        logger.info("Preparing data set for conditional generative model...")
+        condition_type: str = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["condition_type"]
+        num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
+        num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
+        use_one_hot_encoding: int = self.config["dataset_args"]["use_one_hot_encoding"]
 
-    # TODO:
+        mts_features_array, _ = generate_feature_dataframe(
+            data=mts_dataset,
+            series_periodicity=self.config["stl_args"]["series_periodicity"],
+            num_features_per_uts=self.config["dataset_args"]["num_features_per_uts"],
+        )
+
+        X, y = create_conditioned_dataset_for_inference(
+            mts_array=mts_dataset,
+            mts_features=mts_features_array,
+            condition_type=condition_type,
+            transformation_indices=evaluation_set_indices,
+            number_of_uts_in_mts=num_uts_in_mts,
+            number_of_features_in_mts=num_features_per_uts,
+        )
+
+        return X
+
     @override
     def infer(self, X: np.ndarray) -> np.ndarray:
-        return super().infer(X)
+        predicted_mts = self.model.infer(X)
+
+        # Reshape to have shape (Number of MTS predicted, Number of UTS in MTS, Number of samples in UTS)
+        num_samples_in_uts: int = self.config["dataset_args"]["window_size"]
+        num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
+        predicted_mts = predicted_mts.reshape(-1, num_uts_in_mts, num_samples_in_uts)
+
+        return predicted_mts
