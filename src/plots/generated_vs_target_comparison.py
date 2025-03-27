@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import numpy as np
 
@@ -16,31 +17,37 @@ from src.utils.logging_config import logger
 def create_and_save_plots_of_model_performances(
     total_mse_for_each_mts: np.array,  # Shape: (number of timeseries generated,)
     mse_per_feature: np.array,  # Shape (number of timeseries generated, number of features)
-    original_mts_features: np.array,  # Shape: (number of  time series generated, number of features)
-    y_features_train: np.array,  # Shape: (number of entries in training set, number of features)
-    y_features_validation: np.array,  # Shape: (number of entries in validation set, number of features)
-    y_features_test: np.array,  # Shape: (number of entries in test set, number of features)
-    X_mts: np.array,  # Shape: (number of timeseries generated, number of uts, number of time steps)
-    y_mts: np.array,  # Shape: (number of time series generated, number of uts, number of time steps)
-    predicted_mts: np.array,  # Shape: (number of time series generated, number of uts, number of time steps)
-    mts_features_predicted_before_generation: np.array,  # Shape: (number of time series generated, number of features)
-    mts_features_of_genererated_mts: np.array,  # Shape: (number of time series generated, number of features)
-    target_for_predicted_mts_features: np.array,  # Shape: (number of time series genereated, number of features)
+    mts_dataset_array: np.array,
+    mts_dataset_features: np.array,
+    transformation_indices: np.ndarray,  # Shape (number of transformation in train set, 2) Entry 1 is the original index, Entry 2 is target
+    inferred_mts_array: np.array,  # Shape: (number of time series generated, number of uts, number of time steps)
+    inferred_mts_features: np.array,
+    inferred_mts_features_before_ga: Optional[
+        np.array
+    ] = None,  # Shape: (number of time series generated, number of features)
 ):
-    # Make sure that we are not plotting duplicates
-    y_features_train = np.unique(y_features_train, axis=0)
-    y_features_validation = np.unique(y_features_validation, axis=0)
-    y_features_test = np.unique(y_features_test, axis=0)
+    # For instance when using CVAE we dont have features before generation.
+    # In this case, we set them to be the same as the features of inferred mts.
+    # This is done to not break the program
+    if inferred_mts_features_before_ga is None:
+        inferred_mts_features_before_ga = inferred_mts_features
 
+    X_features = mts_dataset_features[transformation_indices[:, 0]]
+    y_features = mts_dataset_features[transformation_indices[:, 1]]
+
+    X_mts = mts_dataset_array[transformation_indices[:, 0]]
+    y_mts = mts_dataset_array[transformation_indices[:, 1]]
+
+    # MSE Plots
     total_mse_plot = plot_total_mse_distribution(
         total_mse_for_each_mts=total_mse_for_each_mts
     )
-    total_mse_plot.savefig("total_mse_distribution.png")
+    total_mse_plot.savefig(os.path.join(OUTPUT_DIR, "total_mse_distribution.png"))
 
-    feature_wise_errror_plot = plot_distribution_of_feature_wise_error(
+    feature_wise_error_plot = plot_distribution_of_feature_wise_error(
         mse_per_feature=mse_per_feature
     )
-    feature_wise_errror_plot.savefig(
+    feature_wise_error_plot.savefig(
         os.path.join(OUTPUT_DIR, "distribution_of_feature_wise_error.png")
     )
 
@@ -50,28 +57,23 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_best_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[best_generated_mts_index],
         target_mts=y_mts[best_generated_mts_index],
-        transformed_mts=predicted_mts[best_generated_mts_index],
-        original_mts_features=original_mts_features[best_generated_mts_index],
-        predicted_mts_features=mts_features_predicted_before_generation[
+        transformed_mts=inferred_mts_array[best_generated_mts_index],
+        original_mts_features=X_features[best_generated_mts_index],
+        predicted_mts_features=inferred_mts_features_before_ga[
             best_generated_mts_index
         ],
-        transformed_mts_features=mts_features_of_genererated_mts[
-            best_generated_mts_index
-        ],
-        target_mts_features=target_for_predicted_mts_features[best_generated_mts_index],
+        transformed_mts_features=inferred_mts_features[best_generated_mts_index],
+        target_mts_features=y_features[best_generated_mts_index],
     )
     ts_plot_of_best_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "best_timeseries_generated_mts.png")
     )
     pca_plot_of_best_generated_mts = plot_pca_for_each_uts_with_transformed(
-        mts_features_train=y_features_train,
-        mts_features_validation=y_features_validation,
-        mts_features_test=y_features_test,
-        original_mts_features=original_mts_features[best_generated_mts_index],
-        target_mts_features=target_for_predicted_mts_features[best_generated_mts_index],
-        predicted_mts_features=mts_features_of_genererated_mts[
-            best_generated_mts_index
-        ],
+        mts_dataset_features=mts_dataset_features,
+        mts_features_evaluation_set=y_features,
+        original_mts_features=X_features[best_generated_mts_index],
+        target_mts_features=y_features[best_generated_mts_index],
+        predicted_mts_features=inferred_mts_features[best_generated_mts_index],
     )
     pca_plot_of_best_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "best_timeseries_generated_mts_pca.png")
@@ -82,39 +84,26 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_worst_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[worst_generated_mts_index],
         target_mts=y_mts[worst_generated_mts_index],
-        transformed_mts=predicted_mts[worst_generated_mts_index],
-        original_mts_features=original_mts_features[worst_generated_mts_index],
-        transformed_mts_features=mts_features_of_genererated_mts[
+        transformed_mts=inferred_mts_array[worst_generated_mts_index],
+        original_mts_features=X_features[worst_generated_mts_index],
+        predicted_mts_features=inferred_mts_features_before_ga[
             worst_generated_mts_index
         ],
-        predicted_mts_features=mts_features_predicted_before_generation[
-            worst_generated_mts_index
-        ],
-        target_mts_features=target_for_predicted_mts_features[
-            worst_generated_mts_index
-        ],
+        transformed_mts_features=inferred_mts_features[worst_generated_mts_index],
+        target_mts_features=y_features[worst_generated_mts_index],
     )
     ts_plot_of_worst_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "worst_timeseries_generated_mts.png")
     )
     pca_plot_of_worst_generated_mts = plot_pca_for_each_uts_with_transformed(
-        mts_features_train=y_features_train,
-        mts_features_validation=y_features_validation,
-        mts_features_test=y_features_test,
-        original_mts_features=original_mts_features[worst_generated_mts_index],
-        target_mts_features=target_for_predicted_mts_features[
-            worst_generated_mts_index
-        ],
-        predicted_mts_features=mts_features_of_genererated_mts[
-            worst_generated_mts_index
-        ],
+        mts_dataset_features=mts_dataset_features,
+        mts_features_evaluation_set=y_features,
+        original_mts_features=X_features[worst_generated_mts_index],
+        target_mts_features=y_features[worst_generated_mts_index],
+        predicted_mts_features=inferred_mts_features[worst_generated_mts_index],
     )
     pca_plot_of_worst_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "worst_timeseries_generated_mts_pca.png")
-    )
-
-    logger.info(
-        f"Worst prediction in validation set according to plots: {mts_features_of_genererated_mts[worst_generated_mts_index]}"
     )
 
     median_mse = np.median(total_mse_for_each_mts)
@@ -124,33 +113,29 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_median_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[median_mts_index],
         target_mts=y_mts[median_mts_index],
-        transformed_mts=predicted_mts[median_mts_index],
-        original_mts_features=original_mts_features[median_mts_index],
-        transformed_mts_features=mts_features_of_genererated_mts[median_mts_index],
-        predicted_mts_features=mts_features_predicted_before_generation[
-            median_mts_index
-        ],
-        target_mts_features=target_for_predicted_mts_features[median_mts_index],
+        transformed_mts=inferred_mts_array[median_mts_index],
+        original_mts_features=X_features[median_mts_index],
+        predicted_mts_features=inferred_mts_features_before_ga[median_mts_index],
+        transformed_mts_features=inferred_mts_features[median_mts_index],
+        target_mts_features=y_features[median_mts_index],
     )
     ts_plot_of_median_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts.png")
     )
     pca_plot_of_median_generated_mts = plot_pca_for_each_uts_with_transformed(
-        mts_features_train=y_features_train,
-        mts_features_validation=y_features_validation,
-        mts_features_test=y_features_test,
-        original_mts_features=original_mts_features[median_mts_index],
-        target_mts_features=target_for_predicted_mts_features[median_mts_index],
-        predicted_mts_features=mts_features_of_genererated_mts[median_mts_index],
+        mts_dataset_features=mts_dataset_features,
+        mts_features_evaluation_set=y_features,
+        original_mts_features=X_features[median_mts_index],
+        target_mts_features=y_features[median_mts_index],
+        predicted_mts_features=inferred_mts_features[median_mts_index],
     )
     pca_plot_of_median_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts_pca.png")
     )
 
     pca_total_plot = plot_pca_for_all_generated_mts(
-        mts_features_train=y_features_train,
-        mts_features_validation=y_features_validation,
-        mts_features_test=y_features_test,
-        mts_generated_features=mts_features_of_genererated_mts,
+        mts_dataset_features=mts_dataset_features,
+        evaluation_set_indices=transformation_indices[:, 1],
+        mts_generated_features=inferred_mts_features,
     )
     pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))

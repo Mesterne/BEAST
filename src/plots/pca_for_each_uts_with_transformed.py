@@ -2,7 +2,6 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import seaborn as sns
 from matplotlib.figure import Figure
 
@@ -11,9 +10,8 @@ from src.utils.pca import PCAWrapper
 
 
 def plot_pca_for_each_uts_with_transformed(
-    mts_features_train: np.ndarray,  # Shape = (num_mts, num_uts_features)
-    mts_features_validation: np.ndarray,  # Shape = (num_mts, num_uts_features)
-    mts_features_test: np.ndarray,  # Shape = (num_mts, num_uts_features)
+    mts_dataset_features: np.ndarray,  # Shape = (num_mts, num_uts_features)
+    mts_features_evaluation_set: np.ndarray,  # Shape = (num_mts, num_uts_features)
     original_mts_features: np.ndarray,  # Shape = (num_uts_features,)
     target_mts_features: np.ndarray,  # Shape = (num_uts_features,)
     predicted_mts_features: np.ndarray,  # Shape = (num_uts_features,)
@@ -30,19 +28,15 @@ def plot_pca_for_each_uts_with_transformed(
     ax = axes[0]
     pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
 
-    dataset_mts_features = np.vstack(
-        [mts_features_train, mts_features_validation, mts_features_test]
-    )
-
     # Reshape single samples to 2D. New shape (1, num_uts_features)
     original_mts_features = original_mts_features.reshape(1, -1)
     target_mts_features = target_mts_features.reshape(1, -1)
     predicted_mts_features = predicted_mts_features.reshape(1, -1)
 
-    dataset_features_pca: np.ndarray = pca_transformer.fit_transform(
-        dataset_mts_features
+    dataset_pca: np.ndarray = pca_transformer.fit_transform(mts_dataset_features)
+    evaluation_set_pca: np.ndarray = pca_transformer.transform(
+        mts_features_evaluation_set
     )
-    validation_pca: np.ndarray = pca_transformer.transform(mts_features_validation)
 
     original_pca: np.ndarray = pca_transformer.transform(original_mts_features)
     target_pca: np.ndarray = pca_transformer.transform(target_mts_features)
@@ -50,19 +44,20 @@ def plot_pca_for_each_uts_with_transformed(
 
     # Plot scatter points
     sns.scatterplot(
-        x=dataset_features_pca[:, 0],
-        y=dataset_features_pca[:, 1],
-        label="Dataset",
+        x=dataset_pca[:, 0],
+        y=dataset_pca[:, 1],
+        label="Train",
         color="grey",
         s=50,
         ax=ax,
     )
-    ax.scatter(
-        x=validation_pca[:, 0],
-        y=validation_pca[:, 1],
-        label="Target (Validation set)",
+    sns.scatterplot(
+        x=evaluation_set_pca[:, 0],
+        y=evaluation_set_pca[:, 1],
+        label="Evaluation set",
         color="red",
         s=50,
+        ax=ax,
     )
 
     ax.scatter(*original_pca.T, color="blue", s=150, label="Original MTS")
@@ -90,43 +85,35 @@ def plot_pca_for_each_uts_with_transformed(
             if col_name.startswith(uts_name)
         ]
 
-        uts_features_train: np.ndarray = mts_features_train[:, uts_column_indices]
-        uts_features_validation: np.ndarray = mts_features_validation[
+        uts_features_all: np.ndarray = mts_dataset_features[:, uts_column_indices]
+        uts_features_evaluation_set: np.ndarray = mts_features_evaluation_set[
             :, uts_column_indices
         ]
-        uts_features_test: np.ndarray = mts_features_test[:, uts_column_indices]
-
-        uts_features_all = np.vstack(
-            [uts_features_train, uts_features_validation, uts_features_test]
-        )
         uts_original: np.ndarray = original_mts_features[:, uts_column_indices]
         uts_target: np.ndarray = target_mts_features[:, uts_column_indices]
         uts_predicted: np.ndarray = predicted_mts_features[:, uts_column_indices]
 
         pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
-        uts_features_all_pca: np.ndarray = pca_transformer.fit_transform(
-            uts_features_all
+        uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(uts_features_all)
+        uts_evaluation_set_pca: np.ndarray = pca_transformer.transform(
+            uts_features_evaluation_set
         )
-        uts_validation_pca: np.ndarray = pca_transformer.transform(
-            uts_features_validation
-        )
-        uts_test_pca: np.ndarray = pca_transformer.transform(uts_features_test)
 
         uts_original_pca: np.ndarray = pca_transformer.transform(uts_original)
         uts_target_pca: np.ndarray = pca_transformer.transform(uts_target)
         uts_predicted_pca: np.ndarray = pca_transformer.transform(uts_predicted)
 
         sns.scatterplot(
-            x=uts_features_all_pca[:, 0],
-            y=uts_features_all_pca[:, 1],
+            x=uts_dataset_pca[:, 0],
+            y=uts_dataset_pca[:, 1],
             label="Dataset",
             color="grey",
             s=50,
             ax=ax,
         )
         ax.scatter(
-            x=uts_validation_pca[:, 0],
-            y=uts_validation_pca[:, 1],
+            x=uts_evaluation_set_pca[:, 0],
+            y=uts_evaluation_set_pca[:, 1],
             label="Target (Validation set)",
             color="red",
             s=50,

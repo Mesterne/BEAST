@@ -1,352 +1,171 @@
-from typing import List
+import random
+from typing import Dict, List
 
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 
-from src.data.constants import COLUMN_NAMES, FEATURE_NAMES, UTS_NAMES
+from src.plots.feature_distribution import plot_feature_distribution
+from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
-
-
-def _generate_X_y_pairs_from_df_one_hot_encoded(df):
-    # Prefix COLUMN_NAMES with original_ and delta_
-    original_features_names: List[str] = [f"original_{name}" for name in COLUMN_NAMES]
-    delta_names: List[str] = [f"delta_{name}" for name in FEATURE_NAMES]
-    one_hot_encoded_names: List[str] = [
-        f"{uts_name}_is_delta" for uts_name in UTS_NAMES
-    ]
-    target_names: List[str] = [f"target_{name}" for name in COLUMN_NAMES]
-
-    # Extract X as both original features and delta values
-    original_features = df.loc[:, original_features_names].values
-    one_hot_encoding = df.loc[:, one_hot_encoded_names].values
-    delta_features = df.loc[:, delta_names].values
-
-    # Combine original features and delta features horizontally
-    X = np.hstack((original_features, delta_features, one_hot_encoding))
-
-    # Extract y (targets) as usual
-    y = df.loc[:, target_names].values
-
-    return X, y
-
-
-def _generate_X_y_pairs_from_df_full_delta(df):
-    # Prefix COLUMN_NAMES with original_ and delta_
-    original_features_names: List[str] = [f"original_{name}" for name in COLUMN_NAMES]
-    delta_names: List[str] = [f"delta_{name}" for name in COLUMN_NAMES]
-    target_names: List[str] = [f"target_{name}" for name in COLUMN_NAMES]
-
-    # Extract X as both original features and delta values
-    original_features = df.loc[:, original_features_names].values
-    delta_features = df.loc[:, delta_names].values
-
-    # Combine original features and delta features horizontally
-    X = np.hstack((original_features, delta_features))
-
-    # Extract y (targets) as usual
-    y = df.loc[:, target_names].values
-
-    return X, y
-
-
-def _generate_X_y_pairs_from_df(df, use_one_hot_encoding):
-    if use_one_hot_encoding == True:
-        X, y = _generate_X_y_pairs_from_df_one_hot_encoded(df)
-    elif use_one_hot_encoding == False:
-        X, y = _generate_X_y_pairs_from_df_full_delta(df)
-    return X, y
+from src.utils.pca import PCAWrapper
 
 
 def create_train_val_test_split(
-    pca_array: np.ndarray,  # Shape (number of mts, 2)
-    mts_feature_array: np.ndarray,  # Shape (number of mts, number of uts * number of features in uts)
-    use_one_hot_encoding: bool,
+    mts_dataset_array: np.ndarray,
+    config: Dict[str, any],
 ):
-    """
-    Generate X and y list for train, validation and testing supervised datasets.
-    It does this by selecting certain regions in the PCA space which is looked at as
-    out of distribution.
-    Args:
-        pca_df (np.ndarray): The PCA data as a numpy array, with columns for pca1 and pca2
-        feature_df (pd.DataFrame): The feature dataframe, having the features of all MTSs in the dataset!
-        use_one_hot_encoding (Boolean): Controls wether X will contain all delta values or delta values
-            of one set of features and a one hot encoding of which UTS the delta corresponds to
-    Returns:
-        X_train
-        y_train
-        X_validation
-        y_validation
-        X_test
-        y_test
-        These are the numpy arrays of feature/target pairs for train, validation and test
-    """
-    logger.info(
-        f"Generating X,y pairs of feature space for train, validation and test sets..."
+    """ """
+    logger.info(f"Generating transformation index pairs for training...")
+    mts_features_array, mts_decomps = generate_feature_dataframe(
+        data=mts_dataset_array,
+        series_periodicity=config["stl_args"]["series_periodicity"],
+        num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
     )
 
-    feature_df: pd.DataFrame = pd.DataFrame(mts_feature_array, columns=COLUMN_NAMES)
-    pca_df_converted = pd.DataFrame(pca_array, columns=["pca1", "pca2"])
+    dist_of_features = plot_feature_distribution(mts_features_array)
+    dist_of_features.savefig("distribution_of_features.png")
 
-    # Add a sequential index column from 0 to len(pca_df)-1
-    pca_df_converted["index"] = np.arange(len(pca_df_converted))
+    mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
+    logger.info("Successfully generated MTS PCA space")
 
-    validation_indices = pca_df_converted[
-        (pca_df_converted["pca1"] > 0.1) & (pca_df_converted["pca2"] > 0)
-    ]["index"].values
+    logger.info("Splitting PCA space into train, validation and test indices...")
+    pca1, pca2 = mts_pca_array[:, 0], mts_pca_array[:, 1]
+    indices = np.arange(len(mts_pca_array))
 
-    # Now use the converted DataFrame for the filtering operations
-    test_indices = pca_df_converted[
-        (pca_df_converted["pca1"] < 0.1) & (pca_df_converted["pca2"] > 0.0)
-    ]["index"].values
-
-    train_indices = pca_df_converted["index"][
-        ~(
-            pca_df_converted["index"].isin(test_indices)
-            | pca_df_converted["index"].isin(validation_indices)
-        )
-    ].values
-
-    assert (
-        len(train_indices) > 0
-    ), "Train set must be larger than 0. Check your sampling techniques"
-    assert (
-        len(validation_indices) > 0
-    ), "Validation set must be larger than 0. Check your sampling techniques"
-    assert (
-        len(test_indices) > 0
-    ), "Test set must be larger than 0. Check your sampling techniques"
-
-    # Add the train/validation/test indicators to the DataFrame
-    pca_df_converted["isTrain"] = pca_df_converted["index"].isin(train_indices)
-    pca_df_converted["isValidation"] = pca_df_converted["index"].isin(
-        validation_indices
+    validation_indices = indices[(pca1 > 0.1) & (pca2 > 0)]
+    test_indices = indices[(pca1 < 0.1) & (pca2 > 0)]
+    train_indices = np.setdiff1d(
+        indices, np.concatenate([validation_indices, test_indices])
     )
-    pca_df_converted["isTest"] = pca_df_converted["index"].isin(test_indices)
 
-    # Continue with the rest of the function using the converted DataFrame
-    train_features = feature_df[feature_df.index.isin(train_indices)]
-    validation_features = feature_df[feature_df.index.isin(validation_indices)]
-    test_features = feature_df[feature_df.index.isin(test_indices)]
+    logger.info("Pairing training transformations")
+    train_transformation_indices: List[Tuple[int, int]] = []
+    for i in tqdm(train_indices):
+        for j in train_indices:
+            train_transformation_indices.append((i, j))
+    logger.info("Pairing validation transformations")
+    validation_transformation_indices: List[Tuple[int, int]] = []
+    for i in tqdm(train_indices):
+        for j in validation_indices:
+            validation_transformation_indices.append((i, j))
+    logger.info("Pairing test transformations")
+    test_transformation_indices: List[Tuple[int, int]] = []
+    for i in tqdm(train_indices):
+        for j in test_indices:
+            test_transformation_indices.append((i, j))
 
-    # To generate a training set, we create a matching between all MTSs in the
-    # defined training feature space
-    if use_one_hot_encoding == True:
-        logger.info(f"Generating supervised training dataset...")
-        train_supervised_dataset = (
-            create_one_hot_encoded_supervised_original_target_delta_dataset(
-                train_features, train_features
-            )
-        )
+    assert len(train_transformation_indices) > 0, "Training set must have elements"
 
-        logger.info(f"Generating supervised validation dataset...")
-        validation_supervised_dataset = (
-            create_one_hot_encoded_supervised_original_target_delta_dataset(
-                train_features, validation_features
-            )
-        )
-
-        logger.info(f"Generating supervised test dataset...")
-        test_supervised_dataset = (
-            create_one_hot_encoded_supervised_original_target_delta_dataset(
-                train_features, test_features
-            )
-        )
-    elif use_one_hot_encoding == False:
-        logger.info(f"Generating supervised training dataset...")
-        train_supervised_dataset = create_all_delta_supervised_original_target_dataset(
-            train_features, train_features
-        )
-
-        logger.info(f"Generating supervised validation dataset...")
-        validation_supervised_dataset = (
-            create_all_delta_supervised_original_target_dataset(
-                train_features, validation_features
-            )
-        )
-
-        logger.info(f"Generating supervised test dataset...")
-        test_supervised_dataset = create_all_delta_supervised_original_target_dataset(
-            train_features, test_features
-        )
-
-    logger.info(f"Generating X,y pairs for training dataset...")
-    X_train, y_train = _generate_X_y_pairs_from_df(
-        train_supervised_dataset, use_one_hot_encoding=use_one_hot_encoding
+    # If test_set_sample_size is in the config, we sample validation and test
+    test_set_sample_size = config.get("dataset_args", {}).get(
+        "test_set_sample_size", None
     )
-    logger.info(f"Generating X,y pairs for validation dataset...")
+    if test_set_sample_size is not None:
+        number_of_transformations_in_test_set = min(
+            config["dataset_args"]["test_set_sample_size"],
+            max(
+                len(validation_transformation_indices), len(test_transformation_indices)
+            ),
+        )
+        assert (
+            len(validation_transformation_indices)
+            > number_of_transformations_in_test_set
+        ), "Validation set must have more than number of defined samples in evaluation set entries."
 
-    X_validation, y_validation = _generate_X_y_pairs_from_df(
-        validation_supervised_dataset, use_one_hot_encoding=use_one_hot_encoding
-    )
-    logger.info(f"Generating X,y pairs for test dataset...")
-    X_test, y_test = _generate_X_y_pairs_from_df(
-        test_supervised_dataset, use_one_hot_encoding=use_one_hot_encoding
-    )
-    logger.info(
-        f""" Generated X, y pairs for training, test and validation. With shapes:
-            X_training: {X_train.shape}
-            y_training: {y_train.shape}
-            X_validation: {X_validation.shape}
-            y_validation: {y_validation.shape}
-            X_test: {X_test.shape}
-            y_test: {y_test.shape}
-    """
-    )
+        assert (
+            len(test_transformation_indices) > number_of_transformations_in_test_set
+        ), "Test set must have more than number of defined samples in evaluation set entries."
+        validation_transformation_indices = random.sample(
+            validation_transformation_indices, number_of_transformations_in_test_set
+        )
+        test_transformation_indices = random.sample(
+            test_transformation_indices, number_of_transformations_in_test_set
+        )
     return (
-        X_train,
-        y_train,
-        X_validation,
-        y_validation,
-        X_test,
-        y_test,
-        train_supervised_dataset,
-        validation_supervised_dataset,
-        test_supervised_dataset,
+        np.array(train_transformation_indices),
+        np.array(validation_transformation_indices),
+        np.array(test_transformation_indices),
     )
 
 
-def create_one_hot_encoded_supervised_original_target_delta_dataset(
-    original_distribution, target_distribution
+def concat_delta_values_to_features(
+    X_features: np.ndarray,  # Shape (Number of input vector, Number of features in UTS * Number of UTS in MTS)
+    y_features: np.ndarray,  # Shape (Number of output vector, Number of features in UTS * Number of UTS in MTS)
+    use_one_hot_encoding: bool,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
 ):
     """
-    Generate a supervised dataset by creating all possible pairwise combinations between
-    an original distribution and a target distribution, computing deltas between paired features,
-    and simulating user change behavior by activating specific groups of delta coulmns. Other delta columns are omitted.
-    A one hot encoding over the UTSs define which delta is active
-
-    Args:
-        original_distribution (pd.DataFrame): The DataFrame representing the original distribution.
-            Each row corresponds to an instance, and columns represent features.
-        target_distribution (pd.DataFrame): The DataFrame representing the target distribution
-            with the same feature structure as `original_distribution`.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing:
-            - Features from both the original and target distributions, prefixed by `original_` and `target_`.
-            - Delta columns showing the difference between paired features, prefixed by `delta_`.
-            - For each row, specific groups of `delta_` columns retain non-zero values while others are set to zero.
-
-    Notes:
-        - The original and target indices are reset and renamed to avoid conflicts during merging.
-        - The function filters out rows where the original and target indices are identical.
-        - Cross joins between distributions are used to create all possible pairs.
-        - Activates grouped delta columns together based on specific prefixes.
+    Augments the input feature vectors (X) by computing and appending delta values
+    based on the difference between y and X. Optionally applies one-hot encoding.
     """
-    # Copy distributions to avoid inplace alteration and add prefixes to columns
-    orig_copy = original_distribution.copy().add_prefix("original_")
-    target_copy = target_distribution.copy().add_prefix("target_")
+    expanded_x_rows: List = []
+    expanded_y_rows: List = []
+    for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):
+        X_row = X_features[row_index]
+        y_row = y_features[row_index]
+        for uts_index in range(0, number_of_uts_in_mts):
+            new_row = X_row.copy()
+            start_index = uts_index * number_of_uts_in_mts
+            end_index = start_index + number_of_features_in_mts
+            if not use_one_hot_encoding:
+                delta = [0] * len(y_row)
+                delta[start_index:end_index] = (
+                    y_row[start_index:end_index] - X_row[start_index:end_index]
+                )
+                new_row = np.concatenate((new_row, delta))
+            else:
+                delta = y_row[start_index:end_index] - X_row[start_index:end_index]
+                new_row = np.concatenate((new_row, delta))
 
-    # Reset and rename indices to avoid conflicts during merging
-    orig_copy.reset_index(inplace=True)
-    target_copy.reset_index(inplace=True)
-    orig_copy.rename(columns={"index": "original_index"}, inplace=True)
-    target_copy.rename(columns={"index": "target_index"}, inplace=True)
+            if use_one_hot_encoding:
+                one_hot_encoding = [0] * number_of_uts_in_mts
+                one_hot_encoding[uts_index] = 1
+                new_row = np.concatenate((new_row, one_hot_encoding))
+            expanded_x_rows.append(new_row)
+            expanded_y_rows.append(y_row)
 
-    # Perform cross join to create all possible pairs
-    dataset = pd.merge(orig_copy, target_copy, how="cross")
-
-    # Remove pairs where the original and target indices are identical
-    dataset = dataset[dataset["original_index"] != dataset["target_index"]]
-
-    delta_feature_columns = [f"delta_{feature}" for feature in FEATURE_NAMES]
-
-    # For each row, we create 3 supervised rows - One for each uts activated
-    # For each uts row, we compute the delta of the
-    expanded_rows: List = []
-    for _, row in tqdm(dataset.iterrows(), total=len(dataset)):
-        for uts_name in UTS_NAMES:
-            new_row = row.copy()
-            # For each uts activated iterate through features and calculate delta
-            for delta_feature in delta_feature_columns:
-                original_col = f"original_{uts_name}_{delta_feature[len('delta_') :]}"
-                target_col = f"target_{uts_name}_{delta_feature[len('delta_') :]}"
-                new_row[delta_feature] = row[target_col] - row[original_col]
-            for uts in UTS_NAMES:
-                if uts_name == uts:
-                    new_row[f"{uts}_is_delta"] = 1
-                else:
-                    new_row[f"{uts}_is_delta"] = 0
-            expanded_rows.append(new_row)
-
-    # Create a new DataFrame from the expanded rows
-    expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
-
-    return expanded_dataset
+    return np.array(expanded_x_rows), np.array(expanded_y_rows)
 
 
-def create_all_delta_supervised_original_target_dataset(
-    original_distribution, target_distribution
+# Pick random UTS to deactivate. Done to prevent explosion in validation, test set
+def concat_delta_values_to_features_for_inference(
+    X_features: np.ndarray,  # Shape (Number of input vector, Number of features in UTS * Number of UTS in MTS)
+    y_features: np.ndarray,  # Shape (Number of output vector, Number of features in UTS * Number of UTS in MTS)
+    use_one_hot_encoding: bool,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
 ):
     """
-    Generate a supervised dataset by creating all possible pairwise combinations between
-    an original distribution and a target distribution, computing deltas between paired features,
-    and simulating user change behavior by activating specific groups of delta columns, the unactivated delta values are set to zero.
-
-    Args:
-        original_distribution (pd.DataFrame): The DataFrame representing the original distribution.
-            Each row corresponds to an instance, and columns represent features.
-        target_distribution (pd.DataFrame): The DataFrame representing the target distribution
-            with the same feature structure as `original_distribution`.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing:
-            - Features from both the original and target distributions, prefixed by `original_` and `target_`.
-            - Delta columns showing the difference between paired features, prefixed by `delta_`.
-            - For each row, specific groups of `delta_` columns retain non-zero values while others are set to zero.
-
-    Notes:
-        - The original and target indices are reset and renamed to avoid conflicts during merging.
-        - The function filters out rows where the original and target indices are identical.
-        - Cross joins between distributions are used to create all possible pairs.
-        - Activates grouped delta columns together based on specific prefixes.
+    Augments the input feature vectors (X) by computing and appending delta values
+    based on the difference between y and X. Optionally applies one-hot encoding.
+    This function is for inference data. This is done so that we dont add more
+    test data than designed.
     """
-    # Copy distributions to avoid inplace alteration and add prefixes to columns
-    orig_copy = original_distribution.copy().add_prefix("original_")
-    target_copy = target_distribution.copy().add_prefix("target_")
+    expanded_x_rows: List = []
+    expanded_y_rows: List = []
+    for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):
+        X_row = X_features[row_index]
+        y_row = y_features[row_index]
+        uts_index = np.random.choice(range(0, number_of_uts_in_mts))
+        new_row = X_row.copy()
+        start_index = uts_index * number_of_uts_in_mts
+        end_index = start_index + number_of_features_in_mts
+        if not use_one_hot_encoding:
+            delta = [0] * len(y_row)
+            delta[start_index:end_index] = (
+                y_row[start_index:end_index] - X_row[start_index:end_index]
+            )
+            new_row = np.concatenate((new_row, delta))
+        else:
+            delta = y_row[start_index:end_index] - X_row[start_index:end_index]
+            new_row = np.concatenate((new_row, delta))
 
-    # Reset and rename indices to avoid conflicts during merging
-    orig_copy.reset_index(inplace=True)
-    target_copy.reset_index(inplace=True)
-    orig_copy.rename(columns={"index": "original_index"}, inplace=True)
-    target_copy.rename(columns={"index": "target_index"}, inplace=True)
+        if use_one_hot_encoding:
+            one_hot_encoding = [0] * number_of_uts_in_mts
+            one_hot_encoding[uts_index] = 1
+            new_row = np.concatenate((new_row, one_hot_encoding))
+        expanded_x_rows.append(new_row)
+        expanded_y_rows.append(y_row)
 
-    # Perform cross join to create all possible pairs
-    dataset = pd.merge(orig_copy, target_copy, how="cross")
-
-    # Remove pairs where the original and target indices are identical
-    dataset = dataset[dataset["original_index"] != dataset["target_index"]]
-
-    # Compute delta columns
-    for col in orig_copy.columns:
-        if col.startswith("original_"):
-            target_col = "target_" + col[len("original_") :]
-            delta_col = "delta_" + col[len("original_") :]
-            dataset[delta_col] = dataset[target_col] - dataset[col]
-
-    delta_columns = [col for col in dataset.columns if col.startswith("delta_")]
-
-    # Define groups of delta columns
-    load_columns = [col for col in delta_columns if col.startswith("delta_grid1-load")]
-    loss_columns = [col for col in delta_columns if col.startswith("delta_grid1-loss")]
-    temp_columns = [col for col in delta_columns if col.startswith("delta_grid1-temp")]
-
-    grouped_columns = [load_columns, loss_columns, temp_columns]
-
-    # Create rows by activating each group separately
-    expanded_rows = []
-    for index, row in dataset.iterrows():
-        for group in grouped_columns:
-            new_row = row.copy()
-            # Set all delta columns to 0
-            for col in delta_columns:
-                new_row[col] = 0
-            # Activate all columns in the current group
-            for col in group:
-                new_row[col] = row[col]
-            expanded_rows.append(new_row)
-
-    # Create a new DataFrame from the expanded rows
-    expanded_dataset = pd.DataFrame(expanded_rows).reset_index(drop=True)
-
-    return expanded_dataset
+    return np.array(expanded_x_rows), np.array(expanded_y_rows)

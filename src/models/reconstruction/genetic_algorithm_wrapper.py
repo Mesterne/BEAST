@@ -91,11 +91,13 @@ class GeneticAlgorithmWrapper:
         ]
 
         # Calculate the number of MTS we need to process
-        num_mts = len(original_mts_indices)
+        number_of_mts = len(original_mts_indices)
         # Reshape predicted features to have the right shape for each MTS
         # (num_mts, num_uts_in_mts, num_features_per_uts)
         predicted_features_reshape = predicted_features.reshape(
-            num_mts, self.num_uts_in_mts, self.num_features_per_uts
+            number_of_mts,
+            self.num_uts_in_mts,
+            self.num_features_per_uts,
         )
 
         all_mts_transformed = []
@@ -170,7 +172,9 @@ class GeneticAlgorithmWrapper:
             all_mts_transformed_features.append(transformed_mts_features)
             all_mts_transformed_factors.append(transformed_mts_factors)
 
-        logger.info(f"Successfully transformed {num_mts} multivariate time series.")
+        logger.info(
+            f"Successfully transformed {number_of_mts} multivariate time series."
+        )
 
         return (
             all_mts_transformed,

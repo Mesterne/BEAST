@@ -1,8 +1,9 @@
-import torch.nn.functional as F
-from torch import nn
-from torch import save, load
-from src.utils.logging_config import logger
 import os
+
+import torch.nn.functional as F
+from torch import load, nn, save
+
+from src.utils.logging_config import logger
 
 
 class FeedForwardFeatureModel(nn.Module):
@@ -19,9 +20,6 @@ class FeedForwardFeatureModel(nn.Module):
         )
 
     def generate_network(self, input_size, output_size, hidden_network_sizes):
-        logger.info(
-            f"Building feedforward forecaster with hidden sizes: {hidden_network_sizes}"
-        )
         self.layers = nn.ModuleList()
         self.layers.append(nn.Linear(input_size, hidden_network_sizes[0]))
         for i in range(1, len(hidden_network_sizes)):
