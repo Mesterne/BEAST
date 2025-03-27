@@ -1,4 +1,5 @@
 import copy
+from turtle import st
 from typing import List, Tuple
 
 import numpy as np
@@ -159,6 +160,70 @@ def mask_feature_values(
     masked_values[uts_idx, :] = feature_values_reshaped[uts_idx, :]
 
     return masked_values.flatten()
+
+
+def create_feature_conditioned_dataset(
+    mts_array: np.ndarray,
+    mts_features: np.ndarray,
+    transformation_indices: np.ndarray,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    X_features = mts_features[transformation_indices[:, 0]]
+    y_features = mts_features[transformation_indices[:, 1]]
+
+    X_mts = mts_array[transformation_indices[:, 0]]
+    y_mts = mts_array[transformation_indices[:, 1]]
+
+    X = []
+    y = []
+    for mts_index, mts in enumerate(X_mts):
+        original_mts = X_mts[mts_index].flatten()
+        target_mts = y_mts[mts_index].flatten()
+        target_features_for_X = y_features[mts_index]
+        for uts_index in range(0, number_of_uts_in_mts):
+            start_index = uts_index * number_of_features_in_mts
+            end_index = start_index + number_of_features_in_mts
+            conditions = [0] * len(target_features_for_X)
+            conditions[start_index:end_index] = target_features_for_X[
+                start_index:end_index
+            ]
+            X.append(np.concatenate((original_mts, conditions)))
+            y.append(target_mts)
+    return np.array(X), np.array(y)
+
+
+def create_delta_conditioned_dataset(
+    mts_array: np.ndarray,
+    mts_features: np.ndarray,
+    transformation_indices: np.ndarray,
+    number_of_uts_in_mts: int,
+    number_of_features_in_mts: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    X_features = mts_features[transformation_indices[:, 0]]
+    y_features = mts_features[transformation_indices[:, 1]]
+
+    X_mts = mts_array[transformation_indices[:, 0]]
+    y_mts = mts_array[transformation_indices[:, 1]]
+
+    X = []
+    y = []
+    for mts_index, mts in enumerate(X_mts):
+        original_mts = X_mts[mts_index].flatten()
+        target_mts = y_mts[mts_index].flatten()
+        original_features_for_X = X_features[mts_index]
+        target_features_for_X = y_features[mts_index]
+        for uts_index in range(0, number_of_uts_in_mts):
+            start_index = uts_index * number_of_features_in_mts
+            end_index = start_index + number_of_features_in_mts
+            conditions = [0] * len(target_features_for_X)
+            conditions[start_index:end_index] = (
+                target_features_for_X[start_index:end_index]
+                - original_features_for_X[start_index:end_index]
+            )
+            X.append(np.concatenate((original_mts, conditions)))
+            y.append(target_mts)
+    return np.array(X), np.array(y)
 
 
 def get_feature_conditioned_dataset(
