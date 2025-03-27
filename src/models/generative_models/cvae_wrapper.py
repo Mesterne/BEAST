@@ -163,6 +163,11 @@ def create_conditioned_dataset_for_training(
     number_of_uts_in_mts: int,
     number_of_features_in_mts: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
+    for either target features (with mask) or delta values to target features. This function is specialized for
+    training. For each UTS it creates a mask and training entry
+    """
     X_features = mts_features[transformation_indices[:, 0]]
     y_features = mts_features[transformation_indices[:, 1]]
 
@@ -202,6 +207,12 @@ def create_conditioned_dataset_for_inference(
     number_of_uts_in_mts: int,
     number_of_features_in_mts: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
+    for either target features (with mask) or delta values to target features. This function is specialized for
+    inference, which means instead of creating a mask for each uts, it picks one uts per MTS, to avoid
+    expanding the size of y for test.
+    """
     X_features = mts_features[transformation_indices[:, 0]]
     y_features = mts_features[transformation_indices[:, 1]]
 

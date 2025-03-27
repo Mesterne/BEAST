@@ -188,13 +188,13 @@ model_handler.train(
 logger.info("Running inference on validation set...")
 inferred_mts_validation = model_handler.infer(
     mts_dataset=mts_dataset_array,
-    evaluation_set_indinces=validation_transformation_indices,
+    evaluation_transformation_indinces=validation_transformation_indices,
 )
 
 logger.info("Running inference on test set...")
 inferred_mts_test = model_handler.infer(
     mts_dataset=mts_dataset_array,
-    evaluation_set_indinces=test_transformation_indices,
+    evaluation_transformation_indinces=test_transformation_indices,
 )
 
 logger.info("Successfully ran inference on validation and test sets")

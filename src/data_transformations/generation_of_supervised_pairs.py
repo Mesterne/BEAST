@@ -15,9 +15,6 @@ def create_train_val_test_split(
     config: Dict[str, any],
 ):
     """ """
-    number_of_transformations_in_test_set = config["dataset_args"][
-        "test_set_sample_size"
-    ]
     logger.info(f"Generating transformation index pairs for training...")
     mts_features_array, mts_decomps = generate_feature_dataframe(
         data=mts_dataset_array,
@@ -58,19 +55,32 @@ def create_train_val_test_split(
             test_transformation_indices.append((i, j))
 
     assert len(train_transformation_indices) > 0, "Training set must have elements"
-    assert (
-        len(validation_transformation_indices) > number_of_transformations_in_test_set
-    ), "Validation set must have more than number of defined samples in evaluation set entries."
 
-    assert (
-        len(test_transformation_indices) > number_of_transformations_in_test_set
-    ), "Test set must have more than number of defined samples in evaluation set entries."
-    validation_transformation_indices = random.sample(
-        validation_transformation_indices, number_of_transformations_in_test_set
+    # If test_set_sample_size is in the config, we sample validation and test
+    test_set_sample_size = config.get("dataset_args", {}).get(
+        "test_set_sample_size", None
     )
-    test_transformation_indices = random.sample(
-        test_transformation_indices, number_of_transformations_in_test_set
-    )
+    if test_set_sample_size is not None:
+        number_of_transformations_in_test_set = min(
+            config["dataset_args"]["test_set_sample_size"],
+            max(
+                len(validation_transformation_indices), len(test_transformation_indices)
+            ),
+        )
+        assert (
+            len(validation_transformation_indices)
+            > number_of_transformations_in_test_set
+        ), "Validation set must have more than number of defined samples in evaluation set entries."
+
+        assert (
+            len(test_transformation_indices) > number_of_transformations_in_test_set
+        ), "Test set must have more than number of defined samples in evaluation set entries."
+        validation_transformation_indices = random.sample(
+            validation_transformation_indices, number_of_transformations_in_test_set
+        )
+        test_transformation_indices = random.sample(
+            test_transformation_indices, number_of_transformations_in_test_set
+        )
     return (
         np.array(train_transformation_indices),
         np.array(validation_transformation_indices),
@@ -79,12 +89,16 @@ def create_train_val_test_split(
 
 
 def concat_delta_values_to_features(
-    X_features: np.ndarray,
-    y_features: np.ndarray,
+    X_features: np.ndarray,  # Shape (Number of input vector, Number of features in UTS * Number of UTS in MTS)
+    y_features: np.ndarray,  # Shape (Number of output vector, Number of features in UTS * Number of UTS in MTS)
     use_one_hot_encoding: bool,
     number_of_uts_in_mts: int,
     number_of_features_in_mts: int,
 ):
+    """
+    Augments the input feature vectors (X) by computing and appending delta values
+    based on the difference between y and X. Optionally applies one-hot encoding.
+    """
     expanded_x_rows: List = []
     expanded_y_rows: List = []
     for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):
@@ -116,12 +130,18 @@ def concat_delta_values_to_features(
 
 # Pick random UTS to deactivate. Done to prevent explosion in validation, test set
 def concat_delta_values_to_features_for_inference(
-    X_features: np.ndarray,
-    y_features: np.ndarray,
+    X_features: np.ndarray,  # Shape (Number of input vector, Number of features in UTS * Number of UTS in MTS)
+    y_features: np.ndarray,  # Shape (Number of output vector, Number of features in UTS * Number of UTS in MTS)
     use_one_hot_encoding: bool,
     number_of_uts_in_mts: int,
     number_of_features_in_mts: int,
 ):
+    """
+    Augments the input feature vectors (X) by computing and appending delta values
+    based on the difference between y and X. Optionally applies one-hot encoding.
+    This function is for inference data. This is done so that we dont add more
+    test data than designed.
+    """
     expanded_x_rows: List = []
     expanded_y_rows: List = []
     for row_index, _ in tqdm(enumerate(X_features), total=len(X_features)):

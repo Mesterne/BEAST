@@ -12,10 +12,19 @@ from src.utils.logging_config import logger
 
 class ModelHandler:
     def __init__(self, config: Dict[str, any]) -> None:
+        """
+        Initializes the model handler with the correct variables.
+
+        Args:
+            config: The configuration dict for the experiment
+        """
         self.config = config
         self.model: TimeseriesTransformationModel = None
 
     def choose_model_category(self):
+        """
+        Based on the config file, chooses and sets the internal model to either GenerativeModel or FeatureOptimizationModel.
+        """
         if self.config["is_conditional_gen_model"]:
             self.model = GenerativeModel(self.config)
             logger.info("Running conditional generative model")
@@ -29,6 +38,16 @@ class ModelHandler:
         train_transformation_indices: np.ndarray,
         validation_transformation_indices: np.ndarray,
     ):
+        """
+        Takes the entire dataset, creates the correct training data for the selected model and trains the model.
+
+        Args:
+            mts_dataset: The entire dataset. Has shape (number of MTS in dataset, number of UTS in MTS, Number of samples per UTS)
+            train_transformation_indices: The transformation indices for the training set. Is a list of tuples where the first
+                element is the original MTS, the second element is the target MTS index.
+            validation_transformation_indices: The transformation indices for the validation set. Is a list of tuples where the first
+                element is the original MTS, the second element is the target MTS index.
+        """
         assert self.model is not None, "The model to train must be defined"
 
         logger.info("Generating training and validation pairs...")
@@ -37,19 +56,32 @@ class ModelHandler:
             train_transformation_indices=train_transformation_indices,
             validation_transformation_indices=validation_transformation_indices,
         )
-        logger.info("Successfully generated training and validation pairs")
+        logger.info(
+            f"Successfully generated training and validation pairs.\nShapes:\nX_train: {X_train.shape}\ny_train: {y_train.shape}\nX_validation: {X_val.shape}\ny_validation: {y_val.shape}"
+        )
         logger.info("Training model...")
         self.model.train(X_train, y_train, X_val, y_val)
         logger.info("Successfully trained model...")
 
-    def infer(self, mts_dataset, evaluation_set_indinces: np.ndarray) -> np.ndarray:
+    def infer(
+        self, mts_dataset, evaluation_transformation_indinces: np.ndarray
+    ) -> np.ndarray:
+        """
+        Takes the entire dataset, creates the correct inference data (X) for the selected model and runs inference.
+
+        Args:
+            mts_dataset: The entire dataset. Has shape (number of MTS in dataset, number of UTS in MTS, Number of samples per UTS)
+            evaluation_transformation_indices: The transformation indices for the evaluation set. Is a list of tuples where the first
+                element is the original MTS, the second element is the target MTS index.
+        """
         assert self.model is not None, "The model must be defined"
 
         logger.info("Generating inference data...")
         X = self.model.create_inference_data(
             mts_dataset=mts_dataset,
-            evaluation_set_indices=evaluation_set_indinces,
+            evaluation_set_indices=evaluation_transformation_indinces,
         )
+        logger.info(f"Successfully generated inference data with shape X: {X.shape}")
 
         logger.info("Running inference...")
         predicted_y = self.model.infer(X)

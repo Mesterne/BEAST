@@ -2,7 +2,6 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import seaborn as sns
 from matplotlib.figure import Figure
 
@@ -10,7 +9,6 @@ from src.data.constants import COLUMN_NAMES, UTS_NAMES
 from src.utils.pca import PCAWrapper
 
 
-# TODO: Fix with new arguments
 def plot_pca_for_each_uts_with_transformed(
     mts_dataset_features: np.ndarray,  # Shape = (num_mts, num_uts_features)
     mts_features_evaluation_set: np.ndarray,  # Shape = (num_mts, num_uts_features)
@@ -56,7 +54,7 @@ def plot_pca_for_each_uts_with_transformed(
     sns.scatterplot(
         x=evaluation_set_pca[:, 0],
         y=evaluation_set_pca[:, 1],
-        label="Train",
+        label="Evaluation set",
         color="red",
         s=50,
         ax=ax,

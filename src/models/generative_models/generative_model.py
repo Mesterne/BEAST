@@ -37,7 +37,6 @@ class GenerativeModel(TimeseriesTransformationModel):
         validation_transformation_indices: np.ndarray,
     ):
 
-        logger.info("Preparing data set for conditional generative model...")
         condition_type: str = self.config["model_args"]["feature_model_args"][
             "conditional_gen_model_args"
         ]["condition_type"]
@@ -91,7 +90,6 @@ class GenerativeModel(TimeseriesTransformationModel):
     def create_inference_data(
         self, mts_dataset: np.ndarray, evaluation_set_indices: np.ndarray
     ):
-        logger.info("Preparing data set for conditional generative model...")
         condition_type: str = self.config["model_args"]["feature_model_args"][
             "conditional_gen_model_args"
         ]["condition_type"]

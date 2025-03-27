@@ -42,7 +42,7 @@ def create_and_save_plots_of_model_performances(
     total_mse_plot = plot_total_mse_distribution(
         total_mse_for_each_mts=total_mse_for_each_mts
     )
-    total_mse_plot.savefig("total_mse_distribution.png")
+    total_mse_plot.savefig(os.path.join(OUTPUT_DIR, "total_mse_distribution.png"))
 
     feature_wise_error_plot = plot_distribution_of_feature_wise_error(
         mse_per_feature=mse_per_feature
@@ -132,11 +132,10 @@ def create_and_save_plots_of_model_performances(
     pca_plot_of_median_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts_pca.png")
     )
-    #
-    # pca_total_plot = plot_pca_for_all_generated_mts(
-    #     mts_features_train=y_features_train,
-    #     mts_features_validation=y_features_validation,
-    #     mts_features_test=y_features_test,
-    #     mts_generated_features=mts_features_of_genererated_mts,
-    # )
-    # pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))
+
+    pca_total_plot = plot_pca_for_all_generated_mts(
+        mts_dataset_features=mts_dataset_features,
+        evaluation_set_indices=transformation_indices[:, 1],
+        mts_generated_features=inferred_mts_features,
+    )
+    pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))
