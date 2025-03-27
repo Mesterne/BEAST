@@ -1,5 +1,5 @@
 from ast import List
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 
@@ -29,37 +29,63 @@ def reshape_and_calculate_features(
     return features
 
 
-# TODO: Remove hardcoded values
 def evaluate(
+    config: Dict[str, any],
     mts_array: np.ndarray,  # Shape (Number of MTS, Number of UTS in MTS, Number of samples in UTS)
     train_transformation_indices: np.ndarray,  # Shape (number of transformation in train set, 2) Entry 1 is the original index, Entry 2 is target
     validation_transformation_indices: np.ndarray,  # Shape (number of transformation in validation set, 2) Entry 1 is the original index, Entry 2 is target
     test_transformation_indices: np.ndarray,  # Shape (number of transformation in test set, 2) Entry 1 is the original index, Entry 2 is target
     inferred_mts_validation: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
     inferred_mts_test: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
-    inferred_intermediate_features_validation: Optional[np.ndarray] = None,
-    inferred_intermediate_features_test: Optional[np.ndarray] = None,
+    inferred_intermediate_features_validation: Optional[
+        np.ndarray
+    ] = None,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
+    inferred_intermediate_features_test: Optional[
+        np.ndarray
+    ] = None,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
 ):
+    """
+    Takes the dataset, defined transformation indices and inferred MTS for the
+    different datasets to evaluate the inferred MTS with the true target values.
+
+    Args:
+        config: Dict, The config file loaded for the experiment
+        mts_array: np.ndarray,  Entire dataset of MTS with shape = (Number of MTS, Number of UTS in MTS, Number of samples in UTS)
+        train_transformation_indices: np.ndarray, Indices for transformations in training set with Shape = (number of transformation in train set, 2)
+            Entry 1 is the original index, Entry 2 is target
+        validation_transformation_indices: np.ndarray, Indices for transformations in validation set with Shape = (number of transformation in train set, 2)
+            Entry 1 is the original index, Entry 2 is target
+        test_transformation_indices: np.ndarray, Indices for transformations in test set with Shape = (number of transformation in train set, 2)
+            Entry 1 is the original index, Entry 2 is target
+        inferred_mts_validation: np.ndarray,  The inferred MTS of validation set with shape = (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
+        inferred_mts_test: np.ndarray,  The inferred MTS of test set with shape = (number of transformations in test set, Number of UTS in MTS * Number of samples in UTS)
+        inferred_intermediate_features_validation: Optional input with intermediate feature values calculated during inference. Shape = (Number of transformations in validation set, Number of UTS in MTS, Number of features in UTS),
+        inferred_intermediate_features_test: Optional input with intermediate feature values calculated during inference. Shape = (Number of transformations in test set, Number of UTS in MTS, Number of features in UTS),
+
+    """
+
+    print(f"See HERE: {inferred_intermediate_features_validation.shape}")
+
     mts_dataset_features = reshape_and_calculate_features(
         mts=mts_array,
-        num_features_per_uts=4,
-        num_samples_per_uts=192,
-        num_uts_in_mts=3,
-        series_periodicity=24,
+        num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
+        num_samples_per_uts=config["dataset_args"]["window_size"],
+        num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
+        series_periodicity=config["stl_args"]["series_periodicity"],
     )
     inferred_features_validation = reshape_and_calculate_features(
         mts=inferred_mts_validation,
-        num_features_per_uts=4,
-        num_samples_per_uts=192,
-        num_uts_in_mts=3,
-        series_periodicity=24,
+        num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
+        num_samples_per_uts=config["dataset_args"]["window_size"],
+        num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
+        series_periodicity=config["stl_args"]["series_periodicity"],
     )
     inferred_features_test = reshape_and_calculate_features(
         mts=inferred_mts_test,
-        num_features_per_uts=4,
-        num_samples_per_uts=192,
-        num_uts_in_mts=3,
-        series_periodicity=24,
+        num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
+        num_samples_per_uts=config["dataset_args"]["window_size"],
+        num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
+        series_periodicity=config["stl_args"]["series_periodicity"],
     )
 
     y_features_validation = mts_dataset_features[
@@ -82,9 +108,6 @@ def evaluate(
     total_mse_for_each_mts_test = calculate_total_mse_for_each_mts(
         mse_per_feature=mse_values_for_each_feature_test
     )
-
-    print(f"mts_dataset_features shape: {mts_dataset_features.shape}")
-    print(f"inferred_features_validation shape: {mts_dataset_features.shape}")
 
     # Plotting for validation
     create_and_save_plots_of_model_performances(

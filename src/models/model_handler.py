@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -65,7 +65,7 @@ class ModelHandler:
 
     def infer(
         self, mts_dataset, evaluation_transformation_indinces: np.ndarray
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Takes the entire dataset, creates the correct inference data (X) for the selected model and runs inference.
 
@@ -73,6 +73,8 @@ class ModelHandler:
             mts_dataset: The entire dataset. Has shape (number of MTS in dataset, number of UTS in MTS, Number of samples per UTS)
             evaluation_transformation_indices: The transformation indices for the evaluation set. Is a list of tuples where the first
                 element is the original MTS, the second element is the target MTS index.
+        Returns:
+            A numpy array of shape (Number of MTS inferred, Number of samples per UTS * Number of UTS in MTS) containing all inferred MTS
         """
         assert self.model is not None, "The model must be defined"
 
@@ -84,6 +86,6 @@ class ModelHandler:
         logger.info(f"Successfully generated inference data with shape X: {X.shape}")
 
         logger.info("Running inference...")
-        predicted_y = self.model.infer(X)
+        predicted_y, intermediate_features = self.model.infer(X)
 
-        return predicted_y
+        return predicted_y, np.array(intermediate_features)

@@ -149,9 +149,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         ga = self.initialize_ga_model(self.mts_dataset)
         predicted_features = self.model.infer(X)
 
-        inferred_mts, _ = generate_new_time_series(
+        inferred_mts, intermediate_features = generate_new_time_series(
             original_indices=self.evaluation_set_indices[:, 0],
             predicted_features=predicted_features,
             ga=ga,
         )
-        return inferred_mts
+        return inferred_mts, intermediate_features

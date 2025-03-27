@@ -119,6 +119,63 @@ logger.info("Successfully generated MTS PCA space")
 )
 
 
+config["model_args"]["feature_model_args"]["number_of_uts_in_mts"] = num_uts_in_mts
+config["model_args"]["feature_model_args"]["number_of_features_per_uts"] = config[
+    "dataset_args"
+]["num_features_per_uts"]
+config["model_args"]["feature_model_args"]["input_size"] = (
+    num_uts_in_mts * config["dataset_args"]["num_features_per_uts"]
+)
+config["model_args"]["feature_model_args"]["input_size"] += (
+    config["dataset_args"]["num_features_per_uts"] + num_uts_in_mts
+    if config["dataset_args"]["use_one_hot_encoding"]
+    else config["dataset_args"]["num_features_per_uts"] * num_uts_in_mts
+)
+
+model_handler = ModelHandler(config)
+model_handler.choose_model_category()
+
+############ TRAINING
+model_handler.train(
+    mts_dataset=mts_dataset_array,
+    train_transformation_indices=train_transformation_indices,
+    validation_transformation_indices=validation_transformation_indices,
+)
+
+
+############ INFERENCE
+logger.info("Running inference on validation set...")
+inferred_mts_validation, inferred_intermediate_features_validation = (
+    model_handler.infer(
+        mts_dataset=mts_dataset_array,
+        evaluation_transformation_indinces=validation_transformation_indices,
+    )
+)
+
+logger.info("Running inference on test set...")
+inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
+    mts_dataset=mts_dataset_array,
+    evaluation_transformation_indinces=test_transformation_indices,
+)
+
+logger.info("Successfully ran inference on validation and test sets")
+
+evaluate(
+    config=config,
+    mts_array=mts_dataset_array,
+    train_transformation_indices=train_transformation_indices,
+    validation_transformation_indices=validation_transformation_indices,
+    test_transformation_indices=test_transformation_indices,
+    inferred_mts_validation=inferred_mts_validation,
+    inferred_mts_test=inferred_mts_test,
+    inferred_intermediate_features_validation=inferred_intermediate_features_validation,
+    inferred_intermediate_features_test=inferred_intermediate_features_test,
+)
+
+
+# Forecasting model evaluations
+
+
 train_indices: List[int] = train_transformation_indices[:, 0]
 validation_indices: List[int] = validation_transformation_indices[:, 1]
 test_indices: List[int] = test_transformation_indices[:, 1]
@@ -160,56 +217,6 @@ logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shap
 )
 logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
 
-config["model_args"]["feature_model_args"]["number_of_uts_in_mts"] = num_uts_in_mts
-config["model_args"]["feature_model_args"]["number_of_features_per_uts"] = config[
-    "dataset_args"
-]["num_features_per_uts"]
-config["model_args"]["feature_model_args"]["input_size"] = (
-    num_uts_in_mts * config["dataset_args"]["num_features_per_uts"]
-)
-config["model_args"]["feature_model_args"]["input_size"] += (
-    config["dataset_args"]["num_features_per_uts"] + num_uts_in_mts
-    if config["dataset_args"]["use_one_hot_encoding"]
-    else config["dataset_args"]["num_features_per_uts"] * num_uts_in_mts
-)
-
-model_handler = ModelHandler(config)
-model_handler.choose_model_category()
-
-############ TRAINING
-model_handler.train(
-    mts_dataset=mts_dataset_array,
-    train_transformation_indices=train_transformation_indices,
-    validation_transformation_indices=validation_transformation_indices,
-)
-
-
-############ INFERENCE
-logger.info("Running inference on validation set...")
-inferred_mts_validation = model_handler.infer(
-    mts_dataset=mts_dataset_array,
-    evaluation_transformation_indinces=validation_transformation_indices,
-)
-
-logger.info("Running inference on test set...")
-inferred_mts_test = model_handler.infer(
-    mts_dataset=mts_dataset_array,
-    evaluation_transformation_indinces=test_transformation_indices,
-)
-
-logger.info("Successfully ran inference on validation and test sets")
-
-evaluate(
-    mts_array=mts_dataset_array,
-    train_transformation_indices=train_transformation_indices,
-    validation_transformation_indices=validation_transformation_indices,
-    test_transformation_indices=test_transformation_indices,
-    inferred_mts_validation=inferred_mts_validation,
-    inferred_mts_test=inferred_mts_test,
-)
-
-
-# Forecasting model evaluations
 (
     X_transformed,
     y_transformed,

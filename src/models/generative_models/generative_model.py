@@ -123,4 +123,4 @@ class GenerativeModel(TimeseriesTransformationModel):
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
         predicted_mts = predicted_mts.reshape(-1, num_uts_in_mts, num_samples_in_uts)
 
-        return predicted_mts
+        return predicted_mts, None
