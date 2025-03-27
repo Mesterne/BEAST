@@ -110,25 +110,12 @@ mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
 logger.info("Successfully generated MTS PCA space")
 
 (
-    _,
-    _,
-    _,
-    _,
-    _,
-    _,
-    _,
-    _,
-    _,
     train_transformation_indices,
     validation_transformation_indices,
     test_transformation_indices,
 ) = create_train_val_test_split(
-    mts_pca_array,
-    mts_features_array,
-    use_one_hot_encoding=config["dataset_args"]["use_one_hot_encoding"],
-    number_of_transformations_in_test_set=config["dataset_args"][
-        "test_set_sample_size"
-    ],
+    mts_dataset_array=mts_dataset_array,
+    config=config,
 )
 
 

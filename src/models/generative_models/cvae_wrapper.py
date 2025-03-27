@@ -54,7 +54,6 @@ class CVAEWrapper(FeatureTransformationModel):
         X_validation_tensor = torch.tensor(X_val, dtype=torch.float32).to(device)
         y_validation_tensor = torch.tensor(y_val, dtype=torch.float32).to(device)
 
-        print(X_train_tensor.shape, y_train_tensor.shape)
         train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
         train_dataloader = DataLoader(
             train_dataset, batch_size=self.batch_size, shuffle=True
@@ -186,7 +185,7 @@ def create_conditioned_dataset_for_training(
                     target_features_for_X[start_index:end_index]
                     - original_features_for_X[start_index:end_index]
                 )
-            elif conditon_type == "feature":
+            elif condition_type == "feature":
                 conditions[start_index:end_index] = target_features_for_X[
                     start_index:end_index
                 ]
@@ -225,7 +224,7 @@ def create_conditioned_dataset_for_inference(
                 target_features_for_X[start_index:end_index]
                 - original_features_for_X[start_index:end_index]
             )
-        elif conditon_type == "feature":
+        elif condition_type == "feature":
             conditions[start_index:end_index] = target_features_for_X[
                 start_index:end_index
             ]

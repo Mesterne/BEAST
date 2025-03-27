@@ -38,7 +38,7 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 50 # 1, 50
+      num_epochs: 2 # 1, 50
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25

@@ -51,8 +51,6 @@ class ModelHandler:
             evaluation_set_indices=evaluation_set_indinces,
         )
 
-        print(X.shape)
-
         logger.info("Running inference...")
         predicted_y = self.model.infer(X)
 

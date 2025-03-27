@@ -55,7 +55,6 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             series_periodicity=seasonal_period,
             decomps_only=True,
         )
-        print(f"mts_decomps:{len(mts_decomps)}")
 
         return GeneticAlgorithmWrapper(
             ga_params=self.config["model_args"]["genetic_algorithm_args"],
@@ -65,7 +64,6 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             num_features_per_uts=num_features_per_uts,
         )
 
-    # TODO:
     @override
     def create_training_data(
         self,
@@ -118,7 +116,6 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
     ) -> Tuple[List[float], List[float]]:
         self.model.train(X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)
 
-    # TODO:
     @override
     def create_inference_data(
         self, mts_dataset: np.ndarray, evaluation_set_indices: np.ndarray
@@ -147,13 +144,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         )
         return X
 
-    # TODO:
     @override
     def infer(self, X: np.ndarray) -> np.ndarray:
         ga = self.initialize_ga_model(self.mts_dataset)
         predicted_features = self.model.infer(X)
-        print(f"original_indices: {self.evaluation_set_indices[:, 0]}")
-        print(f"Length of dataset: {self.mts_dataset.shape}")
 
         inferred_mts, _ = generate_new_time_series(
             original_indices=self.evaluation_set_indices[:, 0],

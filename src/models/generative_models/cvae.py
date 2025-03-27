@@ -82,7 +82,6 @@ class MTSCVAE(nn.Module):
 
     def generate_mts(self, feature_values: np.ndarray) -> np.ndarray:
         """Generate MTS data given feature values as condition."""
-        print("FEATURE INFO", feature_values.shape)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32).to(
             device
