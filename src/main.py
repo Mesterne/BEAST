@@ -85,8 +85,6 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
     num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
 )
 
-dist_of_features = plot_feature_distribution(mts_features_array)
-dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
 
 logger.info("Successfully generated feature dataframe")
 

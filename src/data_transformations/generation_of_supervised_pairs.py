@@ -1,9 +1,11 @@
+import os
 import random
 from typing import Dict, List
 
 import numpy as np
 from tqdm import tqdm
 
+from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
 from src.utils.generate_dataset import generate_feature_dataframe
@@ -24,7 +26,7 @@ def create_train_val_test_split(
     )
 
     dist_of_features = plot_feature_distribution(mts_features_array)
-    dist_of_features.savefig("distribution_of_features.png")
+    dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
 
     mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
     logger.info("Successfully generated MTS PCA space")
