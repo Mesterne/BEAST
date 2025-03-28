@@ -25,13 +25,10 @@ def plot_feature_distribution(
     # Feature distribution is just the input array
     feature_distribution = mts_feature_array
 
-    colors = sns.color_palette("viridis", num_features)  # Use a smooth color map
-
     for i in range(num_features):
         sns.histplot(
             data=feature_distribution[:, i],
             kde=True,
-            color=colors[i],
             ax=axes[i],
             alpha=0.7,  # Transparency for a softer look
             edgecolor="black",

@@ -1,4 +1,3 @@
-from ast import List
 from typing import Dict, Optional
 
 import numpy as np
@@ -11,6 +10,7 @@ from src.utils.evaluation.feature_space_evaluation import (
     calculate_total_mse_for_each_mts,
 )
 from src.utils.features import decomp_and_features
+from src.utils.logging_config import logger
 
 
 def reshape_and_calculate_features(
@@ -64,6 +64,9 @@ def evaluate(
 
     """
 
+    logger.info(
+        "Calculating features for original dataset, inferred validation timeseries and inferred test timeseries"
+    )
     mts_dataset_features = reshape_and_calculate_features(
         mts=mts_array,
         num_features_per_uts=config["dataset_args"]["num_features_per_uts"],

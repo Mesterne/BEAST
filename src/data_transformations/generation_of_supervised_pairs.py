@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.plots.feature_distribution import plot_feature_distribution
+from src.plots.plot_train_val_split import plot_train_val_test_split
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
@@ -16,7 +17,7 @@ def create_train_val_test_split(
 ):
     """ """
     logger.info(f"Generating transformation index pairs for training...")
-    mts_features_array, mts_decomps = generate_feature_dataframe(
+    mts_features_array, _ = generate_feature_dataframe(
         data=mts_dataset_array,
         series_periodicity=config["stl_args"]["series_periodicity"],
         num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
@@ -32,10 +33,15 @@ def create_train_val_test_split(
     pca1, pca2 = mts_pca_array[:, 0], mts_pca_array[:, 1]
     indices = np.arange(len(mts_pca_array))
 
-    validation_indices = indices[(pca1 > 0.1) & (pca2 > 0)]
-    test_indices = indices[(pca1 < 0.1) & (pca2 > 0)]
+    validation_indices = indices[(pca1 > 0.6) & (pca2 > 0)]
+    test_indices = indices[(pca1 < 0.6) & (pca1 > 0.4) & (pca2 > 0.0)]
     train_indices = np.setdiff1d(
         indices, np.concatenate([validation_indices, test_indices])
+    )
+    plot_train_val_test_split(
+        mts_dataset_pca=mts_pca_array,
+        validation_indices=validation_indices,
+        test_indices=test_indices,
     )
 
     logger.info("Pairing training transformations")
