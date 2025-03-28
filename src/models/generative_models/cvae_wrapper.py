@@ -67,6 +67,8 @@ class CVAEWrapper(FeatureTransformationModel):
         )
 
         train_loss_history = []
+        train_loss_history_kl_divergence = []
+        train_loss_history_reconstruction = []
         validation_loss_history = []
 
         best_validation_loss = float("inf")
@@ -75,17 +77,35 @@ class CVAEWrapper(FeatureTransformationModel):
         for epoch in tqdm(range(self.num_epochs)):
             self.model.train()
             running_loss = 0.0
+            running_loss_kl_divergence = 0
+            running_loss_reconstruction = 0
 
             for inputs, targets in train_dataloader:
                 optimizer.zero_grad()
                 outputs, latent_means, latent_logvars = self.model(inputs)
                 loss = loss_function(outputs, targets, latent_means, latent_logvars)
+                loss_kl_divergence = self.KL_divergence(latent_means, latent_logvars)
+                loss_reconstruction = self.reconstruction_loss(
+                    input=outputs, output=targets
+                )
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item() * inputs.size(0)
+                running_loss_kl_divergence += loss_kl_divergence.item() * inputs.size(0)
+                running_loss_reconstruction += loss_reconstruction.item() * inputs.size(
+                    0
+                )
 
             epoch_loss = running_loss / len(train_dataloader.dataset)
+            epoch_loss_kl_divergence = running_loss_kl_divergence / len(
+                train_dataloader.dataset
+            )
+            epoch_loss_reconstruction = running_loss_reconstruction / len(
+                train_dataloader.dataset
+            )
             train_loss_history.append(epoch_loss)
+            train_loss_history_kl_divergence.append(epoch_loss_kl_divergence)
+            train_loss_history_reconstruction.append(epoch_loss_reconstruction)
 
             # NOTE: Evaluates reconstruction
             self.model.eval()
@@ -118,6 +138,12 @@ class CVAEWrapper(FeatureTransformationModel):
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,
+                model_name="CVAE_model",
+            )
+            plot_detailed_training_loss(
+                training_loss=train_loss_history,
+                training_loss_kl_divergence=train_loss_history_kl_divergence,
+                train_loss_reconstruction=train_loss_history_reconstruction,
                 model_name="CVAE_model",
             )
 

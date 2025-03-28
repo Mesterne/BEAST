@@ -11,7 +11,7 @@ dataset_args:
     - grid1-temp
   num_features_per_uts: 4
   use_one_hot_encoding: false
-  test_set_sample_size: 500
+  test_set_sample_size: 30
 stl_args:
   series_periodicity: 24
 model_args:
