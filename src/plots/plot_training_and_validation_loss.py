@@ -46,8 +46,10 @@ def plot_detailed_training_loss(
     epochs = np.arange(1, len(training_loss) + 1)
     data = pd.DataFrame(
         {
-            "Epoch": np.concatenate([epochs, epochs]),
-            "Loss": np.concatenate([training_loss, validation_loss]),
+            "Epoch": np.concatenate([epochs, epochs, epochs]),
+            "Loss": np.concatenate(
+                [training_loss, training_loss_kl_divergence, train_loss_reconstruction]
+            ),
             "Type": ["Training"] * len(training_loss)
             + ["Training KL divergence"] * len(training_loss_kl_divergence)
             + ["Training Reconstruction"] * len(train_loss_reconstruction),
