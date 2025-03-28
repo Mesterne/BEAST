@@ -7,10 +7,11 @@ from src.models.generative_models.cvae_wrapper import (
     CVAEWrapper,
     create_conditioned_dataset_for_inference,
     create_conditioned_dataset_for_training,
+    create_ohe_conditioned_dataset_for_inference,
+    create_ohe_conditioned_dataset_for_training,
 )
 from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 from src.utils.generate_dataset import generate_feature_dataframe
-from src.utils.logging_config import logger
 
 
 class GenerativeModel(TimeseriesTransformationModel):
@@ -25,8 +26,12 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
-        cvae = MTSCVAE(model_params=model_params)
-        model = CVAEWrapper(cvae, training_params=training_params)
+        if config["dataset_args"]["use_identity_mapping"] == True:
+            cvae = MTSCVAE(model_params=model_params)
+            model = CVAEWrapper(model=cvae, training_params=training_params)
+        else:
+            cvae = MTSCVAE(model_params=model_params)
+            model = CVAEWrapper(cvae, training_params=training_params)
         return model
 
     @override
@@ -50,22 +55,34 @@ class GenerativeModel(TimeseriesTransformationModel):
             num_features_per_uts=self.config["dataset_args"]["num_features_per_uts"],
         )
 
-        X_train, y_train = create_conditioned_dataset_for_training(
-            mts_array=mts_dataset,
-            mts_features=mts_features_array,
-            condition_type=condition_type,
-            transformation_indices=train_transformation_indices,
-            number_of_uts_in_mts=num_uts_in_mts,
-            number_of_features_in_mts=num_features_per_uts,
-        )
-        X_validation, y_validation = create_conditioned_dataset_for_training(
-            mts_array=mts_dataset,
-            mts_features=mts_features_array,
-            condition_type=condition_type,
-            transformation_indices=validation_transformation_indices,
-            number_of_uts_in_mts=num_uts_in_mts,
-            number_of_features_in_mts=num_features_per_uts,
-        )
+        if use_one_hot_encoding:
+            X_train, y_train = create_ohe_conditioned_dataset_for_training(
+                mts_array=mts_dataset,
+                transformation_indices=train_transformation_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+            )
+            X_validation, y_validation = create_ohe_conditioned_dataset_for_inference(
+                mts_array=mts_dataset,
+                transformation_indices=train_transformation_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+            )
+        else:
+            X_train, y_train = create_conditioned_dataset_for_training(
+                mts_array=mts_dataset,
+                mts_features=mts_features_array,
+                condition_type=condition_type,
+                transformation_indices=train_transformation_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+                number_of_features_in_mts=num_features_per_uts,
+            )
+            X_validation, y_validation = create_conditioned_dataset_for_inference(
+                mts_array=mts_dataset,
+                mts_features=mts_features_array,
+                condition_type=condition_type,
+                transformation_indices=validation_transformation_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+                number_of_features_in_mts=num_features_per_uts,
+            )
 
         return X_train, y_train, X_validation, y_validation
 
@@ -103,14 +120,21 @@ class GenerativeModel(TimeseriesTransformationModel):
             num_features_per_uts=self.config["dataset_args"]["num_features_per_uts"],
         )
 
-        X, y = create_conditioned_dataset_for_inference(
-            mts_array=mts_dataset,
-            mts_features=mts_features_array,
-            condition_type=condition_type,
-            transformation_indices=evaluation_set_indices,
-            number_of_uts_in_mts=num_uts_in_mts,
-            number_of_features_in_mts=num_features_per_uts,
-        )
+        if use_one_hot_encoding:
+            X, y = create_ohe_conditioned_dataset_for_inference(
+                mts_array=mts_dataset,
+                transformation_indices=evaluation_set_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+            )
+        else:
+            X, y = create_conditioned_dataset_for_inference(
+                mts_array=mts_dataset,
+                mts_features=mts_features_array,
+                condition_type=condition_type,
+                transformation_indices=evaluation_set_indices,
+                number_of_uts_in_mts=num_uts_in_mts,
+                number_of_features_in_mts=num_features_per_uts,
+            )
 
         return X
 

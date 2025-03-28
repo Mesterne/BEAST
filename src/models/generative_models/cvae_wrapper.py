@@ -12,6 +12,7 @@ import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.plots.plot_training_and_validation_loss import (
+    plot_detailed_training_loss,
     plot_training_and_validation_loss,
 )
 from src.utils.logging_config import logger
@@ -138,7 +139,7 @@ class CVAEWrapper(FeatureTransformationModel):
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,
-                model_name="CVAE_model",
+                model_name="CVAE_model_full",
             )
             plot_detailed_training_loss(
                 training_loss=train_loss_history,
@@ -149,23 +150,30 @@ class CVAEWrapper(FeatureTransformationModel):
 
         return train_loss_history, validation_loss_history
 
+    # TODO: Her er det noe feil
     def infer(
         self,
         X,
     ) -> np.ndarray:
         # If the model is conditioned on features, X should be only the features
         if self.model.condition_type == "feature":
-            input_features = X[:, self.model.mts_size :]
+            input_features = X[:, self.model.input_size_without_conditions :]
             # Run generate_mts for each row in X
-            generated_mts: np.ndarray = self.model.generate_mts(input_features)
+            generated_mts: np.ndarray = self.model.generate_mts(X)
 
         # If the model is conditioned on feature deltas, X should be the original mts and the feature deltas
-        if self.model.condition_type == "feature_delta":
+        elif self.model.condition_type == "feature_delta":
             # FIXME: IMPLEMENT THIS MEHTOD IN CVAE CLASS
-            input_mts = X[:, : self.model.mts_size]
-            input_feature_deltas = X[:, self.model.mts_size :]
+            input_mts = X[:, : self.model.input_size_without_conditions]
+            input_feature_deltas = X[:, self.model.input_size_without_conditions :]
             generated_mts: np.ndarray = self.model.transform_mts_from_original(
                 input_mts, input_feature_deltas
+            )
+        elif self.model.condition_type == "ohe":
+            input_mts = X[:, : self.model.input_size_without_conditions]
+            input_conditions = X[:, self.model.input_size_without_conditions :]
+            generated_mts: np.ndarray = self.model.transform_mts_from_original(
+                input_mts, input_conditions
             )
 
         return generated_mts
@@ -185,6 +193,60 @@ def mask_feature_values(
     masked_values[uts_idx, :] = feature_values_reshaped[uts_idx, :]
 
     return masked_values.flatten()
+
+
+def create_ohe_conditioned_dataset_for_training(
+    mts_array: np.ndarray,
+    transformation_indices: np.ndarray,
+    number_of_uts_in_mts: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
+    for either target features (with mask) or delta values to target features. This function is specialized for
+    training. For each UTS it creates a mask and training entry
+    """
+    X_mts = mts_array[transformation_indices[:, 0]]
+    y_mts = mts_array[transformation_indices[:, 1]]
+
+    X = []
+    y = []
+    for mts_index, _ in enumerate(X_mts):
+        original_mts = X_mts[mts_index]
+        target_mts = y_mts[mts_index].flatten()
+        for uts_index in range(0, number_of_uts_in_mts):
+            activated_uts = original_mts[uts_index]
+            conditions = [0] * number_of_uts_in_mts
+            conditions[uts_index] = 1
+            X.append(np.concatenate((activated_uts, conditions)))
+            y.append(target_mts)
+    return np.array(X), np.array(y)
+
+
+def create_ohe_conditioned_dataset_for_inference(
+    mts_array: np.ndarray,
+    transformation_indices: np.ndarray,
+    number_of_uts_in_mts: int,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
+    for either target features (with mask) or delta values to target features. This function is specialized for
+    training. For each UTS it creates a mask and training entry
+    """
+    X_mts = mts_array[transformation_indices[:, 0]]
+    y_mts = mts_array[transformation_indices[:, 1]]
+
+    X = []
+    y = []
+    for mts_index, _ in enumerate(X_mts):
+        original_mts = X_mts[mts_index]
+        target_mts = y_mts[mts_index].flatten()
+        uts_index = np.random.choice(range(0, number_of_uts_in_mts))
+        activated_uts = original_mts[uts_index]
+        conditions = [0] * number_of_uts_in_mts
+        conditions[uts_index] = 1
+        X.append(np.concatenate((activated_uts, conditions)))
+        y.append(target_mts)
+    return np.array(X), np.array(y)
 
 
 def create_conditioned_dataset_for_training(
