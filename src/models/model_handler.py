@@ -89,6 +89,6 @@ class ModelHandler:
         predicted_y, intermediate_features = self.model.infer(X)
 
         if intermediate_features is not None:
-            intermediate_features = np.array(intermediate_features())
+            intermediate_features = np.array(intermediate_features)
 
         return predicted_y, intermediate_features
