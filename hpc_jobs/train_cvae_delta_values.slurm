@@ -5,7 +5,7 @@
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
-#SBATCH --mem=16G
+#SBATCH --mem=24G
 #SBATCH --nodes=1
 
 #SBATCH --output=idun_outputs/%x_%j/output.txt
