@@ -70,13 +70,6 @@ num_uts_in_mts: int = len(config["dataset_args"]["timeseries_to_use"])
 config["is_conditional_gen_model"]: bool = (
     config["model_args"]["feature_model_args"]["conditional_gen_model_args"] is not None
 )
-if config["training_args"]["log_to_wandb"]:
-    job_name: str = os.environ.get("JOB_NAME", str(uuid.uuid4()))
-    wandb.init(
-        project="MTS-BEAST",
-        name=job_name,
-        config=feature_model_params,
-    )
 
 
 logger.info(f"Running with experiment settings:\n{config}")
@@ -243,7 +236,7 @@ forecasting_model_wrapper_old.train(
     y_train=y_mts_train,
     X_val=X_mts_train,
     y_val=y_mts_train,
-    log_to_wandb=False,
+    plot_loss=False,
 )
 
 forecasting_model_new: FeedForwardForecaster = FeedForwardForecaster(
@@ -259,7 +252,7 @@ forecasting_model_wrapper_new.train(
     y_train=y_new_train,
     X_val=X_new_train,
     y_val=y_new_train,
-    log_to_wandb=False,
+    plot_loss=False,
 )
 
 model_comparison_fig = compare_old_and_new_model(

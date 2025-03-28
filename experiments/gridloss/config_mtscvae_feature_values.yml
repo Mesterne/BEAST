@@ -37,7 +37,7 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 50
+      num_epochs: 200
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
@@ -46,12 +46,10 @@ model_args:
       mts_size: 576
       latent_size: 64
       num_features: 12
-      use_feature_deltas: False
       hidden_layers:
         - [512, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]
-      inference_sample_sizes: [402, 639] # Sizes for feature version
   forecasting_model_args:
     window_size: 168
     network_size:
@@ -65,5 +63,3 @@ model_args:
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
-training_args:
-  log_to_wandb: False

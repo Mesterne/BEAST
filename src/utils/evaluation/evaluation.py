@@ -3,10 +3,13 @@ from typing import Dict, Optional
 
 import numpy as np
 
-from src.plots.generated_vs_target_comparison import \
-    create_and_save_plots_of_model_performances
+from src.plots.generated_vs_target_comparison import (
+    create_and_save_plots_of_model_performances,
+)
 from src.utils.evaluation.feature_space_evaluation import (
-    calculate_mse_for_each_feature, calculate_total_mse_for_each_mts)
+    calculate_mse_for_each_feature,
+    calculate_total_mse_for_each_mts,
+)
 from src.utils.features import decomp_and_features
 
 

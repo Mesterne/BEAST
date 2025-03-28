@@ -2,11 +2,11 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from src.models.feature_optimization_models.feature_optimization_model import \
-    FeatureOptimizationModel
+from src.models.feature_optimization_models.feature_optimization_model import (
+    FeatureOptimizationModel,
+)
 from src.models.generative_models.generative_model import GenerativeModel
-from src.models.timeseries_transformation_model import \
-    TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 from src.utils.logging_config import logger
 
 

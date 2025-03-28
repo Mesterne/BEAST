@@ -11,6 +11,9 @@ from tqdm import tqdm
 import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
+from src.plots.plot_training_and_validation_loss import (
+    plot_training_and_validation_loss,
+)
 from src.utils.logging_config import logger
 
 
@@ -40,7 +43,7 @@ class CVAEWrapper(FeatureTransformationModel):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-        log_to_wandb=False,
+        plot_loss=False,
     ) -> Tuple[List[float], List[float]]:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Training model with device: {device}")
@@ -108,12 +111,15 @@ class CVAEWrapper(FeatureTransformationModel):
                 if patience_counter >= self.early_stopping_patience:
                     logger.info(f"Early stopping at epoch {epoch}")
                     break
-            if log_to_wandb:
-                wandb.log({"train_loss": epoch_loss, "val_loss": val_epoch_loss})
 
         self.model.load_state_dict(best_model_weigths)
 
-        wandb.finish()
+        if plot_loss:
+            plot_training_and_validation_loss(
+                training_loss=train_loss_history,
+                validation_loss=validation_loss_history,
+                model_name="CVAE_model",
+            )
 
         return train_loss_history, validation_loss_history
 

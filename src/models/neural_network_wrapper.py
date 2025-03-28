@@ -8,6 +8,9 @@ from tqdm import tqdm
 
 import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
+from src.plots.plot_training_and_validation_loss import (
+    plot_training_and_validation_loss,
+)
 from src.utils.logging_config import logger
 
 
@@ -25,7 +28,7 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-        log_to_wandb=False,
+        plot_loss=False,
     ) -> Tuple[List[float], List[float]]:
         """
         Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -108,18 +111,13 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
                 if patience_counter >= self.early_stopping_patience:
                     logger.info(f"Early stopping triggered for epoch {epoch}.")
                     break
-            if log_to_wandb:
-                wandb.log(
-                    {
-                        "Training loss": epoch_loss,
-                        "Validation loss": val_epoch_loss,
-                        "patience_counter": patience_counter,
-                    }
+            if plot_loss:
+                plot_training_and_validation_loss(
+                    training_loss=train_loss_history,
+                    validation_loss=validation_loss_history,
                 )
 
         self.model.load_state_dict(best_model_weigths)
-
-        wandb.finish()
 
         return train_loss_history, validation_loss_history
 

@@ -46,5 +46,3 @@ model_args:
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
-training_args:
-  log_to_wandb: False

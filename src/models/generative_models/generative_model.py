@@ -76,14 +76,14 @@ class GenerativeModel(TimeseriesTransformationModel):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-        log_to_wandb=False,
+        plot_loss=True,
     ):
         self.model.train(
             X_train=X_train,
             y_train=y_train,
             X_val=X_val,
             y_val=y_val,
-            log_to_wandb=False,
+            plot_loss=plot_loss,
         )
 
     @override
