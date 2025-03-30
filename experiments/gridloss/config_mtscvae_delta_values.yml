@@ -11,6 +11,7 @@ dataset_args:
     - grid1-temp
   num_features_per_uts: 4
   use_one_hot_encoding: false
+  use_identity_mapping: false
   test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
@@ -38,15 +39,16 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 10000
-      batch_size: 1
+      num_epochs: 200
+      batch_size: 128
       learning_rate: 0.001
-      early_stopping_patience: 100000
+      early_stopping_patience: 25
     conditional_gen_model_args:
       condition_type: "feature_delta"
+      input_size_without_conditions: 576
       mts_size: 576
       latent_size: 64
-      num_features: 12
+      number_of_conditions: 12
       hidden_layers:
         - [512, linear, relu]
         - [256, linear, relu]
