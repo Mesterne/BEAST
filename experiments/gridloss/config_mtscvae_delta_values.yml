@@ -12,7 +12,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: false
-  test_set_sample_size: 500
+  # test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
