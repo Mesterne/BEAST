@@ -39,21 +39,25 @@ def create_and_save_plots_of_model_performances(
     y_mts = mts_dataset_array[transformation_indices[:, 1]]
 
     # MSE Plots
+    logger.info("Generating total MSE plot...")
     total_mse_plot = plot_total_mse_distribution(
         total_mse_for_each_mts=total_mse_for_each_mts
     )
     total_mse_plot.savefig(os.path.join(OUTPUT_DIR, "total_mse_distribution.png"))
 
-    feature_wise_error_plot = plot_distribution_of_feature_wise_error(
-        mse_per_feature=mse_per_feature
-    )
-    feature_wise_error_plot.savefig(
-        os.path.join(OUTPUT_DIR, "distribution_of_feature_wise_error.png")
-    )
+    # logger.info("Generating feature wise MSE plot...")
+    # print(mse_per_feature.shape)
+    # feature_wise_error_plot = plot_distribution_of_feature_wise_error(
+    #     mse_per_feature=mse_per_feature
+    # )
+    # feature_wise_error_plot.savefig(
+    #     os.path.join(OUTPUT_DIR, "distribution_of_feature_wise_error.png")
+    # )
 
     best_generated_mts_index = np.argmin(total_mse_for_each_mts)
     logger.info(f"Best genereated mts index: {best_generated_mts_index}")
 
+    logger.info("Generating full TS plot...")
     ts_plot_of_best_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[best_generated_mts_index],
         target_mts=y_mts[best_generated_mts_index],
@@ -68,6 +72,7 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_best_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "best_timeseries_generated_mts.png")
     )
+    logger.info("Generating prediction PCA plot...")
     pca_plot_of_best_generated_mts = plot_pca_for_each_uts_with_transformed(
         mts_dataset_features=mts_dataset_features,
         mts_features_evaluation_set=y_features,
@@ -81,6 +86,7 @@ def create_and_save_plots_of_model_performances(
 
     worst_generated_mts_index = np.argmax(total_mse_for_each_mts)
     logger.info(f"Worst genereated mts index: {worst_generated_mts_index}")
+    logger.info("Generating full TS plot...")
     ts_plot_of_worst_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[worst_generated_mts_index],
         target_mts=y_mts[worst_generated_mts_index],
@@ -95,6 +101,7 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_worst_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "worst_timeseries_generated_mts.png")
     )
+    logger.info("Generating prediction PCA plot...")
     pca_plot_of_worst_generated_mts = plot_pca_for_each_uts_with_transformed(
         mts_dataset_features=mts_dataset_features,
         mts_features_evaluation_set=y_features,
@@ -110,6 +117,7 @@ def create_and_save_plots_of_model_performances(
     # NOTE: This way of finding the median index always returns one index. This is acceptable in this use case.
     median_mts_index = np.argmin(np.abs(total_mse_for_each_mts - median_mse))
 
+    logger.info("Generating full TS plot...")
     ts_plot_of_median_generated_mts = plot_time_series_for_all_uts(
         original_mts=X_mts[median_mts_index],
         target_mts=y_mts[median_mts_index],
@@ -122,6 +130,7 @@ def create_and_save_plots_of_model_performances(
     ts_plot_of_median_generated_mts.savefig(
         os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts.png")
     )
+    logger.info("Generating prediction PCA plot...")
     pca_plot_of_median_generated_mts = plot_pca_for_each_uts_with_transformed(
         mts_dataset_features=mts_dataset_features,
         mts_features_evaluation_set=y_features,
@@ -133,6 +142,7 @@ def create_and_save_plots_of_model_performances(
         os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts_pca.png")
     )
 
+    logger.info("Generating PCA plot of all predictions...")
     pca_total_plot = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         evaluation_set_indices=transformation_indices[:, 1],

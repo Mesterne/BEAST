@@ -1,14 +1,11 @@
 import copy
-from turtle import st
 from typing import List, Tuple
 
 import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.plots.plot_training_and_validation_loss import (
@@ -154,11 +151,21 @@ class CVAEWrapper(FeatureTransformationModel):
         self,
         X,
     ) -> np.ndarray:
-        input_mts: np.ndarray = X[:, : self.model.input_size_without_conditions]
-        input_conditions: np.ndarray = X[:, self.model.input_size_without_conditions :]
-        generated_mts: np.ndarray = self.model.transform_mts_from_original(
-            input_mts, input_conditions
-        )
+        # If the model is feature based, it takes the features as conditions and in inference,
+        # samples the distribution, with feature conditions. To generate mts
+        if self.model.condition_type == "feature":
+            input_features = X[:, self.model.input_size_without_conditions :]
+            # Run generate_mts for each row in X
+            generated_mts: np.ndarray = self.model.generate_mts(input_features)
+        # Other models take the entire MTS and conditions to generate new MTS
+        else:
+            input_mts: np.ndarray = X[:, : self.model.input_size_without_conditions]
+            input_conditions: np.ndarray = X[
+                :, self.model.input_size_without_conditions :
+            ]
+            generated_mts: np.ndarray = self.model.transform_mts_from_original(
+                input_mts, input_conditions
+            )
 
         return generated_mts
 

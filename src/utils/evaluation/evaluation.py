@@ -95,6 +95,7 @@ def evaluate(
     y_features_test = mts_dataset_features[test_transformation_indices[:, 1]]
 
     # Calcuate MSE
+    logger.info("Calculating MSE values...")
     mse_values_for_each_feature_validation = calculate_mse_for_each_feature(
         predicted_features=inferred_features_validation,
         target_features=y_features_validation,
@@ -110,7 +111,7 @@ def evaluate(
         mse_per_feature=mse_values_for_each_feature_test
     )
 
-    # Plotting for validation
+    logger.info("Creating plots for validation...")
     create_and_save_plots_of_model_performances(
         total_mse_for_each_mts=total_mse_for_each_mts_validation,
         mse_per_feature=mse_values_for_each_feature_validation,

@@ -89,19 +89,22 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
 logger.info("Successfully generated feature dataframe")
 
 
-# TODO: This is done for testing only
-# (
-#     train_transformation_indices,
-#     validation_transformation_indices,
-#     test_transformation_indices,
-# ) = create_train_val_test_split(
-#     mts_dataset_array=mts_dataset_array,
-#     config=config,
-# )
+(
+    train_transformation_indices,
+    validation_transformation_indices,
+    test_transformation_indices,
+) = create_train_val_test_split(
+    mts_dataset_array=mts_dataset_array,
+    config=config,
+)
 
-train_transformation_indices = np.array([[1, 1]])
-validation_transformation_indices = np.array([[1, 1]])
-test_transformation_indices = np.array([[1, 1]])
+logger.info(
+    f"""Transformation indices shapes:
+    Train: {train_transformation_indices.shape}
+    Validation: {validation_transformation_indices.shape}
+    Test: {test_transformation_indices.shape}
+"""
+)
 
 
 config["model_args"]["feature_model_args"]["number_of_uts_in_mts"] = num_uts_in_mts

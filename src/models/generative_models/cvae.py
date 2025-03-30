@@ -84,6 +84,18 @@ class MTSCVAE(nn.Module):
         standard_deviation = exp(0.5 * log_var)
         return mean + standard_deviation * noise
 
+    def generate_mts(self, feature_values: np.ndarray) -> np.ndarray:
+        """Generate MTS data given feature values as condition."""
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32).to(
+            device
+        )
+        # Sample latent vector
+        latent_vector = randn(feature_values.shape[0], self.latent_size).to(device)
+        # Run latent vector through decoder with features as conditions.
+        cpu_mts = self.decoder(tensor_feature_values, latent_vector).cpu()
+        return cpu_mts.detach().numpy()
+
     def transform_mts_from_original(
         self, mts: np.ndarray, conditions: np.ndarray
     ) -> np.ndarray:

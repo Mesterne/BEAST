@@ -26,12 +26,8 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
-        if config["dataset_args"]["use_identity_mapping"] == True:
-            cvae = MTSCVAE(model_params=model_params)
-            model = CVAEWrapper(model=cvae, training_params=training_params)
-        else:
-            cvae = MTSCVAE(model_params=model_params)
-            model = CVAEWrapper(cvae, training_params=training_params)
+        cvae = MTSCVAE(model_params=model_params)
+        model = CVAEWrapper(cvae, training_params=training_params)
         return model
 
     @override

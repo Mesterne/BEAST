@@ -45,35 +45,29 @@ def create_train_val_test_split(
         validation_indices=validation_indices,
         test_indices=test_indices,
     )
+    train_transformation_indices: List[Tuple[int, int]] = []
+    validation_transformation_indices: List[Tuple[int, int]] = []
+    test_transformation_indices: List[Tuple[int, int]] = []
 
     if config["dataset_args"]["use_identity_mapping"] == True:
+        logger.info("Using identity mapping")
         logger.info("Pairing training transformations")
         for i in tqdm(train_indices):
             train_transformation_indices.append((i, i))
-        logger.info("Pairing validation transformations")
-        validation_transformation_indices: List[Tuple[int, int]] = []
-        for i in tqdm(validation_indices):
-            validation_transformation_indices.append((i, i))
-        logger.info("Pairing test transformations")
-        test_transformation_indices: List[Tuple[int, int]] = []
-        for i in tqdm(test_indices):
-            test_transformation_indices.append((i, i))
     else:
+        logger.info("Using transformation mapping")
         logger.info("Pairing training transformations")
-        train_transformation_indices: List[Tuple[int, int]] = []
         for i in tqdm(train_indices):
             for j in train_indices:
                 train_transformation_indices.append((i, j))
-        logger.info("Pairing validation transformations")
-        validation_transformation_indices: List[Tuple[int, int]] = []
-        for i in tqdm(train_indices):
-            for j in validation_indices:
-                validation_transformation_indices.append((i, j))
-        logger.info("Pairing test transformations")
-        test_transformation_indices: List[Tuple[int, int]] = []
-        for i in tqdm(train_indices):
-            for j in test_indices:
-                test_transformation_indices.append((i, j))
+    logger.info("Pairing validation transformations")
+    for i in tqdm(train_indices):
+        for j in validation_indices:
+            validation_transformation_indices.append((i, j))
+    logger.info("Pairing test transformations")
+    for i in tqdm(train_indices):
+        for j in test_indices:
+            test_transformation_indices.append((i, j))
 
     assert len(train_transformation_indices) > 0, "Training set must have elements"
 
