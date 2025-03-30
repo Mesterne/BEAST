@@ -84,32 +84,19 @@ class MTSCVAE(nn.Module):
         standard_deviation = exp(0.5 * log_var)
         return mean + standard_deviation * noise
 
-    def generate_mts(self, feature_values: np.ndarray) -> np.ndarray:
-        """Generate MTS data given feature values as condition."""
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        tensor_feature_values = torch.tensor(feature_values, dtype=torch.float32).to(
-            device
-        )
-        latent_vector = randn(feature_values.shape[0], self.latent_size).to(device)
-        # NOTE: Necessary to move tensor to cpu before converting to numpy
-        cpu_mts = self.decoder(tensor_feature_values, latent_vector).cpu()
-        return cpu_mts.detach().numpy()
-
     def transform_mts_from_original(
-        self, mts: np.ndarray, feature_deltas: np.ndarray
+        self, mts: np.ndarray, conditions: np.ndarray
     ) -> np.ndarray:
         """Transform MTS data given feature deltas as condition."""
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tensor_mts = torch.tensor(mts, dtype=torch.float32).to(device)
-        tensor_feature_deltas = torch.tensor(feature_deltas, dtype=torch.float32).to(
-            device
-        )
-        latent_mean, latent_log_var = self.encoder(tensor_mts, tensor_feature_deltas)
+        tensor_conditions = torch.tensor(conditions, dtype=torch.float32).to(device)
+        latent_mean, latent_log_var = self.encoder(tensor_mts, tensor_conditions)
         latent_vector = self.reparamterization_trick(latent_mean, latent_log_var).to(
             device
         )
         # NOTE: Necessary to move tensor to cpu before converting to numpy
-        cpu_mts = self.decoder(tensor_feature_deltas, latent_vector).cpu()
+        cpu_mts = self.decoder(tensor_conditions, latent_vector).cpu()
         return cpu_mts.detach().numpy()
 
 

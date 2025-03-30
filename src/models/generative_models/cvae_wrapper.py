@@ -150,49 +150,17 @@ class CVAEWrapper(FeatureTransformationModel):
 
         return train_loss_history, validation_loss_history
 
-    # TODO: Her er det noe feil
     def infer(
         self,
         X,
     ) -> np.ndarray:
-        # If the model is conditioned on features, X should be only the features
-        if self.model.condition_type == "feature":
-            input_features = X[:, self.model.input_size_without_conditions :]
-            # Run generate_mts for each row in X
-            generated_mts: np.ndarray = self.model.generate_mts(X)
-
-        # If the model is conditioned on feature deltas, X should be the original mts and the feature deltas
-        elif self.model.condition_type == "feature_delta":
-            # FIXME: IMPLEMENT THIS MEHTOD IN CVAE CLASS
-            input_mts = X[:, : self.model.input_size_without_conditions]
-            input_feature_deltas = X[:, self.model.input_size_without_conditions :]
-            generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_mts, input_feature_deltas
-            )
-        elif self.model.condition_type == "ohe":
-            input_mts = X[:, : self.model.input_size_without_conditions]
-            input_conditions = X[:, self.model.input_size_without_conditions :]
-            generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_mts, input_conditions
-            )
+        input_mts: np.ndarray = X[:, : self.model.input_size_without_conditions]
+        input_conditions: np.ndarray = X[:, self.model.input_size_without_conditions :]
+        generated_mts: np.ndarray = self.model.transform_mts_from_original(
+            input_mts, input_conditions
+        )
 
         return generated_mts
-
-
-def mask_feature_values(
-    feature_values: np.ndarray, num_uts: int, uts_idx: int
-) -> np.ndarray:
-    num_features = feature_values.shape[0]
-    num_features_per_uts = num_features // num_uts
-
-    # Use the masked UTS features (zero value) in delta values to mask the original values
-    feature_values_reshaped = feature_values.reshape(num_uts, num_features_per_uts)
-
-    masked_values = np.zeros_like(feature_values_reshaped)
-
-    masked_values[uts_idx, :] = feature_values_reshaped[uts_idx, :]
-
-    return masked_values.flatten()
 
 
 def create_ohe_conditioned_dataset_for_training(
@@ -238,10 +206,9 @@ def create_ohe_conditioned_dataset_for_inference(
     X = []
     y = []
     for mts_index, _ in enumerate(X_mts):
-        original_mts = X_mts[mts_index]
         target_mts = y_mts[mts_index].flatten()
         uts_index = np.random.choice(range(0, number_of_uts_in_mts))
-        activated_uts = original_mts[uts_index]
+        activated_uts = y_mts[mts_index][uts_index]
         conditions = [0] * number_of_uts_in_mts
         conditions[uts_index] = 1
         X.append(np.concatenate((activated_uts, conditions)))
