@@ -88,9 +88,6 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
 
 logger.info("Successfully generated feature dataframe")
 
-# Generate PCA space used to create train test splits
-mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
-logger.info("Successfully generated MTS PCA space")
 
 (
     train_transformation_indices,
@@ -99,6 +96,14 @@ logger.info("Successfully generated MTS PCA space")
 ) = create_train_val_test_split(
     mts_dataset_array=mts_dataset_array,
     config=config,
+)
+
+logger.info(
+    f"""Transformation indices shapes:
+    Train: {train_transformation_indices.shape}
+    Validation: {validation_transformation_indices.shape}
+    Test: {test_transformation_indices.shape}
+"""
 )
 
 

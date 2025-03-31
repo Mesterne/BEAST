@@ -1,8 +1,10 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import numpy as np
 import math
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from matplotlib.figure import Figure
+from tqdm import tqdm
 
 from src.data.constants import COLUMN_NAMES
 
@@ -22,10 +24,6 @@ def plot_distribution_of_feature_wise_error(mse_per_feature: np.array) -> Figure
     """
     num_features = mse_per_feature.shape[1]
 
-    # Determine global min and max for x-axis
-    global_min = mse_per_feature.min()
-    global_max = mse_per_feature.max()
-
     # Determine grid size for the subplots
     grid_size = math.ceil(math.sqrt(num_features))
     fig, axes = plt.subplots(
@@ -33,7 +31,7 @@ def plot_distribution_of_feature_wise_error(mse_per_feature: np.array) -> Figure
     )
     axes = axes.flatten()
 
-    for i in range(num_features):
+    for i in tqdm(range(num_features)):
         sns.histplot(data=mse_per_feature[:, i], kde=True, color="blue", ax=axes[i])
         axes[i].set_title(f"Distribution of {COLUMN_NAMES[i]}")
         axes[i].set_xlabel("Error")
