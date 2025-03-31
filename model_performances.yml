@@ -1,0 +1,30 @@
+without_retrain:
+  name: Forecasting wo. retrain
+  performance: 20.0
+
+correlation:
+  name: Correlation + GA
+  performance: 10.0
+covariance:
+  name: Covariance + GA
+  performance: 10.0
+perfect:
+  name: Perfect + GA
+  performance: 10.0
+
+ffnn_delta:
+  name: Feed Forward Feature model with delta values + GA 
+  performance: 10.0
+ffnn_ohe_delta:
+  name: Feed Forward Feature model with one hot encoded delta values + GA 
+  performance: 10.0
+
+cvae_feature:
+  name: CVAE w/feature value conditions
+  performance: 10.0
+cvae_delta:
+  name: CVAE w/delta value conditions
+  performance: 10.0
+cvae_uts:
+  name: CVAE w/OHE change of UTS
+  performance: 7.0
