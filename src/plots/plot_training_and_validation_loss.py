@@ -13,6 +13,9 @@ def plot_training_and_validation_loss(
     validation_loss: np.ndarray,
     model_name: str = "unnamed_model",
 ) -> None:
+
+    training_loss = np.log(training_loss)
+    validation_loss = np.log(validation_loss)
     epochs = np.arange(1, len(training_loss) + 1)
     data = pd.DataFrame(
         {
@@ -24,11 +27,11 @@ def plot_training_and_validation_loss(
     )
 
     plt.figure(figsize=(10, 6))
-    sns.lineplot(data=data, x="Epoch", y="Loss", hue="Type", marker="o")
+    sns.lineplot(data=data, x="Epoch", y="Loss", hue="Type")
 
     plt.title(f"Training and Validation Loss - {model_name}")
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
+    plt.ylabel("Log Loss")
     plt.legend(title="Loss Type")
     plt.tight_layout()
 
@@ -43,6 +46,9 @@ def plot_detailed_training_loss(
     train_loss_reconstruction: np.ndarray,
     model_name: str = "unnamed_model",
 ) -> None:
+    training_loss = np.log(training_loss)
+    training_loss_kl_divergence = np.log(training_loss_kl_divergence)
+    train_loss_reconstruction = np.log(train_loss_reconstruction)
     epochs = np.arange(1, len(training_loss) + 1)
     data = pd.DataFrame(
         {
@@ -57,7 +63,7 @@ def plot_detailed_training_loss(
     )
 
     plt.figure(figsize=(10, 6))
-    sns.lineplot(data=data, x="Epoch", y="Loss", hue="Type", marker="o")
+    sns.lineplot(data=data, x="Epoch", y="Loss", hue="Type")
 
     plt.title(f"Detailed training loss - {model_name}")
     plt.xlabel("Epoch")
