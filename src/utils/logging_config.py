@@ -1,7 +1,6 @@
 import logging
-import sys
 import os
-
+import sys
 
 output_dir = os.getenv("OUTPUT_DIR", "")
 
@@ -12,8 +11,11 @@ log_file = os.path.join(output_dir, "BEAST.log")
 
 def setup_logger():
     logger = logging.getLogger("BEAST-logger")
+    logger.propagate = False  # Prevent messages from being passed to the root logger
+
+    # Check if the logger already has handlers to avoid duplication
     if logger.hasHandlers():
-        return logger  # Prevent duplicate handlers if re-imported
+        return logger
 
     logger.setLevel(logging.INFO)
 
