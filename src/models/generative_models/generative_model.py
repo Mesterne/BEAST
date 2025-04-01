@@ -45,6 +45,16 @@ class GenerativeModel(TimeseriesTransformationModel):
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
         use_one_hot_encoding: int = self.config["dataset_args"]["use_one_hot_encoding"]
 
+        input_size_without_conditions = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["input_size_without_conditions"]
+        number_of_conditions = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["number_of_conditions"]
+        mts_size = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["mts_size"]
+
         mts_features_array, _ = generate_feature_dataframe(
             data=mts_dataset,
             series_periodicity=self.config["stl_args"]["series_periodicity"],
@@ -80,6 +90,13 @@ class GenerativeModel(TimeseriesTransformationModel):
                 number_of_features_in_mts=num_features_per_uts,
             )
 
+        X_train = X_train[:, -(input_size_without_conditions + number_of_conditions) :]
+        y_train = y_train[:, -mts_size:]
+        X_validation = X_validation[
+            :, -(input_size_without_conditions + number_of_conditions) :
+        ]
+        y_validation = y_validation[:, -mts_size:]
+
         return X_train, y_train, X_validation, y_validation
 
     @override
@@ -110,6 +127,13 @@ class GenerativeModel(TimeseriesTransformationModel):
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
         use_one_hot_encoding: int = self.config["dataset_args"]["use_one_hot_encoding"]
 
+        input_size_without_conditions = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["input_size_without_conditions"]
+        number_of_conditions = self.config["model_args"]["feature_model_args"][
+            "conditional_gen_model_args"
+        ]["number_of_conditions"]
+
         mts_features_array, _ = generate_feature_dataframe(
             data=mts_dataset,
             series_periodicity=self.config["stl_args"]["series_periodicity"],
@@ -131,6 +155,7 @@ class GenerativeModel(TimeseriesTransformationModel):
                 number_of_uts_in_mts=num_uts_in_mts,
                 number_of_features_in_mts=num_features_per_uts,
             )
+        X = X[:, -(input_size_without_conditions + number_of_conditions) :]
 
         return X
 

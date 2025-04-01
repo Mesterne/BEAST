@@ -108,6 +108,9 @@ def create_train_val_test_split(
         "test_set_sample_size", None
     )
     if test_set_sample_size is not None:
+        logger.info(
+            f"Sampling validation and test sets to size of {test_set_sample_size}"
+        )
         number_of_transformations_in_test_set = min(
             config["dataset_args"]["test_set_sample_size"],
             max(

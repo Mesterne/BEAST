@@ -262,7 +262,10 @@ def create_conditioned_dataset_for_training(
                 conditions[start_index:end_index] = target_features_for_X[
                     start_index:end_index
                 ]
-            X.append(np.concatenate((original_mts, conditions)))
+            if condition_type == "only_conditions":
+                X.append(conditions)
+            else:
+                X.append(np.concatenate((original_mts, conditions)))
             y.append(target_mts)
     return np.array(X), np.array(y)
 
@@ -307,7 +310,9 @@ def create_conditioned_dataset_for_inference(
             conditions[start_index:end_index] = target_features_for_X[
                 start_index:end_index
             ]
-
-        X.append(np.concatenate((original_mts, conditions)))
+        if condition_type == "only_conditions":
+            X.append(conditions)
+        else:
+            X.append(np.concatenate((original_mts, conditions)))
         y.append(target_mts)
     return np.array(X), np.array(y)
