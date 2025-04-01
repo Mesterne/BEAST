@@ -1,0 +1,5 @@
+Running from directory: /cluster/home/vegasj/BEAST
+Name of job: train_correlation_feature_model_with_one_hot_encoding
+ID of job: 21348273
+Nodes used: idun-09-08
+Output directory: /cluster/home/vegasj/BEAST/idun_outputs/train_correlation_feature_model_with_one_hot_encoding_21348273

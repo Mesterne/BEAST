@@ -1,0 +1,5 @@
+Running from directory: /cluster/home/vegasj/BEAST
+Name of job: train_feed_forward_feature_model_without_one_hot_encoding
+ID of job: 21348279
+Nodes used: idun-07-04
+Output directory: /cluster/home/vegasj/BEAST/idun_outputs/train_feed_forward_feature_model_without_one_hot_encoding_21348279

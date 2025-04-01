@@ -1,0 +1,5 @@
+Running from directory: /cluster/home/vegasj/BEAST
+Name of job: train_perfect_feature_model
+ID of job: 21348280
+Nodes used: idun-09-05
+Output directory: /cluster/home/vegasj/BEAST/idun_outputs/train_perfect_feature_model_21348280

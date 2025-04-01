@@ -1,0 +1,5 @@
+Running from directory: /cluster/home/vegasj/BEAST
+Name of job: train_cvae_ohe_one_uts
+ID of job: 21348277
+Nodes used: idun-07-01
+Output directory: /cluster/home/vegasj/BEAST/idun_outputs/train_cvae_ohe_one_uts_21348277
