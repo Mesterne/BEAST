@@ -12,6 +12,17 @@ from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
 
+EVALUATION_FRACTION = 0.1
+MIN_TRANSFORMATION_DISTANCE = 0.1
+
+
+def euclidean_distance_between_arrays(array1: np.ndarray, array2: np.ndarray):
+    """
+    Calcuates the euclidean_distance_between_arrays. Inspired from
+    https://stackoverflow.com/questions/1401712/how-can-the-euclidean-distance-be-calculated-with-numpy
+    """
+    return np.linalg.norm(array1 - array2)
+
 
 def create_train_val_test_split(
     mts_dataset_array: np.ndarray,
@@ -35,11 +46,14 @@ def create_train_val_test_split(
     pca1, pca2 = mts_pca_array[:, 0], mts_pca_array[:, 1]
     indices = np.arange(len(mts_pca_array))
 
-    validation_indices = indices[(pca1 > 0.6) & (pca2 > 0)]
-    test_indices = indices[(pca1 < 0.6) & (pca1 > 0.4) & (pca2 > 0.0)]
-    train_indices = np.setdiff1d(
-        indices, np.concatenate([validation_indices, test_indices])
-    )
+    validation_size = int(EVALUATION_FRACTION * len(indices))
+
+    np.random.shuffle(indices)
+
+    validation_indices = indices[:validation_size]
+    test_indices = indices[validation_size : validation_size + validation_size]
+    train_indices = indices[validation_size + validation_size :]
+
     plot_train_val_test_split(
         mts_dataset_pca=mts_pca_array,
         validation_indices=validation_indices,
@@ -59,15 +73,33 @@ def create_train_val_test_split(
         logger.info("Pairing training transformations")
         for i in tqdm(train_indices):
             for j in train_indices:
-                train_transformation_indices.append((i, j))
+                if (
+                    euclidean_distance_between_arrays(
+                        mts_features_array[i], mts_features_array[j]
+                    )
+                    > MIN_TRANSFORMATION_DISTANCE
+                ):
+                    train_transformation_indices.append((i, j))
     logger.info("Pairing validation transformations")
     for i in tqdm(train_indices):
         for j in validation_indices:
-            validation_transformation_indices.append((i, j))
+            if (
+                euclidean_distance_between_arrays(
+                    mts_features_array[i], mts_features_array[j]
+                )
+                > MIN_TRANSFORMATION_DISTANCE
+            ):
+                validation_transformation_indices.append((i, j))
     logger.info("Pairing test transformations")
     for i in tqdm(train_indices):
         for j in test_indices:
-            test_transformation_indices.append((i, j))
+            if (
+                euclidean_distance_between_arrays(
+                    mts_features_array[i], mts_features_array[j]
+                )
+                > MIN_TRANSFORMATION_DISTANCE
+            ):
+                test_transformation_indices.append((i, j))
 
     assert len(train_transformation_indices) > 0, "Training set must have elements"
 
