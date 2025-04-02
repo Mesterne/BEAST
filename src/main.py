@@ -95,9 +95,6 @@ logger.info("Successfully generated feature dataframe")
     mts_dataset_array=mts_dataset_array,
     config=config,
 )
-train_transformation_indices = np.array([[10, 10]])
-validation_transformation_indices = np.array([[10, 10]])
-test_transformation_indices = np.array([[10, 10]])
 
 logger.info(
     f"""Transformation indices shapes:
