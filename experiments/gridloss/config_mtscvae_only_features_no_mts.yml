@@ -40,7 +40,7 @@ model_args:
       - 256
     training_args:
       num_epochs: 400
-      batch_size: 16
+      batch_size: 132
       learning_rate: 0.0005
       early_stopping_patience: 50
     conditional_gen_model_args:

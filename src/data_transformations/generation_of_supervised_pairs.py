@@ -13,7 +13,7 @@ from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
 
 EVALUATION_FRACTION = 0.1
-MIN_TRANSFORMATION_DISTANCE = 0.1
+MIN_TRANSFORMATION_DISTANCE = 0.75
 
 
 def euclidean_distance_between_arrays(array1: np.ndarray, array2: np.ndarray):

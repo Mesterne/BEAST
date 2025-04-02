@@ -160,6 +160,15 @@ evaluate(
 
 
 # Forecasting model evaluations
+evaluate_forecasting_improvement(
+    config=config,
+    mts_dataset=mts_dataset_array,
+    train_indices=train_indices,
+    validation_indices=validation_indices,
+    test_indices=test_indices,
+    inferred_mts_validation=inferred_mts_validation,
+    inferred_mts_test=inferred_mts_test,
+)
 
 
 train_indices: List[int] = train_transformation_indices[:, 0]
