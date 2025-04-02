@@ -1,11 +1,11 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
 from src.utils.evaluation.forecaster_evaluation import mse_for_forecast
 from src.utils.generate_dataset import create_training_windows
-from src.utils.logging_config import logger
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 
 
 def compare_original_and_transformed_forecasting(
@@ -69,6 +69,45 @@ def compare_old_and_new_model(
     inferred_old_test = forecasting_model_wrapper_old.infer(X=X_test)
     inferred_new_test = forecasting_model_wrapper_new.infer(X=X_test)
 
+    print(X_val.shape)
+    # Plot worst forecast before and after
+    errors = np.abs(y_val - inferred_old_val)
+    errors_summed = np.sum(errors, axis=1)
+    worst_index = np.argmax(errors_summed)
+    worst_forecast_old = inferred_old_val[worst_index]
+    worst_forecast_new = inferred_new_val[worst_index]
+    window_value = X_val[worst_index][168:336]
+    true_value = y_val[worst_index]
+
+    print(f"worst_forecast_old shape: {worst_forecast_old.shape}")
+    print(f"worst_forecast_new shape: {worst_forecast_new.shape}")
+    print(f"window_value shape: {window_value.shape}")
+    print(f"true_value shape: {true_value.shape}")
+
+    window_length = len(window_value)
+    forecast_length = len(worst_forecast_old)
+
+    data = pd.DataFrame(
+        {
+            "Forecast Type": ["Window Value"] * window_length
+            + ["Old Model"] * forecast_length
+            + ["New Model"] * forecast_length
+            + ["True Value"] * forecast_length,
+            "Value": np.concatenate(
+                [window_value, worst_forecast_old, worst_forecast_new, true_value]
+            ),
+            "Index": list(range(-window_length, 0))
+            + list(range(1, forecast_length + 1)) * 3,
+        }
+    )
+
+    forecast_plot = plt.figure(figsize=(8, 5))
+    ax = sns.lineplot(data=data, x="Index", y="Value", hue="Forecast Type")
+    plt.title("Comparison of Worst Forecast: Old vs New Model with Window Value")
+    plt.xlabel("Forecast Stage")
+    plt.ylabel("Value")
+
+    # Plot overall improvements
     mse_old_train = mse_for_forecast(y_train, inferred_old_train)
     mse_new_train = mse_for_forecast(y_train, inferred_new_train)
 
@@ -94,8 +133,7 @@ def compare_old_and_new_model(
     df = pd.DataFrame(data)
 
     # Create the plot
-    plt.figure(figsize=(10, 6))
-    fig = plt.figure()
+    mse_plot = plt.figure()
     ax = sns.barplot(x="Dataset", y="MSE", hue="Model", data=df)
 
     # Add labels and title
@@ -112,4 +150,4 @@ def compare_old_and_new_model(
 
     plt.tight_layout()
 
-    return fig
+    return forecast_plot, mse_plot

@@ -2,7 +2,7 @@ import argparse
 import os
 import random
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,16 +23,11 @@ from src.data.constants import OUTPUT_DIR
 from src.data_transformations.generation_of_supervised_pairs import (
     create_train_val_test_split,
 )  # noqa: E402
-from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.model_handler import ModelHandler
-from src.models.neural_network_wrapper import NeuralNetworkWrapper
+from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
-from src.utils.forecasting_utils import compare_old_and_new_model
-from src.utils.generate_dataset import (  # noqa: E402
-    create_training_windows_from_mts,
-    generate_feature_dataframe,
-)
+from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
 from src.utils.logging_config import logger  # noqa: E402
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 
@@ -159,116 +154,19 @@ evaluate(
 )
 
 
-# Forecasting model evaluations
-evaluate_forecasting_improvement(
+##### FORECASTING EVALUATION
+logger.info("Starting forecasting evaluation...")
+evaluator = ForecasterEvaluator(
     config=config,
     mts_dataset=mts_dataset_array,
-    train_indices=train_indices,
-    validation_indices=validation_indices,
-    test_indices=test_indices,
-    inferred_mts_validation=inferred_mts_validation,
-    inferred_mts_test=inferred_mts_test,
+    train_indices=train_transformation_indices[:, 0],
+    validation_indices=validation_transformation_indices[:, 1],
+    test_indices=test_transformation_indices[:, 1],
 )
 
-
-train_indices: List[int] = train_transformation_indices[:, 0]
-validation_indices: List[int] = validation_transformation_indices[:, 1]
-test_indices: List[int] = test_transformation_indices[:, 1]
-
-
-train_mts_array: np.ndarray = mts_dataset_array[train_indices]
-validation_mts_array: np.ndarray = mts_dataset_array[validation_indices]
-test_mts_array: np.ndarray = mts_dataset_array[test_indices]
-
-
-(
-    X_mts_train,
-    y_mts_train,
-) = create_training_windows_from_mts(
-    mts=train_mts_array,
-    target_col_index=1,
-    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    forecast_horizon=config["model_args"]["forecasting_model_args"]["horizon_length"],
-)
-logger.info("Forecasting train data shape: {}".format(X_mts_train.shape))
-(
-    X_mts_validation,
-    y_mts_validation,
-) = create_training_windows_from_mts(
-    mts=validation_mts_array,
-    target_col_index=1,
-    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    forecast_horizon=config["model_args"]["forecasting_model_args"]["horizon_length"],
-)
-logger.info("Forecasting validation data shape: {}".format(X_mts_validation.shape))
-(
-    X_mts_test,
-    y_mts_test,
-) = create_training_windows_from_mts(
-    mts=test_mts_array,
-    target_col_index=1,
-    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    forecast_horizon=config["model_args"]["forecasting_model_args"]["horizon_length"],
-)
-logger.info("Forecasting test data shape: {}".format(X_mts_test.shape))
-
-(
-    X_transformed,
-    y_transformed,
-) = create_training_windows_from_mts(
-    mts=(inferred_mts_validation),
-    target_col_index=1,
-    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    forecast_horizon=config["model_args"]["forecasting_model_args"]["horizon_length"],
-)
-
-X_new_train: np.ndarray = np.vstack((X_mts_train, X_transformed))
-y_new_train: np.ndarray = np.vstack((y_mts_train, y_transformed))
-
-forecasting_model_old: FeedForwardForecaster = FeedForwardForecaster(
-    model_params=config["model_args"]["forecasting_model_args"],
-)
-forecasting_model_wrapper_old: NeuralNetworkWrapper = NeuralNetworkWrapper(
-    model=forecasting_model_old,
-    training_params=config["model_args"]["forecasting_model_args"]["training_args"],
-)
-logger.info("Training forecasting model on old data")
-forecasting_model_wrapper_old.train(
-    X_train=X_mts_train,
-    y_train=y_mts_train,
-    X_val=X_mts_train,
-    y_val=y_mts_train,
-    plot_loss=False,
-)
-
-forecasting_model_new: FeedForwardForecaster = FeedForwardForecaster(
-    model_params=config["model_args"]["forecasting_model_args"],
-)
-forecasting_model_wrapper_new: NeuralNetworkWrapper = NeuralNetworkWrapper(
-    model=forecasting_model_new,
-    training_params=config["model_args"]["forecasting_model_args"]["training_args"],
-)
-logger.info("Training forecasting model on old + generated data")
-forecasting_model_wrapper_new.train(
-    X_train=X_new_train,
-    y_train=y_new_train,
-    X_val=X_new_train,
-    y_val=y_new_train,
-    plot_loss=False,
-)
-
-model_comparison_fig = compare_old_and_new_model(
-    X_test=X_mts_test,
-    y_test=y_mts_test,
-    X_val=X_mts_validation,
-    y_val=y_mts_validation,
-    X_train=X_mts_train,
-    y_train=y_mts_train,
-    forecasting_model_wrapper_old=forecasting_model_wrapper_old,
-    forecasting_model_wrapper_new=forecasting_model_wrapper_new,
-)
-model_comparison_fig.savefig(
-    os.path.join(OUTPUT_DIR, "forecasting_model_comparison.png")
+logger.info("Evaluating foreasting improvement on inferred validation set...")
+evaluator.evaluate_on_evaluation_set(
+    inferred_mts_array=inferred_mts_validation, type="validation"
 )
 
 
