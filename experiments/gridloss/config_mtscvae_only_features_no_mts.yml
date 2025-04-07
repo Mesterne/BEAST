@@ -40,8 +40,8 @@ model_args:
       - 256
     training_args:
       num_epochs: 400
-      batch_size: 132
-      learning_rate: 0.0005
+      batch_size: 16
+      learning_rate: 0.0001
       early_stopping_patience: 50
     conditional_gen_model_args:
       condition_type: "feature_values"
@@ -51,6 +51,8 @@ model_args:
       number_of_conditions: 12
       hidden_layers:
         - [512, linear, relu]
+        - [512, linear, relu]
+        - [256, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]
   forecasting_model_args:
