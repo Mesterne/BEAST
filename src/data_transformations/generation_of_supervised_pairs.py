@@ -8,6 +8,7 @@ from tqdm import tqdm
 from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
+from src.plots.plot_transformation_directions import plot_transformation_directions
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
@@ -131,6 +132,22 @@ def create_train_val_test_split(
         test_transformation_indices = random.sample(
             test_transformation_indices, number_of_transformations_in_test_set
         )
+
+    arrow_plot_train = plot_transformation_directions(
+        mts_dataset_pca=mts_pca_array,
+        transformation_indices=train_transformation_indices,
+    )
+    arrow_plot_train.savefig(os.path.join(OUTPUT_DIR, "train_arrows.png"))
+    arrow_plot_validation = plot_transformation_directions(
+        mts_dataset_pca=mts_pca_array,
+        transformation_indices=validation_transformation_indices,
+    )
+    arrow_plot_validation.savefig(os.path.join(OUTPUT_DIR, "validation_arrows.png"))
+    arrow_plot_test = plot_transformation_directions(
+        mts_dataset_pca=mts_pca_array,
+        transformation_indices=test_transformation_indices,
+    )
+    arrow_plot_test.savefig(os.path.join(OUTPUT_DIR, "test_arrows.png"))
     return (
         np.array(train_transformation_indices),
         np.array(validation_transformation_indices),
