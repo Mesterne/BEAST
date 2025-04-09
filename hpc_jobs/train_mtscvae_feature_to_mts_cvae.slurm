@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=cvae_feature_to_mts
+#SBATCH --job-name=cvae_feature_to_mts_cvae_reconstruction
 #SBATCH --time=0-23:00:00
 
 #SBATCH --partition=GPUQ
