@@ -1,6 +1,7 @@
 from typing import Dict, override
 
 import numpy as np
+from torch import nn
 
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import (
@@ -10,6 +11,7 @@ from src.models.generative_models.cvae_wrapper import (
     create_ohe_conditioned_dataset_for_inference,
     create_ohe_conditioned_dataset_for_training,
 )
+from src.models.generative_models.rnn_cvae import RNNCVAE
 from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 from src.utils.generate_dataset import generate_feature_dataframe
 
@@ -26,9 +28,28 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
-        cvae = MTSCVAE(model_params=model_params)
+        architecture: str = model_params["architecture"]
+        cvae = self._select_cvae_architecture(architecture, model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
         return model
+
+    def _select_cvae_architecture(
+        self, architecture: str, model_params: Dict[str, any]
+    ) -> nn.Module:
+        """
+        Return CVAE with desired encoder-decoder architecture.
+        """
+        if architecture == "feedforward":
+            return MTSCVAE(model_params=model_params)
+        if architecture == "rnn":
+            return RNNCVAE(model_params=model_params)
+        if architecture == "convolutional":
+            raise NotImplementedError(
+                "Convolutional architecture is not implemented yet."
+            )
+        if architecture == "attention":
+            raise NotImplementedError("Attention architecture is not implemented yet.")
+        raise ValueError(f"Unknown architecture: {architecture}")
 
     @override
     def create_training_data(
