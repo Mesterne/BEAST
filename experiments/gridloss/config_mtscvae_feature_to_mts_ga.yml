@@ -12,7 +12,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: true
   use_identity_mapping: false
-  test_set_sample_size: 1
+  test_set_sample_size: 200
 stl_args:
   series_periodicity: 24
 model_args:
@@ -40,10 +40,10 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 1
-      batch_size: 256
-      learning_rate: 0.0001
-      early_stopping_patience: 50
+      num_epochs: 200
+      batch_size: 16
+      learning_rate: 0.0005
+      early_stopping_patience: 25
     conditional_gen_model_args:
       condition_type: "feature_delta"
       input_size_without_conditions: 12
