@@ -42,6 +42,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             nn = FeedForwardFeatureModel(feature_model_params)
             model = NeuralNetworkWrapper(nn, training_params=training_params)
             return model
+        elif model_type == "cvae_feature_to_mts":
+            nn = FeedForwardFeatureModel(feature_model_params)
+            model = NeuralNetworkWrapper(nn, training_params=training_params)
+            return model
         else:
             raise ValueError(f"Model type {model_type} not supported")
 
