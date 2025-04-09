@@ -90,5 +90,16 @@ class ModelHandler:
 
         if intermediate_features is not None:
             intermediate_features = np.array(intermediate_features)
+            intermediate_features = intermediate_features.reshape(
+                -1,
+                len(self.config["dataset_args"]["timeseries_to_use"]),
+                self.config["dataset_args"]["num_features_per_uts"],
+            )
+        predicted_y = predicted_y.reshape(
+            -1,
+            len(self.config["dataset_args"]["timeseries_to_use"]),
+            self.config["model_args"]["reconstruction_model_args"]["mts_size"]
+            // len(self.config["dataset_args"]["timeseries_to_use"]),
+        )
 
         return predicted_y, intermediate_features

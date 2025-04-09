@@ -141,6 +141,7 @@ inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
 
 logger.info("Successfully ran inference on validation and test sets")
 
+
 evaluate(
     config=config,
     mts_array=mts_dataset_array,

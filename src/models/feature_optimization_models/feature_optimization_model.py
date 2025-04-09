@@ -16,19 +16,26 @@ from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
+from src.models.reconstruction.cvae_reconstruction_model import CVAEReconstructionModel
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.models.reconstruction.reconstruction_model import ReconstructionModel
 from src.models.timeseries_transformation_model import TimeseriesTransformationModel
-from src.utils.features import decomp_and_features
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import generate_feature_dataframe
+from src.utils.logging_config import logger
 
 
 class FeatureOptimizationModel(TimeseriesTransformationModel):
     def __init__(self, config: Dict[str, any]) -> None:
         self.config = config
-        self.model = self._choose_underlying_model_based_on_config()
+        self.feature_model = self._choose_underlying_feature_model_based_on_config()
+        self.reconstruction_model = (
+            self._choose_underlying_reconstruction_model_based_on_config()
+        )
 
-    def _choose_underlying_model_based_on_config(self) -> FeatureTransformationModel:
+    def _choose_underlying_feature_model_based_on_config(
+        self,
+    ) -> FeatureTransformationModel:
         feature_model_params: Dict[str, Any] = self.config["model_args"][
             "feature_model_args"
         ]
@@ -52,26 +59,27 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         else:
             raise ValueError(f"Model type {model_type} not supported")
 
-    def initialize_ga_model(self, mts_dataset: np.ndarray) -> GeneticAlgorithmWrapper:
-        num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
-        num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
-        seasonal_period: int = self.config["stl_args"]["series_periodicity"]
-        mts_decomps, _ = decomp_and_features(
-            mts=mts_dataset,
-            num_features_per_uts=num_features_per_uts,
-            series_periodicity=seasonal_period,
-            decomps_only=True,
-        )
+    def _choose_underlying_reconstruction_model_based_on_config(
+        self,
+    ) -> ReconstructionModel:
+        reconstruction_model_params: Dict[str, Any] = self.config["model_args"][
+            "reconstruction_model_args"
+        ]
 
-        return GeneticAlgorithmWrapper(
-            ga_params=self.config["model_args"]["reconstruction_model_args"][
-                "genetic_algorithm_args"
-            ],
-            mts_dataset=mts_dataset,
-            mts_decomp=mts_decomps,
-            num_uts_in_mts=num_uts_in_mts,
-            num_features_per_uts=num_features_per_uts,
-        )
+        model_type: str = reconstruction_model_params["model_type"]
+
+        if model_type == "cvae":
+            model = CVAEReconstructionModel(
+                model_params=self.config["model_args"]["reconstruction_model_args"],
+                config=self.config,
+            )
+            return model
+        elif model_type == "ga":
+            model = GeneticAlgorithmWrapper(
+                model_params=self.config["model_args"]["reconstruction_model_args"],
+                config=self.config,
+            )
+            return model
 
     @override
     def create_training_data(
@@ -83,6 +91,7 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
         use_one_hot_encoding: int = self.config["dataset_args"]["use_one_hot_encoding"]
+        self.mts_dataset = mts_dataset
 
         mts_features_array, _ = generate_feature_dataframe(
             data=mts_dataset,
@@ -97,6 +106,13 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         y_validation: np.ndarray = mts_features_array[
             validation_transformation_indices[:, 1]
         ]
+
+        self.X_reconstruction = mts_features_array[train_transformation_indices[:, 0]]
+        self.y_reconstruction = mts_dataset[train_transformation_indices[:, 1]]
+        # We reshape to get shape (Number of samples, Number of samples per MTS flattened)
+        self.y_reconstruction = self.y_reconstruction.reshape(
+            -1, self.y_reconstruction.shape[1] * self.y_reconstruction.shape[2]
+        )
 
         X_train, y_train = concat_delta_values_to_features(
             X_train,
@@ -123,7 +139,16 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         y_val: np.ndarray,
         log_to_wandb=False,
     ) -> Tuple[List[float], List[float]]:
-        self.model.train(X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)
+        logger.info("Training feature model...")
+        self.feature_model.train(
+            X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val
+        )
+        logger.info("Training reconstruction model...")
+        self.reconstruction_model.train(
+            mts_dataset=self.mts_dataset,
+            X=self.X_reconstruction,
+            y=self.y_reconstruction,
+        )
 
     @override
     def create_inference_data(
@@ -155,12 +180,11 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
 
     @override
     def infer(self, X: np.ndarray) -> np.ndarray:
-        ga = self.initialize_ga_model(self.mts_dataset)
-        predicted_features = self.model.infer(X)
+        predicted_features = self.feature_model.infer(X)
 
         inferred_mts, intermediate_features = generate_new_time_series(
             original_indices=self.evaluation_set_indices[:, 0],
             predicted_features=predicted_features,
-            ga=ga,
+            reconstruction_model=self.reconstruction_model,
         )
         return inferred_mts, intermediate_features
