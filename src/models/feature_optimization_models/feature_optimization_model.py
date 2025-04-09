@@ -13,6 +13,8 @@ from src.models.feature_optimization_models.perfect_feature_model import (
     PerfectFeatureModel,
 )
 from src.models.feature_transformation_model import FeatureTransformationModel
+from src.models.generative_models.cvae import MTSCVAE
+from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.models.timeseries_transformation_model import TimeseriesTransformationModel
@@ -42,9 +44,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             nn = FeedForwardFeatureModel(feature_model_params)
             model = NeuralNetworkWrapper(nn, training_params=training_params)
             return model
-        elif model_type == "cvae_feature_to_mts":
-            nn = FeedForwardFeatureModel(feature_model_params)
-            model = NeuralNetworkWrapper(nn, training_params=training_params)
+        elif model_type == "feature_cvae":
+            cvae_params = feature_model_params["conditional_gen_model_args"]
+            cvae = MTSCVAE(model_params=cvae_params)
+            model = CVAEWrapper(cvae, training_params=training_params)
             return model
         else:
             raise ValueError(f"Model type {model_type} not supported")
@@ -61,7 +64,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         )
 
         return GeneticAlgorithmWrapper(
-            ga_params=self.config["model_args"]["genetic_algorithm_args"],
+            ga_params=self.config["model_args"]["reconstruction_model_args"][
+                "genetic_algorithm_args"
+            ],
             mts_dataset=mts_dataset,
             mts_decomp=mts_decomps,
             num_uts_in_mts=num_uts_in_mts,

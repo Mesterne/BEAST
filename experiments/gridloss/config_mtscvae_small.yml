@@ -32,6 +32,7 @@ model_args:
       condition_type: "feature" # "feature" or "feature_delta"
       input_size_without_conditions: 576
       mts_size: 576
+      output_size: 576
       latent_size: 64
       number_of_conditions: 12
       hidden_layers:

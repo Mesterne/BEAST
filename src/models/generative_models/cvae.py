@@ -30,6 +30,7 @@ class MTSCVAE(nn.Module):
         self.number_of_conditions = model_params["number_of_conditions"]
         self.latent_size = model_params["latent_size"]
         self.condition_type = model_params["condition_type"]
+        self.output_size = model_params["output_size"]
         self.encoder = Encoder(
             self.input_size_without_conditions,
             self.number_of_conditions,
@@ -38,6 +39,7 @@ class MTSCVAE(nn.Module):
         )
         self.decoder = Decoder(
             self.mts_size,
+            self.output_size,
             self.number_of_conditions,
             self.latent_size,
             model_params["hidden_layers"],
@@ -193,6 +195,7 @@ class Decoder(nn.Module):
     def __init__(
         self,
         mts_size: int,
+        output_size: int,
         number_of_conditions: int,
         latent_size: int,
         hidden_layers: dict,
@@ -211,7 +214,7 @@ class Decoder(nn.Module):
 
         self.generate_hidden_layers(hidden_layers)
 
-        self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
+        self.output: Tensor = nn.Linear(final_hidden_layer_size, output_size)
 
     def generate_hidden_layers(self, hidden_layers: dict):
         reversed_hidden_layers = hidden_layers[::-1]

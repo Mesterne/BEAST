@@ -69,7 +69,6 @@ def compare_old_and_new_model(
     inferred_old_test = forecasting_model_wrapper_old.infer(X=X_test)
     inferred_new_test = forecasting_model_wrapper_new.infer(X=X_test)
 
-    print(X_val.shape)
     # Plot worst forecast before and after
     errors = np.abs(y_val - inferred_old_val)
     errors_summed = np.sum(errors, axis=1)
@@ -78,11 +77,6 @@ def compare_old_and_new_model(
     worst_forecast_new = inferred_new_val[worst_index]
     window_value = X_val[worst_index][168:336]
     true_value = y_val[worst_index]
-
-    print(f"worst_forecast_old shape: {worst_forecast_old.shape}")
-    print(f"worst_forecast_new shape: {worst_forecast_new.shape}")
-    print(f"window_value shape: {window_value.shape}")
-    print(f"true_value shape: {true_value.shape}")
 
     window_length = len(window_value)
     forecast_length = len(worst_forecast_old)
