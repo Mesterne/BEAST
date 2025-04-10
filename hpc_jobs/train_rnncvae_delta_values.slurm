@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=train_cvae_delta_values
+#SBATCH --job-name=train_rnncvae_delta_values
 #SBATCH --time=0-23:00:00
 
 #SBATCH --partition=GPUQ
