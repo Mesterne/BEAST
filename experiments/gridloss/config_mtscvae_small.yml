@@ -16,7 +16,7 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  genetic_algorithm_args:
+  reconstruction_model_args:
   feature_model_args:
     model_name: mts_cvae
     input_size: 24
