@@ -42,6 +42,8 @@ class GenerativeModel(TimeseriesTransformationModel):
         if architecture == "feedforward":
             return MTSCVAE(model_params=model_params)
         if architecture == "rnn":
+            return MTSCVAE(model_params=model_params)
+        if architecture == "rnn_enc_dec":
             return RNNCVAE(model_params=model_params)
         if architecture == "convolutional":
             raise NotImplementedError(

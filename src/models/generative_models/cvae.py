@@ -23,24 +23,25 @@ class MTSCVAE(nn.Module):
 
     def __init__(self, model_params: dict) -> None:
         super(MTSCVAE, self).__init__()
-        self.input_size_without_conditions = model_params[
-            "input_size_without_conditions"
-        ]
         self.mts_size = model_params["mts_size"]
         self.number_of_conditions = model_params["number_of_conditions"]
         self.latent_size = model_params["latent_size"]
         self.condition_type = model_params["condition_type"]
+        self.uts_size = model_params["uts_size"]
         self.encoder = Encoder(
-            self.input_size_without_conditions,
+            self.mts_size,
             self.number_of_conditions,
             self.latent_size,
-            model_params["hidden_layers"],
+            model_params["feedforward_layers"],
+            self.uts_size,
+            model_params["architecture"],
+            model_params["rnn_hidden_state_size"],
         )
         self.decoder = Decoder(
             self.mts_size,
             self.number_of_conditions,
             self.latent_size,
-            model_params["hidden_layers"],
+            model_params["feedforward_layers"],
         )
 
     def forward(self, input: np.ndarray) -> np.ndarray:
@@ -53,16 +54,15 @@ class MTSCVAE(nn.Module):
 
         # First mts_size elements are the MTS, the rest is either feature values or feature deltas
         assert (
-            input.shape[1]
-            == self.input_size_without_conditions + self.number_of_conditions
-        ), f"Input size mismatch. Expected {self.input_size_without_conditions + self.number_of_conditions}, got {input.shape[1]}"
+            input.shape[1] == self.mts_size + self.number_of_conditions
+        ), f"Input size mismatch. Expected {self.mts_size + self.number_of_conditions}, got {input.shape[1]}"
 
-        mts: np.ndarray = input[:, : self.input_size_without_conditions]
-        feature_info: np.ndarray = input[:, self.input_size_without_conditions :]
+        mts: np.ndarray = input[:, : self.mts_size]
+        feature_info: np.ndarray = input[:, self.mts_size :]
 
         assert (
-            mts.shape[1] == self.input_size_without_conditions
-        ), f"MTS size mismatch. Expected {self.input_size_without_conditions}, got {mts.shape[1]}"
+            mts.shape[1] == self.mts_size
+        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Conditions size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
@@ -116,53 +116,109 @@ class Encoder(nn.Module):
 
     def __init__(
         self,
-        input_size_without_conditions: int,
+        mts_size: int,
         number_of_conditions: int,
         latent_size: int,
-        hidden_layers: dict,
+        feedforward_layers: dict,
+        uts_size: int,
+        architecture: str,
+        rnn_hidden_state_size: int,
     ) -> None:
         super(Encoder, self).__init__()
-        self.input_size_without_conditions = input_size_without_conditions
+        self.mts_size = mts_size
+        self.uts_size = uts_size
+        self.num_uts = self.mts_size // self.uts_size
         self.number_of_conditions = number_of_conditions
         self.latent_size = latent_size
+        self.architecture = architecture
+        self.rnn_hidden_state_size = rnn_hidden_state_size
+        self.feedforward_layers_list = feedforward_layers
+        final_hidden_layer_size = int(feedforward_layers[-1][0])
 
-        self.input_size = input_size_without_conditions + number_of_conditions
-        final_hidden_layer_size = int(hidden_layers[-1][0])
+        self.add_input_layer()
+        self.generate_feedforward_layers()
 
-        self.input_layer = nn.Sequential(
-            nn.Linear(self.input_size, hidden_layers[0][0]), nn.ReLU()
+        self.combination_layer_input_size = (
+            self.mts_size + self.number_of_conditions
+            if architecture == "feedforward"
+            else self.rnn_hidden_state_size + self.number_of_conditions
         )
 
-        self.generate_hidden_layers(hidden_layers)
+        self.input_condition_combination_layer = nn.Sequential(
+            nn.Linear(
+                self.combination_layer_input_size, self.feedforward_layers_list[0][0]
+            ),
+            nn.ReLU(),
+        )
 
         self.mean = nn.Linear(final_hidden_layer_size, self.latent_size)
         self.log_var = nn.Linear(final_hidden_layer_size, self.latent_size)
 
-    def generate_hidden_layers(self, hidden_layers: dict):
-        hidden_layer_sizes = np.asarray(hidden_layers)[:, 0].astype(int)
-        hidden_layer_types = np.asarray(hidden_layers)[:, 1]
-        hidden_layer_activations = np.asarray(hidden_layers)[:, 2]
-        logger.info(
-            f"Building encoder with hidden layer sizes: {hidden_layer_sizes}; types: {hidden_layer_types}; and activations: {hidden_layer_activations}"
+    def add_input_layer(self):
+        """Add specific feature extraction architecture to the input layer of the encoder."""
+        if self.architecture == "feedforward":
+            # NOTE: Not necessarily what i want. Maybe this can some extra ff layers to increase parameter count?
+            # logger.info("Building encoder with linear input layer")
+            # self.input_layer = nn.Sequential(
+            #     nn.Linear(
+            #         self.combination_layer_input_size,
+            #         self.feedforward_layers_list[0][0],
+            #     ),
+            #     nn.ReLU(),
+            # )
+            pass
+        if self.architecture == "rnn":
+            logger.info("Building encoder with LSTM input layer")
+            self.generate_lstm_layer(
+                input_size=self.num_uts,
+                hidden_size=self.rnn_hidden_state_size,
+            )
+        if self.architecture == "cnn":
+            logger.info("Building encoder with CNN input layer")
+            self.generate_cnn_layer()
+        if self.architecture == "attention":
+            logger.info("Building encoder with attention input layer")
+            self.generate_attention_layer()
+
+    def generate_lstm_layer(self, input_size: int, hidden_size: int) -> None:
+        self.input_layer = nn.LSTM(
+            input_size=input_size, hidden_size=hidden_size, batch_first=True
         )
 
-        self.hidden_layers = nn.ModuleList()
-        for i in range(len(hidden_layer_sizes) - 1):
-            if hidden_layer_types[i] == "linear":
-                self.hidden_layers.append(
-                    nn.Linear(
-                        hidden_layer_sizes[i],
-                        hidden_layer_sizes[i + 1],
-                    )
+    def generate_cnn_layer():
+        NotImplementedError("CNN layer is not implemented yet")
+
+    def generate_attention_layer():
+        NotImplementedError("Attention layer is not implemented yet")
+
+    def generate_feedforward_layers(self):
+        layer_sizes = np.asarray(self.feedforward_layers_list)[:, 0].astype(int)
+        layer_activations = np.asarray(self.feedforward_layers_list)[:, 1]
+        logger.info(
+            f"Building encoder with hidden layer sizes: {layer_sizes}; and activations: {layer_activations}"
+        )
+
+        self.feedforward_layers = nn.ModuleList()
+        for i in range(len(layer_sizes) - 1):
+            self.feedforward_layers.append(
+                nn.Linear(
+                    layer_sizes[i],
+                    layer_sizes[i + 1],
                 )
-            else:
-                raise ValueError(f"Unknown hidden layer type: {hidden_layer_types[i]}")
-            if hidden_layer_activations[i] == "relu":
-                self.hidden_layers.append(nn.ReLU())
+            )
+            if layer_activations[i] == "relu":
+                self.feedforward_layers.append(nn.ReLU())
             else:
                 raise ValueError(
-                    f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
+                    f"Unknown hidden layer activation: {layer_activations[i]}"
                 )
+
+    def format_input(self, input: np.ndarray) -> Tensor:
+        if self.architecture == "feedforward":
+            return input
+        if self.architecture == "rnn":
+            # Reshape input to (batch_size, seq_len, input_size)
+            return input.reshape(input.shape[0], self.uts_size, self.num_uts)
 
     def forward(
         self, mts: np.ndarray, feature_info: np.ndarray
@@ -170,19 +226,32 @@ class Encoder(nn.Module):
         """Encoder in VAE from (Kingma and Welling, 2013) return the mean and the log of the variance."""
 
         assert (
-            mts.shape[1] == self.input_size_without_conditions
-        ), f"MTS size mismatch. Expected {self.input_size_without_conditions}, got {mts.shape[1]}"
+            mts.shape[1] == self.mts_size
+        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Feature size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
-        input = cat((mts, feature_info), dim=1)
-        hidden_layer_input = self.input_layer(input)
-        for i in range(len(self.hidden_layers)):
+        input = self.format_input(mts)
+
+        if self.architecture == "rnn":
+            lstm_out, _ = self.input_layer(input)
+            lstm_out_final_hidden_state = lstm_out[:, -1, :]
+            combination_layer_input = cat(
+                (lstm_out_final_hidden_state, feature_info), dim=1
+            )
+        if self.architecture == "feedforward":
+            combination_layer_input = cat((mts, feature_info), dim=1)
+
+        feedforward_input = self.input_condition_combination_layer(
+            combination_layer_input
+        )
+
+        for i in range(len(self.feedforward_layers)):
             if i == 0:
-                encoded_input = self.hidden_layers[i](hidden_layer_input)
+                encoded_input = self.feedforward_layers[i](feedforward_input)
             else:
-                encoded_input = self.hidden_layers[i](encoded_input)
+                encoded_input = self.feedforward_layers[i](encoded_input)
         latent_mean: Tensor = self.mean(encoded_input)
         latent_log_var: Tensor = self.log_var(encoded_input)
         return latent_mean, latent_log_var
@@ -195,7 +264,7 @@ class Decoder(nn.Module):
         mts_size: int,
         number_of_conditions: int,
         latent_size: int,
-        hidden_layers: dict,
+        feedforward_layers: dict,
     ) -> None:
         super(Decoder, self).__init__()
         self.latent_size = latent_size
@@ -203,38 +272,34 @@ class Decoder(nn.Module):
         self.mts_size = mts_size
 
         self.input_size = latent_size + number_of_conditions
-        final_hidden_layer_size = int(hidden_layers[0][0])
+        final_hidden_layer_size = int(feedforward_layers[0][0])
 
         self.input_layer = nn.Sequential(
-            nn.Linear(self.input_size, hidden_layers[-1][0]), nn.ReLU()
+            nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
         )
 
-        self.generate_hidden_layers(hidden_layers)
+        self.generate_feedforward_layers(feedforward_layers)
 
         self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
 
-    def generate_hidden_layers(self, hidden_layers: dict):
-        reversed_hidden_layers = hidden_layers[::-1]
-        hidden_layer_sizes = np.asarray(reversed_hidden_layers)[:, 0].astype(int)
-        hidden_layer_types = np.asarray(reversed_hidden_layers)[:, 1]
-        hidden_layer_activations = np.asarray(reversed_hidden_layers)[:, 2]
+    def generate_feedforward_layers(self, feedforward_layers: dict):
+        reversed_feedforward_layers = feedforward_layers[::-1]
+        hidden_layer_sizes = np.asarray(reversed_feedforward_layers)[:, 0].astype(int)
+        hidden_layer_activations = np.asarray(reversed_feedforward_layers)[:, 1]
         logger.info(
-            f"Building decoder with hidden layer sizes: {hidden_layer_sizes}; types: {hidden_layer_types}; and activations: {hidden_layer_activations}"
+            f"Building decoder with hidden layer sizes: {hidden_layer_sizes};and activations: {hidden_layer_activations}"
         )
 
-        self.hidden_layers = nn.ModuleList()
+        self.feedforward_layers = nn.ModuleList()
         for i in range(len(hidden_layer_sizes) - 1):
-            if hidden_layer_types[i] == "linear":
-                self.hidden_layers.append(
-                    nn.Linear(
-                        hidden_layer_sizes[i],
-                        hidden_layer_sizes[i + 1],
-                    )
+            self.feedforward_layers.append(
+                nn.Linear(
+                    hidden_layer_sizes[i],
+                    hidden_layer_sizes[i + 1],
                 )
-            else:
-                raise ValueError(f"Unknown hidden layer type: {hidden_layer_types[i]}")
+            )
             if hidden_layer_activations[i] == "relu":
-                self.hidden_layers.append(nn.ReLU())
+                self.feedforward_layers.append(nn.ReLU())
             else:
                 raise ValueError(
                     f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
@@ -252,10 +317,10 @@ class Decoder(nn.Module):
 
         input = cat((latent, feature_info), dim=1).to(device)
         hidden_layer_input = self.input_layer(input)
-        for i in range(len(self.hidden_layers)):
+        for i in range(len(self.feedforward_layers)):
             if i == 0:
-                decoded_input = self.hidden_layers[i](hidden_layer_input)
+                decoded_input = self.feedforward_layers[i](hidden_layer_input)
             else:
-                decoded_input = self.hidden_layers[i](decoded_input)
+                decoded_input = self.feedforward_layers[i](decoded_input)
         output = self.output(decoded_input)
         return output

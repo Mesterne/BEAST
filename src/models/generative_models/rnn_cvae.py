@@ -16,7 +16,7 @@ class RNNCVAE(nn.Module):
             "input_size_without_conditions"
         ]
         self.num_conditions = model_params["number_of_conditions"]
-        self.hidden_size = model_params["hidden_size"]
+        self.hidden_size = model_params["rnn_hidden_state_size"]
         self.latent_size = model_params["latent_size"]
         self.encoder = Encoder(
             uts_size=self.uts_size,
