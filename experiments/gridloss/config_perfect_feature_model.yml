@@ -4,6 +4,7 @@ dataset_args:
   training_data: train.csv
   test_data: test.csv
   window_size: 192
+  mts_size: 576
   step_size: 24
   timeseries_to_use:
     - grid1-load

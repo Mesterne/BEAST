@@ -50,11 +50,8 @@ class FeedForwardFeatureModel(nn.Module):
                 )
 
     def forward(self, x):
-        hidden_layer_input = self.input_layer(x)
+        input = self.input_layer(x)
         for i in range(0, len(self.hidden_layers)):
-            if i == 0:
-                input = self.hidden_layers[i](hidden_layer_input)
-            else:
-                input = self.hidden_layers[i](input)
+            input = self.hidden_layers[i](hidden_layer_input)
         output = self.output_layer(input)
         return output
