@@ -98,7 +98,7 @@ class ModelHandler:
         predicted_y = predicted_y.reshape(
             -1,
             len(self.config["dataset_args"]["timeseries_to_use"]),
-            self.config["model_args"]["reconstruction_model_args"]["mts_size"]
+            self.config["dataset_args"]["mts_size"]
             // len(self.config["dataset_args"]["timeseries_to_use"]),
         )
 

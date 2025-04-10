@@ -3,6 +3,7 @@ dataset_args:
   directory: data/gridloss
   training_data: train.csv
   test_data: test.csv
+  mts_size: 576
   window_size: 192
   step_size: 24
   timeseries_to_use:
@@ -16,7 +17,8 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  genetic_algorithm_args:
+  reconstruction_model_args:
+    model_type: 'ga'
     num_generations: 100
     num_parents_mating: 2
     solutions_per_population: 10
@@ -33,13 +35,12 @@ model_args:
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
     model_name: feedforward_neural_network
+    input_size: 19
     output_size: 12
-    hidden_network_sizes:
-      - 256
-      - 256
-      - 256
-      - 256
-      - 256
+    hidden_layers:
+      - [512, linear, relu]
+      - [256, linear, relu]
+      - [128, linear, relu]
     training_args:
       num_epochs: 50
       batch_size: 128

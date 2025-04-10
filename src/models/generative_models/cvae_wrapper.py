@@ -42,6 +42,7 @@ class CVAEWrapper(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         plot_loss=False,
+        model_name="",
     ) -> Tuple[List[float], List[float]]:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Training model with device: {device}")
@@ -72,6 +73,7 @@ class CVAEWrapper(FeatureTransformationModel):
         best_validation_loss = float("inf")
         best_model_weigths = copy.deepcopy(self.model.state_dict())
 
+        patience_counter = 0
         for epoch in tqdm(range(self.num_epochs)):
             self.model.train()
             running_loss = 0.0
@@ -136,13 +138,7 @@ class CVAEWrapper(FeatureTransformationModel):
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,
-                model_name="CVAE_model_full",
-            )
-            plot_detailed_training_loss(
-                training_loss=train_loss_history,
-                training_loss_kl_divergence=train_loss_history_kl_divergence,
-                train_loss_reconstruction=train_loss_history_reconstruction,
-                model_name="CVAE_model",
+                model_name=model_name,
             )
 
         return train_loss_history, validation_loss_history

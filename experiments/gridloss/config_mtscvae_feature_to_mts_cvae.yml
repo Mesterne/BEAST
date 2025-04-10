@@ -4,6 +4,7 @@ dataset_args:
   training_data: train.csv
   test_data: test.csv
   window_size: 192
+  mts_size: 576
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -18,12 +19,11 @@ stl_args:
 model_args:
   reconstruction_model_args:
     model_type: 'cvae'
-    condition_type: "feature"
-    input_size_without_conditions: 0
-    mts_size: 576
+    condition_type: "feature_delta"
+    input_size_without_conditions: 576
     output_size: 576
     latent_size: 64
-    number_of_conditions: 12
+    number_of_conditions: 12 # Delta values
     hidden_layers:
       - [512, linear, relu]
       - [256, linear, relu]
@@ -35,10 +35,6 @@ model_args:
       early_stopping_patience: 25
   feature_model_args:
     model_name: feature_cvae
-    input_size: 24
-    output_size: 12
-    hidden_network_sizes:
-      - 256
     training_args:
       num_epochs: 200
       batch_size: 256

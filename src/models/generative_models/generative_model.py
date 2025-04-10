@@ -114,6 +114,7 @@ class GenerativeModel(TimeseriesTransformationModel):
             X_val=X_val,
             y_val=y_val,
             plot_loss=plot_loss,
+            model_name="CVAE_generative_model",
         )
 
     @override

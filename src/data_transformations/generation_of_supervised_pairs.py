@@ -44,11 +44,11 @@ def create_train_val_test_split(
     logger.info("Successfully generated MTS PCA space")
 
     logger.info("Splitting PCA space into train, validation and test indices...")
-    pca1, pca2 = mts_pca_array[:, 0], mts_pca_array[:, 1]
     indices = np.arange(len(mts_pca_array))
 
     validation_size = int(EVALUATION_FRACTION * len(indices))
 
+    # Validation, test and train indices are on the global object
     np.random.shuffle(indices)
 
     validation_indices = indices[:validation_size]

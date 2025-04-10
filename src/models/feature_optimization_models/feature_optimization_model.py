@@ -107,12 +107,20 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             validation_transformation_indices[:, 1]
         ]
 
-        self.X_reconstruction = mts_features_array[train_transformation_indices[:, 0]]
+        delta_values = (
+            mts_features_array[train_transformation_indices[:, 1]]
+            - mts_features_array[train_transformation_indices[:, 0]]
+        )
+        X_mts = mts_dataset[train_transformation_indices[:, 0]]
+        X_mts = X_mts.reshape(-1, X_mts.shape[1] * X_mts.shape[2])
+        self.X_reconstruction = np.concatenate([X_mts, delta_values], axis=1)
         self.y_reconstruction = mts_dataset[train_transformation_indices[:, 1]]
         # We reshape to get shape (Number of samples, Number of samples per MTS flattened)
         self.y_reconstruction = self.y_reconstruction.reshape(
             -1, self.y_reconstruction.shape[1] * self.y_reconstruction.shape[2]
         )
+        logger.info(f"X_reconstruction shape: {self.X_reconstruction.shape}")
+        logger.info(f"y_reconstruction shape: {self.y_reconstruction.shape}")
 
         X_train, y_train = concat_delta_values_to_features(
             X_train,
