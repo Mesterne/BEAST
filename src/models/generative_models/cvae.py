@@ -24,6 +24,9 @@ class MTSCVAE(nn.Module):
     def __init__(self, model_params: dict) -> None:
         super(MTSCVAE, self).__init__()
         self.mts_size = model_params["mts_size"]
+        self.input_size_without_conditions = model_params[
+            "input_size_without_conditions"
+        ]
         self.number_of_conditions = model_params["number_of_conditions"]
         self.latent_size = model_params["latent_size"]
         self.condition_type = model_params["condition_type"]
@@ -31,16 +34,13 @@ class MTSCVAE(nn.Module):
         self.uts_size = model_params["uts_size"]
         self.encoder = Encoder(
             mts_size=self.mts_size,
+            input_size_without_conditions=self.input_size_without_conditions,
             number_of_conditions=self.number_of_conditions,
             latent_size=self.latent_size,
-            feedforward_layers=model_params[
-                "feedforward_layers"
-            ],  # TODO: Rename in .yml
+            feedforward_layers=model_params["feedforward_layers"],
             uts_size=self.uts_size,
-            architecture=model_params["architecture"],  # TODO: Add to .yml files
-            rnn_hidden_state_size=model_params[
-                "rnn_hidden_state_size"
-            ],  # TODO: Make work when not defined
+            architecture=model_params["architecture"],
+            rnn_hidden_state_size=model_params["rnn_hidden_state_size"],
         )
         self.decoder = Decoder(
             self.mts_size,
@@ -60,21 +60,26 @@ class MTSCVAE(nn.Module):
 
         # First mts_size elements are the MTS, the rest is either feature values or feature deltas
         assert (
-            input.shape[1] == self.mts_size + self.number_of_conditions
-        ), f"Input size mismatch. Expected {self.mts_size + self.number_of_conditions}, got {input.shape[1]}"
+            input.shape[1]
+            == self.input_size_without_conditions + self.number_of_conditions
+        ), f"Input size mismatch. Expected {self.input_size_without_conditions + self.number_of_conditions}, got {input.shape[1]}"
 
-        mts: np.ndarray = input[:, : self.mts_size]
-        feature_info: np.ndarray = input[:, self.mts_size :]
+        input_except_conditions: np.ndarray = input[
+            :, : self.input_size_without_conditions
+        ]
+        feature_info: np.ndarray = input[:, self.input_size_without_conditions :]
 
         assert (
-            mts.shape[1] == self.mts_size
-        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
+            input_except_conditions.shape[1] == self.input_size_without_conditions
+        ), f"Input without condtions size mismatch. Expected {self.input_size_without_conditions}, got {input_except_conditions.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Conditions size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
         # Encoding step
-        latent_mean, latent_log_var = self.encoder(mts, feature_info)
+        latent_mean, latent_log_var = self.encoder(
+            input_except_conditions, feature_info
+        )
 
         # Reparameterization trick
         latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
@@ -123,6 +128,7 @@ class Encoder(nn.Module):
     def __init__(
         self,
         mts_size: int,
+        input_size_without_conditions: int,
         number_of_conditions: int,
         latent_size: int,
         feedforward_layers: dict,
@@ -134,6 +140,7 @@ class Encoder(nn.Module):
         self.mts_size = mts_size
         self.uts_size = uts_size
         self.num_uts = self.mts_size // self.uts_size
+        self.input_size_without_conditions = input_size_without_conditions
         self.number_of_conditions = number_of_conditions
         self.latent_size = latent_size
         self.architecture = architecture
@@ -145,7 +152,7 @@ class Encoder(nn.Module):
         self.generate_feedforward_layers()
 
         self.combination_layer_input_size = (
-            self.mts_size + self.number_of_conditions
+            self.input_size_without_conditions + self.number_of_conditions
             if architecture == "feedforward"
             else self.rnn_hidden_state_size + self.number_of_conditions
         )
@@ -227,24 +234,18 @@ class Encoder(nn.Module):
             return input.reshape(input.shape[0], self.uts_size, self.num_uts)
 
     def forward(
-        self, mts: np.ndarray, feature_info: np.ndarray
+        self, input_without_conditions: np.ndarray, feature_info: np.ndarray
     ) -> Tuple[Tensor, Tensor]:
         """Encoder in VAE from (Kingma and Welling, 2013) return the mean and the log of the variance."""
 
         assert (
-            mts.shape[1] == self.mts_size
-        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
+            input_without_conditions.shape[1] == self.input_size_without_conditions
+        ), f"MTS size mismatch. Expected {self.input_size_without_conditions}, got {input_without_conditions.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Feature size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
-        weight = self.input_layer[0].weight
-        bias = self.input_layer[0].bias
-
-        assert not torch.isnan(weight).any(), "Detected nan weight value"
-        assert not torch.isnan(bias).any(), "Detected nan bias value"
-
-        input = self.format_input(mts)
+        input = self.format_input(input_without_conditions)
 
         if self.architecture == "rnn":
             lstm_out, _ = self.input_layer(input)
@@ -253,7 +254,9 @@ class Encoder(nn.Module):
                 (lstm_out_final_hidden_state, feature_info), dim=1
             )
         if self.architecture == "feedforward":
-            combination_layer_input = cat((mts, feature_info), dim=1)
+            combination_layer_input = cat(
+                (input_without_conditions, feature_info), dim=1
+            )
 
         feedforward_input = self.input_condition_combination_layer(
             combination_layer_input

@@ -60,6 +60,7 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             logger.info("Using feature_cvae feature model")
             cvae_params = feature_model_params["conditional_gen_model_args"]
             cvae_params["mts_size"] = self.config["dataset_args"]["mts_size"]
+            cvae_params["uts_size"] = self.config["dataset_args"]["uts_size"]
             cvae = MTSCVAE(model_params=cvae_params)
             model = CVAEWrapper(cvae, training_params=training_params)
             return model
@@ -74,6 +75,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         ]
         reconstruction_model_params["mts_size"] = self.config["dataset_args"][
             "mts_size"
+        ]
+        reconstruction_model_params["uts_size"] = self.config["dataset_args"][
+            "uts_size"
         ]
 
         model_type: str = reconstruction_model_params["model_type"]

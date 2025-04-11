@@ -14,7 +14,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: true
   use_identity_mapping: false
-  test_set_sample_size: 200
+  test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
@@ -43,7 +43,7 @@ model_args:
   feature_model_args:
     model_name: feature_cvae
     training_args:
-      num_epochs: 1
+      num_epochs: 200
       batch_size: 16
       learning_rate: 0.0005
       early_stopping_patience: 25
@@ -56,9 +56,9 @@ model_args:
       rnn_hidden_state_size:
       number_of_conditions: 7
       feedforward_layers:
-        - [512, linear, relu]
-        - [256, linear, relu]
-        - [128, linear, relu]
+        - [512, relu]
+        - [256, relu]
+        - [128, relu]
   forecasting_model_args:
     window_size: 168
     network_size:

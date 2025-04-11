@@ -174,10 +174,14 @@ class CVAEWrapper(FeatureTransformationModel):
             generated_mts: np.ndarray = self.model.generate_mts(input_features)
         # Other models take the entire MTS and conditions to generate new MTS
         else:
-            input_mts: np.ndarray = X[:, : self.model.mts_size]
-            input_conditions: np.ndarray = X[:, self.model.mts_size :]
+            input_without_conditions: np.ndarray = X[
+                :, : self.model.input_size_without_conditions
+            ]
+            input_conditions: np.ndarray = X[
+                :, self.model.input_size_without_conditions :
+            ]
             generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_mts, input_conditions
+                input_without_conditions, input_conditions
             )
 
         return generated_mts
