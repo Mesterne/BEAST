@@ -53,7 +53,7 @@ data_dir: str = os.path.join(
 )
 num_uts_in_mts: int = len(config["dataset_args"]["timeseries_to_use"])
 config["is_conditional_gen_model"]: bool = (
-    config["model_args"]["feature_model_args"]["conditional_gen_model_args"] is not None
+    config["model_args"]["feature_model_args"]["model_name"] == "mts_cvae"
 )
 
 
@@ -140,6 +140,7 @@ inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
 )
 
 logger.info("Successfully ran inference on validation and test sets")
+
 
 evaluate(
     config=config,

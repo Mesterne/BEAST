@@ -1,7 +1,5 @@
-import os
-
-import torch.nn.functional as F
-from torch import load, nn, save
+import numpy as np
+from torch import nn
 
 from src.utils.logging_config import logger
 
@@ -12,49 +10,48 @@ class FeedForwardFeatureModel(nn.Module):
         model_params,
     ):
         super(FeedForwardFeatureModel, self).__init__()
-        self._check_params(model_params)
-        self.generate_network(
-            input_size=model_params["input_size"],
-            output_size=model_params["output_size"],
-            hidden_network_sizes=model_params["hidden_network_sizes"],
+        self.input_size = model_params["input_size"]
+        self.output_size = model_params["output_size"]
+        hidden_layers_params = model_params["hidden_layers"]
+        final_hidden_layer_size = int(hidden_layers_params[-1][0])
+
+        self.input_layer = nn.Sequential(
+            nn.Linear(self.input_size, hidden_layers_params[0][0]), nn.ReLU()
+        )
+        self.generate_hidden_layers(hidden_layers=hidden_layers_params)
+        self.output_layer = nn.Sequential(
+            nn.Linear(final_hidden_layer_size, self.output_size), nn.ReLU()
         )
 
-    def generate_network(self, input_size, output_size, hidden_network_sizes):
-        self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(input_size, hidden_network_sizes[0]))
-        for i in range(1, len(hidden_network_sizes)):
-            self.layers.append(
-                nn.Linear(hidden_network_sizes[i - 1], hidden_network_sizes[i])
-            )
-        self.layers.append(nn.Linear(hidden_network_sizes[-1], output_size))
+    def generate_hidden_layers(self, hidden_layers: dict):
+        hidden_layer_sizes = np.asarray(hidden_layers)[:, 0].astype(int)
+        hidden_layer_types = np.asarray(hidden_layers)[:, 1]
+        hidden_layer_activations = np.asarray(hidden_layers)[:, 2]
+        logger.info(
+            f"Building network with hidden layer sizes: {hidden_layer_sizes}; types: {hidden_layer_types}; and activations: {hidden_layer_activations}"
+        )
+
+        self.hidden_layers = nn.ModuleList()
+        for i in range(len(hidden_layer_sizes) - 1):
+            if hidden_layer_types[i] == "linear":
+                self.hidden_layers.append(
+                    nn.Linear(
+                        hidden_layer_sizes[i],
+                        hidden_layer_sizes[i + 1],
+                    )
+                )
+            else:
+                raise ValueError(f"Unknown hidden layer type: {hidden_layer_types[i]}")
+            if hidden_layer_activations[i] == "relu":
+                self.hidden_layers.append(nn.ReLU())
+            else:
+                raise ValueError(
+                    f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
+                )
 
     def forward(self, x):
-        for i in range(0, len(self.layers) - 1):
-            x = F.relu(self.layers[i](x))  # Correct usage
-        x = self.layers[-1](x)
-        return x
-
-    def _check_params(self, model_params):
-        assert "input_size" in model_params, "input_size not in model_params"
-        assert "output_size" in model_params, "output_size not in model_params"
-        assert (
-            "hidden_network_sizes" in model_params
-        ), "hidden_network_sizes not in model_params"
-        assert isinstance(
-            model_params["input_size"], int
-        ), "input_size must be an integer"
-        assert isinstance(
-            model_params["output_size"], int
-        ), "output_size must be an integer"
-        assert isinstance(
-            model_params["hidden_network_sizes"], list
-        ), "hidden_network_sizes must be a list"
-        assert all(
-            isinstance(i, int) for i in model_params["hidden_network_sizes"]
-        ), "hidden_network_sizes must be a list of integers"
-        assert (
-            len(model_params["hidden_network_sizes"]) > 0
-        ), "hidden_network_sizes must have at least one element"
-        assert (
-            model_params["hidden_network_sizes"][0] > 0
-        ), "hidden_network_sizes must have at least one element"
+        hidden_layer_input = self.input_layer(x)
+        for i in range(0, len(self.hidden_layers)):
+            hidden_layer_input = self.hidden_layers[i](hidden_layer_input)
+        output = self.output_layer(hidden_layer_input)
+        return output

@@ -4,7 +4,6 @@ from typing import Optional
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.plots.feature_wise_error import plot_distribution_of_feature_wise_error
 from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import (
     plot_pca_for_each_uts_with_transformed,
@@ -44,15 +43,6 @@ def create_and_save_plots_of_model_performances(
         total_mse_for_each_mts=total_mse_for_each_mts
     )
     total_mse_plot.savefig(os.path.join(OUTPUT_DIR, "total_mse_distribution.png"))
-
-    # logger.info("Generating feature wise MSE plot...")
-    # print(mse_per_feature.shape)
-    # feature_wise_error_plot = plot_distribution_of_feature_wise_error(
-    #     mse_per_feature=mse_per_feature
-    # )
-    # feature_wise_error_plot.savefig(
-    #     os.path.join(OUTPUT_DIR, "distribution_of_feature_wise_error.png")
-    # )
 
     best_generated_mts_index = np.argmin(total_mse_for_each_mts)
     logger.info(f"Best genereated mts index: {best_generated_mts_index}")

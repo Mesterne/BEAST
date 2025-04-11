@@ -29,6 +29,8 @@ class GenerativeModel(TimeseriesTransformationModel):
             "training_args"
         ]
         architecture: str = model_params["architecture"]
+        model_params["mts_size"] = config["dataset_args"]["mts_size"]
+        model_params["uts_size"] = config["dataset_args"]["uts_size"]
         cvae = self._select_cvae_architecture(architecture, model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
         return model
@@ -74,10 +76,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         number_of_conditions = self.config["model_args"]["feature_model_args"][
             "conditional_gen_model_args"
         ]["number_of_conditions"]
-        mts_size = self.config["model_args"]["feature_model_args"][
-            "conditional_gen_model_args"
-        ]["mts_size"]
-
+        mts_size = self.config["dataset_args"]["mts_size"]
         mts_features_array, _ = generate_feature_dataframe(
             data=mts_dataset,
             series_periodicity=self.config["stl_args"]["series_periodicity"],
@@ -137,6 +136,7 @@ class GenerativeModel(TimeseriesTransformationModel):
             X_val=X_val,
             y_val=y_val,
             plot_loss=plot_loss,
+            model_name="CVAE_generative_model",
         )
 
     @override

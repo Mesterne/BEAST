@@ -89,26 +89,3 @@ def get_transformed_uts_with_features_and_decomps(
     )
 
     return transformed_uts, transformed_uts_features, transformed_uts_decomp
-
-
-def get_feature_model_by_type(
-    model_type: str,
-    model_params: dict,
-    training_params: dict,
-) -> FeatureTransformationModel:
-    if model_type == "correlation_model":
-        return CorrelationModel(model_params)
-    elif model_type == "perfect_feature_model":
-        return PerfectFeatureModel(params=model_params)
-    elif model_type == "covariance_model":
-        return CovarianceModel(params=model_params)
-    elif model_type == "feedforward_neural_network":
-        nn = FeedForwardFeatureModel(model_params)
-        model = NeuralNetworkWrapper(nn, training_params=training_params)
-        return model
-    elif model_type == "mts_cvae":
-        cvae = MTSCVAE(model_params["conditional_gen_model_args"])
-        model = CVAEWrapper(cvae, training_params=training_params)
-        return model
-    else:
-        raise ValueError(f"Model type {model_type} not supported")
