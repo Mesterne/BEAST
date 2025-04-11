@@ -23,8 +23,10 @@ class CVAEReconstructionModel(ReconstructionModel):
     def train(
         self,
         mts_dataset,
-        X,
-        y,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
         plot_loss: bool = False,
         model_name: str = "CVAEReconstructionModel",
     ) -> None:
@@ -40,10 +42,10 @@ class CVAEReconstructionModel(ReconstructionModel):
         )
 
         self.model.train(
-            X_train=X,
-            y_train=y,
-            X_val=X,
-            y_val=y,
+            X_train=X_train,
+            y_train=y_train,
+            X_val=X_val,
+            y_val=y_val,
             plot_loss=plot_loss,
             model_name=model_name,
         )

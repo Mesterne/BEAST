@@ -5,6 +5,7 @@ import numpy as np
 from src.data_transformations.generation_of_supervised_pairs import (
     concat_delta_values_to_features,
     concat_delta_values_to_features_for_inference,
+    create_reconstruction_xy_pairs,
 )
 from src.models.feature_optimization_models.feedforward import FeedForwardFeatureModel
 from src.models.feature_optimization_models.naive_correlation import CorrelationModel
@@ -115,20 +116,30 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             validation_transformation_indices[:, 1]
         ]
 
-        delta_values = (
-            mts_features_array[train_transformation_indices[:, 1]]
-            - mts_features_array[train_transformation_indices[:, 0]]
+        (
+            self.X_reconstruction_train,
+            self.y_reconstruction_train,
+            self.X_reconstruction_validation,
+            self.y_reconstruction_validation,
+        ) = create_reconstruction_xy_pairs(
+            mts_dataset=mts_dataset,
+            mts_features_array=mts_features_array,
+            train_transformation_indices=train_transformation_indices,
+            validation_transformation_indices=validation_transformation_indices,
         )
-        X_mts = mts_dataset[train_transformation_indices[:, 0]]
-        X_mts = X_mts.reshape(-1, X_mts.shape[1] * X_mts.shape[2])
-        self.X_reconstruction = np.concatenate([X_mts, delta_values], axis=1)
-        self.y_reconstruction = mts_dataset[train_transformation_indices[:, 1]]
-        # We reshape to get shape (Number of samples, Number of samples per MTS flattened)
-        self.y_reconstruction = self.y_reconstruction.reshape(
-            -1, self.y_reconstruction.shape[1] * self.y_reconstruction.shape[2]
+        logger.info(
+            f"X_reconstruction_train shape: {self.X_reconstruction_train.shape}"
         )
-        logger.info(f"X_reconstruction shape: {self.X_reconstruction.shape}")
-        logger.info(f"y_reconstruction shape: {self.y_reconstruction.shape}")
+        logger.info(
+            f"y_reconstruction_train shape: {self.y_reconstruction_train.shape}"
+        )
+
+        logger.info(
+            f"X_reconstruction_validation shape: {self.X_reconstruction_validation.shape}"
+        )
+        logger.info(
+            f"y_reconstruction_validation shape: {self.y_reconstruction_validation.shape}"
+        )
 
         X_train, y_train = concat_delta_values_to_features(
             X_train,
@@ -167,8 +178,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         logger.info("Training reconstruction model...")
         self.reconstruction_model.train(
             mts_dataset=self.mts_dataset,
-            X=self.X_reconstruction,
-            y=self.y_reconstruction,
+            X_train=self.X_reconstruction_train,
+            y_train=self.y_reconstruction_train,
+            X_val=self.X_reconstruction_validation,
+            y_val=self.y_reconstruction_validation,
             plot_loss=True,
             model_name="ReconstructionModel",
         )

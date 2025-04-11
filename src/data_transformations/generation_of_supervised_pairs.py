@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import numpy as np
 from tqdm import tqdm
@@ -236,3 +236,40 @@ def concat_delta_values_to_features_for_inference(
         expanded_y_rows.append(y_row)
 
     return np.array(expanded_x_rows), np.array(expanded_y_rows)
+
+
+def create_reconstruction_xy_pairs(
+    mts_dataset: np.ndarray,
+    mts_features_array: np.ndarray,
+    train_transformation_indices: np.ndarray,
+    validation_transformation_indices: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    train_delta = (
+        mts_features_array[train_transformation_indices[:, 1]]
+        - mts_features_array[train_transformation_indices[:, 0]]
+    )
+    X_mts_train = mts_dataset[train_transformation_indices[:, 0]]
+    X_mts_train = X_mts_train.reshape(-1, X_mts_train.shape[1] * X_mts_train.shape[2])
+
+    X_train = np.concatenate([X_mts_train, train_delta], axis=1)
+    y_train = mts_dataset[train_transformation_indices[:, 1]]
+    # We reshape to get shape (Number of samples, Number of samples per MTS flattened)
+    y_train = y_train.reshape(-1, y_train.shape[1] * y_train.shape[2])
+
+    validation_delta = (
+        mts_features_array[validation_transformation_indices[:, 1]]
+        - mts_features_array[validation_transformation_indices[:, 0]]
+    )
+    X_mts_validation = mts_dataset[validation_transformation_indices[:, 0]]
+    X_mts_validation = X_mts_validation.reshape(
+        -1, X_mts_validation.shape[1] * X_mts_validation.shape[2]
+    )
+
+    X_validation = np.concatenate([X_mts_validation, validation_delta], axis=1)
+    y_validation = mts_dataset[validation_transformation_indices[:, 1]]
+    # We reshape to get shape (Number of samples, Number of samples per MTS flattened)
+    y_validation = y_validation.reshape(
+        -1, y_validation.shape[1] * y_validation.shape[2]
+    )
+
+    return X_train, y_train, X_validation, y_validation

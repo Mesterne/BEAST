@@ -15,8 +15,10 @@ class ReconstructionModel(ABC):
     def train(
         self,
         mts_dataset,
-        X,
-        y,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
         plot_loss: bool = False,
         model_name: str = "unnamed_reconstruction_model",
     ) -> None:

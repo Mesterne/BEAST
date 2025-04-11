@@ -30,8 +30,10 @@ class GeneticAlgorithmWrapper(ReconstructionModel):
     def train(
         self,
         mts_dataset,
-        X,
-        y,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
         plot_loss: bool = False,
         model_name: str = "genetic algrotihm",
     ) -> None:
@@ -50,7 +52,6 @@ class GeneticAlgorithmWrapper(ReconstructionModel):
         self.num_uts_in_mts = num_uts_in_mts
         self.data_set_size = len(mts_dataset)
         self.trained = True
-        pass
 
     @override
     def transform(
