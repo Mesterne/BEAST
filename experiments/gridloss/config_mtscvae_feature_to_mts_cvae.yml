@@ -5,6 +5,7 @@ dataset_args:
   test_data: test.csv
   window_size: 192
   mts_size: 576
+  uts_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -41,13 +42,14 @@ model_args:
       learning_rate: 0.005
       early_stopping_patience: 50
     conditional_gen_model_args:
-      condition_type: "feature"
+      architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
+      condition_type: "feature_delta"
       input_size_without_conditions: 12
-      mts_size: 576
-      latent_size: 64
       output_size: 12
-      number_of_conditions: 12
-      hidden_layers:
+      latent_size: 64
+      rnn_hidden_state_size:
+      number_of_conditions: 7
+      feedforward_layers:
         - [512, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]

@@ -5,6 +5,7 @@ dataset_args:
   test_data: test.csv
   window_size: 192
   mts_size: 576
+  uts_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -41,24 +42,20 @@ model_args:
       early_stopping_patience: 25
   feature_model_args:
     model_name: feature_cvae
-    input_size: 24
-    output_size: 12
-    hidden_network_sizes:
-      - 256
     training_args:
       num_epochs: 1
       batch_size: 16
       learning_rate: 0.0005
       early_stopping_patience: 25
     conditional_gen_model_args:
+      architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature_delta"
       input_size_without_conditions: 12
-      mts_size: 576
-      output_size: 576
-      latent_size: 64
       output_size: 12
+      latent_size: 64
+      rnn_hidden_state_size:
       number_of_conditions: 7
-      hidden_layers:
+      feedforward_layers:
         - [512, linear, relu]
         - [256, linear, relu]
         - [128, linear, relu]

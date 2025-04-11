@@ -3,9 +3,9 @@ dataset_args:
   directory: data/gridloss
   training_data: train.csv
   test_data: test.csv
-  window_size: 192
   mts_size: 576
   uts_size: 192
+  window_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -14,7 +14,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: false
-  test_set_sample_size: 10
+  test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
@@ -35,25 +35,37 @@ model_args:
       trend_lin_factor: [0.01, 10]
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
-    model_name: feedforward_neural_network
-    input_size: 24
-    output_size: 12
-    hidden_layers:
-      - [256, linear, relu]
+    model_name: mts_cvae
     training_args:
-      num_epochs: 1
-      batch_size: 128
-      learning_rate: 0.001
-      early_stopping_patience: 25
+      num_epochs: 20
+      batch_size: 64
+      learning_rate: 0.0001
+      early_stopping_patience: 50
+    conditional_gen_model_args:
+      architecture: "rnn" # rnn, feedforward, rnn_enc_dec, convolution, attention
+      condition_type: "feature_delta"
+      input_size_without_conditions: 576
+      mts_size: 576
+      output_size: 12
+      latent_size: 64
+      rnn_hidden_state_size: 256
+      number_of_conditions: 12
+      feedforward_layers:
+        - [512, relu]
+        - [512, relu]
+        - [256, relu]
+        - [256, relu]
+        - [128, relu]
   forecasting_model_args:
     window_size: 168
     network_size:
+      - 100
       - 100
     horizon_length: 24
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     training_args:
-      num_epochs: 1
+      num_epochs: 50
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
