@@ -39,12 +39,12 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 100
+      num_epochs: 20
       batch_size: 64
       learning_rate: 0.0001
       early_stopping_patience: 50
     conditional_gen_model_args:
-      architecture: "rnn"
+      architecture: "rnn" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature_delta"
       input_size_without_conditions: 576
       mts_size: 576
