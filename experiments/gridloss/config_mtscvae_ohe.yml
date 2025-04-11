@@ -49,12 +49,12 @@ model_args:
       latent_size: 64
       rnn_hidden_state_size:
       number_of_conditions: 3
-      hidden_layers:
-        - [512, linear, relu]
-        - [512, linear, relu]
-        - [256, linear, relu]
-        - [256, linear, relu]
-        - [128, linear, relu]
+      feedforward_layers:
+        - [512, relu]
+        - [512, relu]
+        - [256, relu]
+        - [256, relu]
+        - [128, relu]
   forecasting_model_args:
     window_size: 168
     network_size:
