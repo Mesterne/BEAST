@@ -161,7 +161,7 @@ class CVAEWrapper(FeatureTransformationModel):
         # If the model is feature based, it takes the features as conditions and in inference,
         # samples the distribution, with feature conditions. To generate mts
         if self.model.condition_type == "feature":
-            input_features = X[:, self.model.mts_size :]
+            input_features = X[:, self.model.input_size_without_conditions :]
             # Run generate_mts for each row in X
             generated_mts: np.ndarray = self.model.generate_mts(input_features)
         # Other models take the entire MTS and conditions to generate new MTS
