@@ -18,6 +18,7 @@ class CorrelationModel(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         plot_loss=False,
+        model_name="",
     ) -> Tuple[List[float], List[float]]:
         # The actual features (Omitting the delta values)
         features = X_train[

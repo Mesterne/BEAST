@@ -17,6 +17,7 @@ class PerfectFeatureModel(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         plot_loss=False,
+        model_name="",
     ) -> Tuple[List[float], List[float]]:
         self.validation_targets = y_val
         return [], []
