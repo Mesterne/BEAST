@@ -51,7 +51,7 @@ model_args:
       latent_size: 64
       number_of_conditions: 12
       rnn_hidden_state_size:
-      hidden_layers:
+      feedforward_layers:
         - [512, linear, relu]
         - [512, linear, relu]
         - [256, linear, relu]
