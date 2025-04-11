@@ -84,16 +84,6 @@ class CVAEWrapper(FeatureTransformationModel):
                 optimizer.zero_grad()
                 outputs, latent_means, latent_logvars = self.model(inputs)
 
-                assert not np.isnan(
-                    outputs.detach().cpu().numpy()
-                ).any(), "outputs is nan"
-                assert not np.isnan(
-                    latent_means.detach().cpu().numpy()
-                ).any(), "latent_means is nan"
-                assert not np.isnan(
-                    latent_logvars.detach().cpu().numpy()
-                ).any(), "latent_logvars is nan"
-
                 loss = loss_function(outputs, targets, latent_means, latent_logvars)
                 loss_kl_divergence = self.KL_divergence(latent_means, latent_logvars)
                 loss_reconstruction = self.reconstruction_loss(
@@ -102,7 +92,6 @@ class CVAEWrapper(FeatureTransformationModel):
                 loss.backward()
 
                 optimizer.step()
-                assert not np.isnan(running_loss), "running loss is nan"
                 running_loss += loss.item() * inputs.size(0)
                 running_loss_kl_divergence += loss_kl_divergence.item() * inputs.size(0)
                 running_loss_reconstruction += loss_reconstruction.item() * inputs.size(
@@ -120,6 +109,9 @@ class CVAEWrapper(FeatureTransformationModel):
             train_loss_history_kl_divergence.append(epoch_loss_kl_divergence)
             train_loss_history_reconstruction.append(epoch_loss_reconstruction)
 
+            assert not np.isnan(
+                train_loss_history
+            ), "Loss history contains nan. This can indicate exploding or vanishing gradients. Control the outputs of your loss functions. Adjust learning rate"
             # NOTE: Evaluates reconstruction
             self.model.eval()
             running_val_loss = 0.0
