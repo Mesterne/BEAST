@@ -6,7 +6,6 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-import wandb
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.plots.plot_training_and_validation_loss import (
     plot_training_and_validation_loss,
@@ -29,6 +28,7 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         plot_loss=False,
+        model_name="unnamed",
     ) -> Tuple[List[float], List[float]]:
         """
         Trains a PyTorch model using L1 loss and the Adam optimizer.
@@ -111,13 +111,16 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
                 if patience_counter >= self.early_stopping_patience:
                     logger.info(f"Early stopping triggered for epoch {epoch}.")
                     break
-            if plot_loss:
-                plot_training_and_validation_loss(
-                    training_loss=train_loss_history,
-                    validation_loss=validation_loss_history,
-                )
 
         self.model.load_state_dict(best_model_weigths)
+
+        if plot_loss:
+            print(f"MODEL NAME: {model_name}")
+            plot_training_and_validation_loss(
+                training_loss=train_loss_history,
+                validation_loss=validation_loss_history,
+                model_name=model_name,
+            )
 
         return train_loss_history, validation_loss_history
 

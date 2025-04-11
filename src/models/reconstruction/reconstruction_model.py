@@ -12,7 +12,14 @@ class ReconstructionModel(ABC):
         pass
 
     @abstractmethod
-    def train(self, mts_dataset, X, y) -> None:
+    def train(
+        self,
+        mts_dataset,
+        X,
+        y,
+        plot_loss: bool = False,
+        model_name: str = "unnamed_reconstruction_model",
+    ) -> None:
         pass
 
     @abstractmethod

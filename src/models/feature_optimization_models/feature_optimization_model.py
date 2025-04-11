@@ -42,16 +42,21 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         training_params: Dict[str, Any] = feature_model_params["training_args"]
         model_type: str = feature_model_params["model_name"]
         if model_type == "correlation_model":
+            logger.info("Using correlation feature model")
             return CorrelationModel(feature_model_params)
         elif model_type == "perfect_feature_model":
+            logger.info("Using perfect feature model")
             return PerfectFeatureModel(params=feature_model_params)
         elif model_type == "covariance_model":
+            logger.info("Using covariance feature model")
             return CovarianceModel(params=feature_model_params)
         elif model_type == "feedforward_neural_network":
+            logger.info("Using feedforward_neural_network feature model")
             nn = FeedForwardFeatureModel(feature_model_params)
             model = NeuralNetworkWrapper(nn, training_params=training_params)
             return model
         elif model_type == "feature_cvae":
+            logger.info("Using feature_cvae feature model")
             cvae_params = feature_model_params["conditional_gen_model_args"]
             cvae = MTSCVAE(model_params=cvae_params)
             model = CVAEWrapper(cvae, training_params=training_params)
@@ -65,12 +70,15 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         reconstruction_model_params: Dict[str, Any] = self.config["model_args"][
             "reconstruction_model_args"
         ]
+        reconstruction_model_params["mts_size"] = self.config["dataset_args"][
+            "mts_size"
+        ]
 
         model_type: str = reconstruction_model_params["model_type"]
 
         if model_type == "cvae":
             model = CVAEReconstructionModel(
-                model_params=self.config["model_args"]["reconstruction_model_args"],
+                model_params=reconstruction_model_params,
                 config=self.config,
             )
             return model
@@ -120,6 +128,7 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             -1, self.y_reconstruction.shape[1] * self.y_reconstruction.shape[2]
         )
         logger.info(f"X_reconstruction shape: {self.X_reconstruction.shape}")
+        print(np.isnan(self.X_reconstruction).any())
         logger.info(f"y_reconstruction shape: {self.y_reconstruction.shape}")
 
         X_train, y_train = concat_delta_values_to_features(
@@ -145,17 +154,24 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-        log_to_wandb=False,
+        plot_loss: bool = True,
     ) -> Tuple[List[float], List[float]]:
         logger.info("Training feature model...")
         self.feature_model.train(
-            X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val
+            X_train=X_train,
+            y_train=y_train,
+            X_val=X_val,
+            y_val=y_val,
+            plot_loss=True,
+            model_name="FeatureModel",
         )
         logger.info("Training reconstruction model...")
         self.reconstruction_model.train(
             mts_dataset=self.mts_dataset,
             X=self.X_reconstruction,
             y=self.y_reconstruction,
+            plot_loss=True,
+            model_name="ReconstructionModel",
         )
 
     @override

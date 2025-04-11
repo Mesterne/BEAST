@@ -11,6 +11,7 @@ from src.utils.features import decomp_and_features
 class CVAEReconstructionModel(ReconstructionModel):
     @override
     def __init__(self, model_params: dict, config: dict) -> None:
+        print(model_params)
         self.cvae = MTSCVAE(model_params=model_params)
         self.model = CVAEWrapper(
             model=self.cvae, training_params=model_params["training_args"]
@@ -19,7 +20,14 @@ class CVAEReconstructionModel(ReconstructionModel):
         pass
 
     @override
-    def train(self, mts_dataset, X, y) -> None:
+    def train(
+        self,
+        mts_dataset,
+        X,
+        y,
+        plot_loss: bool = False,
+        model_name: str = "CVAEReconstructionModel",
+    ) -> None:
         num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
         seasonal_period: int = self.config["stl_args"]["series_periodicity"]
 
@@ -30,7 +38,15 @@ class CVAEReconstructionModel(ReconstructionModel):
             series_periodicity=seasonal_period,
             decomps_only=False,
         )
-        self.model.train(X_train=X, y_train=y, X_val=X, y_val=y, plot_loss=False)
+
+        self.model.train(
+            X_train=X,
+            y_train=y,
+            X_val=X,
+            y_val=y,
+            plot_loss=plot_loss,
+            model_name=model_name,
+        )
 
     @override
     def transform(

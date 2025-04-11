@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -121,7 +121,7 @@ class Encoder(nn.Module):
         input_size_without_conditions: int,
         number_of_conditions: int,
         latent_size: int,
-        hidden_layers: dict,
+        hidden_layers: List,
     ) -> None:
         super(Encoder, self).__init__()
         self.input_size_without_conditions = input_size_without_conditions
@@ -178,6 +178,12 @@ class Encoder(nn.Module):
             feature_info.shape[1] == self.number_of_conditions
         ), f"Feature size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
+        weight = self.input_layer[0].weight
+        bias = self.input_layer[0].bias
+
+        assert not torch.isnan(weight).any(), "Detected nan weight value"
+        assert not torch.isnan(bias).any(), "Detected nan bias value"
+
         input = cat((mts, feature_info), dim=1)
         hidden_layer_input = self.input_layer(input)
         for i in range(len(self.hidden_layers)):
@@ -187,6 +193,7 @@ class Encoder(nn.Module):
                 encoded_input = self.hidden_layers[i](encoded_input)
         latent_mean: Tensor = self.mean(encoded_input)
         latent_log_var: Tensor = self.log_var(encoded_input)
+
         return latent_mean, latent_log_var
 
 

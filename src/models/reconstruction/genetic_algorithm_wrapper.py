@@ -27,7 +27,14 @@ class GeneticAlgorithmWrapper(ReconstructionModel):
         self.trained = False
 
     @override
-    def train(self, mts_dataset, X, y) -> None:
+    def train(
+        self,
+        mts_dataset,
+        X,
+        y,
+        plot_loss: bool = False,
+        model_name: str = "genetic algrotihm",
+    ) -> None:
         num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
         seasonal_period: int = self.config["stl_args"]["series_periodicity"]
