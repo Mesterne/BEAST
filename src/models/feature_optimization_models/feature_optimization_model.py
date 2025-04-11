@@ -128,7 +128,6 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             -1, self.y_reconstruction.shape[1] * self.y_reconstruction.shape[2]
         )
         logger.info(f"X_reconstruction shape: {self.X_reconstruction.shape}")
-        print(np.isnan(self.X_reconstruction).any())
         logger.info(f"y_reconstruction shape: {self.y_reconstruction.shape}")
 
         X_train, y_train = concat_delta_values_to_features(

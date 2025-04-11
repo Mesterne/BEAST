@@ -29,17 +29,17 @@ model_args:
       - [512, linear, relu]
       - [256, linear, relu]
     training_args:
-      num_epochs: 5
+      num_epochs: 200
       batch_size: 128
-      learning_rate: 0.005
-      early_stopping_patience: 25
+      learning_rate: 0.0001
+      early_stopping_patience: 50
   feature_model_args:
     model_name: feature_cvae
     training_args:
-      num_epochs: 1
+      num_epochs: 200
       batch_size: 256
       learning_rate: 0.005
-      early_stopping_patience: 25
+      early_stopping_patience: 50
     conditional_gen_model_args:
       condition_type: "feature"
       input_size_without_conditions: 12

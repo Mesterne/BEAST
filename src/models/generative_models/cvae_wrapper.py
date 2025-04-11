@@ -83,13 +83,26 @@ class CVAEWrapper(FeatureTransformationModel):
             for inputs, targets in train_dataloader:
                 optimizer.zero_grad()
                 outputs, latent_means, latent_logvars = self.model(inputs)
+
+                assert not np.isnan(
+                    outputs.detach().cpu().numpy()
+                ).any(), "outputs is nan"
+                assert not np.isnan(
+                    latent_means.detach().cpu().numpy()
+                ).any(), "latent_means is nan"
+                assert not np.isnan(
+                    latent_logvars.detach().cpu().numpy()
+                ).any(), "latent_logvars is nan"
+
                 loss = loss_function(outputs, targets, latent_means, latent_logvars)
                 loss_kl_divergence = self.KL_divergence(latent_means, latent_logvars)
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
                 )
                 loss.backward()
+
                 optimizer.step()
+                assert not np.isnan(running_loss), "running loss is nan"
                 running_loss += loss.item() * inputs.size(0)
                 running_loss_kl_divergence += loss_kl_divergence.item() * inputs.size(0)
                 running_loss_reconstruction += loss_reconstruction.item() * inputs.size(
@@ -138,6 +151,12 @@ class CVAEWrapper(FeatureTransformationModel):
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,
+                model_name=model_name,
+            )
+            plot_detailed_training_loss(
+                training_loss=train_loss_history,
+                training_loss_kl_divergence=train_loss_history_kl_divergence,
+                train_loss_reconstruction=train_loss_history_reconstruction,
                 model_name=model_name,
             )
 
