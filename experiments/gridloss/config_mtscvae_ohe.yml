@@ -46,6 +46,7 @@ model_args:
       architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "ohe"
       input_size_without_conditions: 192
+      output_size: 576
       latent_size: 64
       rnn_hidden_state_size:
       number_of_conditions: 3
