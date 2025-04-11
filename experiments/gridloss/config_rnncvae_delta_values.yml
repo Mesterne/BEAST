@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train_small.csv
+  training_data: train.csv
   test_data: test.csv
   window_size: 192
   step_size: 24
@@ -39,13 +39,13 @@ model_args:
     hidden_network_sizes:
       - 256
     training_args:
-      num_epochs: 1
-      batch_size: 16
+      num_epochs: 20
+      batch_size: 64
       learning_rate: 0.0001
       early_stopping_patience: 50
     conditional_gen_model_args:
+      architecture: "rnn" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature_delta"
-      architecture: "feedforward"
       input_size_without_conditions: 576
       mts_size: 576
       uts_size: 192
