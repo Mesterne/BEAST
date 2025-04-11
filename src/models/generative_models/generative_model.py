@@ -28,6 +28,8 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
+        model_params["mts_size"] = config["dataset_args"]["mts_size"]
+        model_params["uts_size"] = config["dataset_args"]["uts_size"]
         architecture: str = model_params["architecture"]
         cvae = self._select_cvae_architecture(architecture, model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
@@ -39,6 +41,8 @@ class GenerativeModel(TimeseriesTransformationModel):
         """
         Return CVAE with desired encoder-decoder architecture.
         """
+        # TODO: Only relevant selection here is rnn_end_dec or other, even this may be removed in the future.
+        # The selection is handled within the MTSCVAE class.
         if architecture == "feedforward":
             return MTSCVAE(model_params=model_params)
         if architecture == "rnn":

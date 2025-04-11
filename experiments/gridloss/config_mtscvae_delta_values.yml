@@ -4,6 +4,8 @@ dataset_args:
   training_data: train_small.csv
   test_data: test.csv
   window_size: 192
+  mts_size: 576
+  uts_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -47,8 +49,6 @@ model_args:
       condition_type: "feature_delta"
       architecture: "feedforward"
       input_size_without_conditions: 576
-      mts_size: 576
-      uts_size: 192
       latent_size: 64
       rnn_hidden_state_size: 256
       number_of_conditions: 12
