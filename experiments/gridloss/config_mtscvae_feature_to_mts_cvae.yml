@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train_small.csv
+  training_data: train.csv
   test_data: test.csv
   window_size: 192
   mts_size: 576
@@ -13,7 +13,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: false
-  test_set_sample_size: 3
+  test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
@@ -30,14 +30,14 @@ model_args:
       - [256, linear, relu]
     training_args:
       num_epochs: 200
-      batch_size: 128
+      batch_size: 16
       learning_rate: 0.0001
       early_stopping_patience: 50
   feature_model_args:
     model_name: feature_cvae
     training_args:
       num_epochs: 200
-      batch_size: 256
+      batch_size: 16
       learning_rate: 0.005
       early_stopping_patience: 50
     conditional_gen_model_args:
