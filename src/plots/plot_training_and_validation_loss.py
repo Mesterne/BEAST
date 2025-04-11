@@ -27,7 +27,6 @@ def plot_training_and_validation_loss(
     logger.info(
         f"Plotting train/validation loss for model: {model_name}, for {len(epochs)} epochs"
     )
-    print(data)
 
     plt.figure(figsize=(10, 6))
     sns.lineplot(data=data, x="Epoch", y="Loss", hue="Type")

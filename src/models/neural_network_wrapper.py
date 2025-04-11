@@ -115,7 +115,6 @@ class NeuralNetworkWrapper(FeatureTransformationModel):
         self.model.load_state_dict(best_model_weigths)
 
         if plot_loss:
-            print(f"MODEL NAME: {model_name}")
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,

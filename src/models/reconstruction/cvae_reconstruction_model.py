@@ -11,7 +11,6 @@ from src.utils.features import decomp_and_features
 class CVAEReconstructionModel(ReconstructionModel):
     @override
     def __init__(self, model_params: dict, config: dict) -> None:
-        print(model_params)
         self.cvae = MTSCVAE(model_params=model_params)
         self.model = CVAEWrapper(
             model=self.cvae, training_params=model_params["training_args"]
