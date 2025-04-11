@@ -111,7 +111,7 @@ class CVAEWrapper(FeatureTransformationModel):
 
             assert not np.isnan(
                 train_loss_history
-            ), "Loss history contains nan. This can indicate exploding or vanishing gradients. Control the outputs of your loss functions. Adjust learning rate"
+            ).any(), "Loss history contains nan. This can indicate exploding or vanishing gradients. Control the outputs of your loss functions. Adjust learning rate"
             # NOTE: Evaluates reconstruction
             self.model.eval()
             running_val_loss = 0.0
