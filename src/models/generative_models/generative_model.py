@@ -3,6 +3,7 @@ from typing import Dict, override
 import numpy as np
 from torch import nn
 
+from data.constants import NETWORK_ARCHITECTURES
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import (
     CVAEWrapper,
@@ -41,21 +42,13 @@ class GenerativeModel(TimeseriesTransformationModel):
         """
         Return CVAE with desired encoder-decoder architecture.
         """
-        # TODO: Only relevant selection here is rnn_end_dec or other, even this may be removed in the future.
-        # The selection is handled within the MTSCVAE class.
-        if architecture == "feedforward":
-            return MTSCVAE(model_params=model_params)
-        if architecture == "rnn":
-            return MTSCVAE(model_params=model_params)
-        if architecture == "rnn_enc_dec":
-            return RNNCVAE(model_params=model_params)
-        if architecture == "convolutional":
-            raise NotImplementedError(
-                "Convolutional architecture is not implemented yet."
+        if architecture not in NETWORK_ARCHITECTURES:
+            raise ValueError(
+                f"Unknown architecture: {architecture}. Supported architectures are: {NETWORK_ARCHITECTURES}"
             )
-        if architecture == "attention":
-            raise NotImplementedError("Attention architecture is not implemented yet.")
-        raise ValueError(f"Unknown architecture: {architecture}")
+        if architecture == NETWORK_ARCHITECTURES[2]:
+            return RNNCVAE(model_params=model_params)
+        return MTSCVAE(model_params=model_params)
 
     @override
     def create_training_data(

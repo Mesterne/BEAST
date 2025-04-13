@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch import Tensor, cat, exp, nn, randn, randn_like
 
+from data.constants import NETWORK_ARCHITECTURES
 from src.utils.logging_config import logger
 
 
@@ -36,6 +37,7 @@ class MTSCVAE(nn.Module):
             self.uts_size,
             model_params["architecture"],
             model_params["rnn_hidden_state_size"],
+            model_params["convolutional_layers"],
         )
         self.decoder = Decoder(
             self.mts_size,
@@ -123,6 +125,7 @@ class Encoder(nn.Module):
         uts_size: int,
         architecture: str,
         rnn_hidden_state_size: int,
+        convolutional_layers: list,
     ) -> None:
         super(Encoder, self).__init__()
         self.mts_size = mts_size
@@ -132,6 +135,7 @@ class Encoder(nn.Module):
         self.latent_size = latent_size
         self.architecture = architecture
         self.rnn_hidden_state_size = rnn_hidden_state_size
+        self.convolutional_layers_list = convolutional_layers
         self.feedforward_layers_list = feedforward_layers
         final_hidden_layer_size = int(feedforward_layers[-1][0])
 
@@ -139,9 +143,7 @@ class Encoder(nn.Module):
         self.generate_feedforward_layers()
 
         self.combination_layer_input_size = (
-            self.mts_size + self.number_of_conditions
-            if architecture == "feedforward"
-            else self.rnn_hidden_state_size + self.number_of_conditions
+            self.determine_combination_layer_input_size()
         )
 
         self.input_condition_combination_layer = nn.Sequential(
@@ -167,26 +169,64 @@ class Encoder(nn.Module):
             #     nn.ReLU(),
             # )
             pass
-        if self.architecture == "rnn":
+        if self.architecture == NETWORK_ARCHITECTURES[1]:
             logger.info("Building encoder with LSTM input layer")
             self.generate_lstm_layer(
                 input_size=self.num_uts,
                 hidden_size=self.rnn_hidden_state_size,
             )
-        if self.architecture == "cnn":
+        if self.architecture == NETWORK_ARCHITECTURES[3]:
             logger.info("Building encoder with CNN input layer")
-            self.generate_cnn_layer()
-        if self.architecture == "attention":
+            self.generate_cnn_layer(conv_layer_list=self.convolutional_layers_list)
+        if self.architecture == NETWORK_ARCHITECTURES[4]:
             logger.info("Building encoder with attention input layer")
             self.generate_attention_layer()
+
+    def determine_combination_layer_input_size(self) -> int:
+        """Determine the input size of the combination layer based on the architecture."""
+        if self.architecture == NETWORK_ARCHITECTURES[0]:
+            return self.mts_size + self.number_of_conditions
+        if self.architecture == NETWORK_ARCHITECTURES[1]:
+            return self.rnn_hidden_state_size + self.number_of_conditions
+        if self.architecture == NETWORK_ARCHITECTURES[3]:
+            conv_output_length = self.calc_conv_out_len(self.convolutional_layers_list)
+            conv_output_channels = self.convolutional_layers_list[-1][1]
+            conv_output_size = conv_output_length * conv_output_channels
+            return conv_output_size + self.number_of_conditions
+        if self.architecture == NETWORK_ARCHITECTURES[4]:
+            raise NotImplementedError("Attention layer is not implemented yet")
 
     def generate_lstm_layer(self, input_size: int, hidden_size: int) -> None:
         self.input_layer = nn.LSTM(
             input_size=input_size, hidden_size=hidden_size, batch_first=True
         )
 
-    def generate_cnn_layer():
-        NotImplementedError("CNN layer is not implemented yet")
+    def generate_cnn_layer(self, conv_layer_list: list):
+        """Generate CNN layer based on the given list of convolutional layers.
+        Based on the temporal convolutional network (TCN) paper by Bai et al. (2018).
+        The paper proposes a CNN with causal dilated convolutions.
+        This helps to capture long-term dependencies in the time series.
+        """
+        self.input_layer = nn.Sequential()
+        # TODO: Consider pooling
+        for i in range(len(conv_layer_list)):
+            in_channels = conv_layer_list[i][0]
+            out_channels = conv_layer_list[i][1]
+            kernel_size = conv_layer_list[i][2]
+            stride = conv_layer_list[i][3]
+            padding = kernel_size - 1  # For causal convolutions
+            dilation = 2**i  # For dilated convolutions
+            self.input_layer.append(
+                nn.Conv1d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                    dilation=dilation,
+                )
+            )
+            self.input_layer.append(nn.ReLU())
 
     def generate_attention_layer():
         NotImplementedError("Attention layer is not implemented yet")
@@ -213,12 +253,36 @@ class Encoder(nn.Module):
                     f"Unknown hidden layer activation: {layer_activations[i]}"
                 )
 
+    def calc_conv_out_len(self, conv_layer_list: list) -> int:
+        """
+        Calculate the output length of the convolutional layer.
+        Using the formula: L_out = floor([(L_in + 2*padding - dilation*[kernel_size -1] - 1) / stride] + 1)
+        The formula is applied iteratively through all layers to find the final output length.
+        The formula is taken from torch Conv1d documentation:
+        https://pytorch.org/docs/stable/generated/torch.nn.Conv1d.html#torch.nn.Conv1d
+        """
+        kernel_size = conv_layer_list[0][2]  # Constant for all layers
+        stride = conv_layer_list[0][3]  # Constant for all layers
+        padding = kernel_size - 1  # For causal convolutions
+
+        length = self.uts_size
+        for i in range(len(conv_layer_list)):
+            dilation = 2**i
+            length = (
+                (length + (2 * padding) - (dilation * (kernel_size - 1)) - 1) / stride
+            ) + 1
+            length = np.floor(length).astype(int)
+        return length
+
     def format_input(self, input: np.ndarray) -> Tensor:
-        if self.architecture == "feedforward":
+        if self.architecture == NETWORK_ARCHITECTURES[0]:
             return input
-        if self.architecture == "rnn":
+        if self.architecture == NETWORK_ARCHITECTURES[1]:
             # Reshape input to (batch_size, seq_len, input_size)
             return input.reshape(input.shape[0], self.uts_size, self.num_uts)
+        if self.architecture == NETWORK_ARCHITECTURES[3]:
+            # Reshape input to (batch_size, num_channels (uts), input_size)
+            return input.reshape(input.shape[0], self.num_uts, self.uts_size)
 
     def forward(
         self, mts: np.ndarray, feature_info: np.ndarray
@@ -234,13 +298,19 @@ class Encoder(nn.Module):
 
         input = self.format_input(mts)
 
-        if self.architecture == "rnn":
+        if self.architecture == NETWORK_ARCHITECTURES[1]:
             lstm_out, _ = self.input_layer(input)
             lstm_out_final_hidden_state = lstm_out[:, -1, :]
             combination_layer_input = cat(
                 (lstm_out_final_hidden_state, feature_info), dim=1
             )
-        if self.architecture == "feedforward":
+        if self.architecture == NETWORK_ARCHITECTURES[3]:
+            conv_out = self.input_layer(input)
+            conv_out_flattened = conv_out.view(
+                conv_out.shape[0], conv_out.shape[1] * conv_out.shape[2]
+            )
+            combination_layer_input = cat((conv_out_flattened, feature_info), dim=1)
+        if self.architecture == NETWORK_ARCHITECTURES[0]:
             combination_layer_input = cat((mts, feature_info), dim=1)
 
         feedforward_input = self.input_condition_combination_layer(

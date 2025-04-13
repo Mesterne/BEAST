@@ -29,3 +29,11 @@ UTS_NAMES = [
 ]
 
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "")
+
+NETWORK_ARCHITECTURES = [
+    "feedforward",
+    "rnn",
+    "rnn_enc_dec",
+    "convolution",
+    "attention",
+]
