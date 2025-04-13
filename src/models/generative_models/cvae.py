@@ -38,6 +38,7 @@ class MTSCVAE(nn.Module):
             model_params["architecture"],
             model_params["rnn_hidden_state_size"],
             model_params["convolutional_layers"],
+            model_params["transformer_args"],
         )
         self.decoder = Decoder(
             self.mts_size,
@@ -126,6 +127,7 @@ class Encoder(nn.Module):
         architecture: str,
         rnn_hidden_state_size: int,
         convolutional_layers: list,
+        transformer_args: dict,
     ) -> None:
         super(Encoder, self).__init__()
         self.mts_size = mts_size
@@ -136,6 +138,7 @@ class Encoder(nn.Module):
         self.architecture = architecture
         self.rnn_hidden_state_size = rnn_hidden_state_size
         self.convolutional_layers_list = convolutional_layers
+        self.transformer_args = transformer_args
         self.feedforward_layers_list = feedforward_layers
         final_hidden_layer_size = int(feedforward_layers[-1][0])
 
@@ -181,6 +184,9 @@ class Encoder(nn.Module):
         if self.architecture == NETWORK_ARCHITECTURES[4]:
             logger.info("Building encoder with attention input layer")
             self.generate_attention_layer()
+        if self.architecture == NETWORK_ARCHITECTURES[5]:
+            logger.info("Building encoder with transformer input layer")
+            self.generate_transformer_layer(transformer_args=self.transformer_args)
 
     def determine_combination_layer_input_size(self) -> int:
         """Determine the input size of the combination layer based on the architecture."""
@@ -195,6 +201,15 @@ class Encoder(nn.Module):
             return conv_output_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[4]:
             raise NotImplementedError("Attention layer is not implemented yet")
+        if self.architecture == NETWORK_ARCHITECTURES[5]:
+            # FIXME: This seems to be the formula, but i am not sure why we multiply by 3 and divide by 4
+            transformer_encoder_output_length = (
+                self.transformer_args["dim_feedforward"]
+                * 3
+                * self.transformer_args["dim_model"]
+                // 4
+            )
+            return transformer_encoder_output_length + self.number_of_conditions
 
     def generate_lstm_layer(self, input_size: int, hidden_size: int) -> None:
         self.input_layer = nn.LSTM(
@@ -228,8 +243,30 @@ class Encoder(nn.Module):
             )
             self.input_layer.append(nn.ReLU())
 
-    def generate_attention_layer():
-        NotImplementedError("Attention layer is not implemented yet")
+    def generate_attention_layer(self) -> None:
+        pass
+
+    def generate_transformer_layer(self, transformer_args: dict) -> None:
+        """
+        Generate attention layer based on the given transformer arguments.
+        Using the transformer encoder layer from PyTorch, which is based on the paper by Vaswani et al. (2017).
+        The transformer encoder layer is a multi-head self-attention layer with a feedforward network.
+        The transformer encoder is a stack of N layers.
+        """
+        self.transformer_layer = nn.TransformerEncoderLayer(
+            d_model=transformer_args["dim_model"],
+            nhead=transformer_args["num_heads"],
+            dim_feedforward=transformer_args["dim_feedforward"],
+            dropout=transformer_args["dropout_rate"],
+            activation=transformer_args["activation"],
+            batch_first=True,
+        )
+        self.input_layer = nn.TransformerEncoder(
+            self.transformer_layer, num_layers=transformer_args["num_layers"]
+        )
+        self.embedding_layer = nn.Linear(
+            self.num_uts, self.transformer_args["dim_model"]
+        )
 
     def generate_feedforward_layers(self):
         layer_sizes = np.asarray(self.feedforward_layers_list)[:, 0].astype(int)
@@ -283,6 +320,28 @@ class Encoder(nn.Module):
         if self.architecture == NETWORK_ARCHITECTURES[3]:
             # Reshape input to (batch_size, num_channels (uts), input_size)
             return input.reshape(input.shape[0], self.num_uts, self.uts_size)
+        if self.architecture == NETWORK_ARCHITECTURES[5]:
+            # Reshape input to (batch_size, seq_len, input_size)
+            return input.reshape(input.shape[0], self.uts_size, self.num_uts)
+
+    def positional_encoding(self) -> Tensor:
+        """
+        Add positional encoding to the input.
+        The positional encoding is added to the input layer to give the model a sense of order.
+        The positional encoding is based on the paper by Vaswani et al. (2017).
+        The positional encoding is added to the input layer to give the model a sense of order.
+        """
+        dim_model = self.transformer_args["dim_model"]
+        max_len = self.uts_size
+        positional_encoding_matrix = torch.zeros(max_len, dim_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, dim_model, 2).float() * -(np.log(10000.0) / dim_model)
+        )
+        positional_encoding_matrix[:, 0::2] = torch.sin(position * div_term)
+        positional_encoding_matrix[:, 1::2] = torch.cos(position * div_term)
+        positional_encoding_matrix = positional_encoding_matrix.unsqueeze(0)
+        return positional_encoding_matrix
 
     def forward(
         self, mts: np.ndarray, feature_info: np.ndarray
@@ -310,6 +369,19 @@ class Encoder(nn.Module):
                 conv_out.shape[0], conv_out.shape[1] * conv_out.shape[2]
             )
             combination_layer_input = cat((conv_out_flattened, feature_info), dim=1)
+        if self.architecture == NETWORK_ARCHITECTURES[5]:
+            input_embedding = self.embedding_layer(input)
+            positional_encoded_input_embedding = (
+                input_embedding + self.positional_encoding()
+            )
+            transformer_out = self.input_layer(positional_encoded_input_embedding)
+            transformer_out_flattened = transformer_out.view(
+                transformer_out.shape[0],
+                transformer_out.shape[1] * transformer_out.shape[2],
+            )
+            combination_layer_input = cat(
+                (transformer_out_flattened, feature_info), dim=1
+            )
         if self.architecture == NETWORK_ARCHITECTURES[0]:
             combination_layer_input = cat((mts, feature_info), dim=1)
 

@@ -36,4 +36,5 @@ NETWORK_ARCHITECTURES = [
     "rnn_enc_dec",
     "convolution",
     "attention",
+    "transformer",
 ]
