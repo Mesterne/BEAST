@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/feedforward/ffnn_delta.yml'
+python src/main.py 'experiments/gridloss/cvae/feedforward/ffnn_delta.yml'
