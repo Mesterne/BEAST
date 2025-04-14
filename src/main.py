@@ -20,9 +20,10 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
+from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
-)  # noqa: E402
+)
+from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
 from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
@@ -91,6 +92,7 @@ logger.info("Successfully generated feature dataframe")
     config=config,
 )
 
+
 logger.info(
     f"""Transformation indices shapes:
     Train: {train_transformation_indices.shape}
@@ -112,6 +114,17 @@ config["model_args"]["feature_model_args"]["input_size"] += (
     if config["dataset_args"]["use_one_hot_encoding"]
     else config["dataset_args"]["num_features_per_uts"] * num_uts_in_mts
 )
+
+# FIXME: Need to add inverse transform when data is plotted? Or maybe not? We never really care about the original scale of the data.
+if config["is_conditional_gen_model"]:
+    logger.info("Scaling data for conditional generation model (CVAE)...")
+    scaled_mts_dataset_array, uts_scalers = scale_mts_dataset(
+        mts_dataset_array,
+        train_transformation_indices,
+        validation_transformation_indices,
+        test_transformation_indices,
+    )
+    mts_dataset_array = scaled_mts_dataset_array
 
 model_handler = ModelHandler(config)
 model_handler.choose_model_category()
