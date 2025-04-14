@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train_extra_small.csv # CHANGED
+  training_data: train.csv # CHANGED
   test_data: test.csv
   window_size: 192
   mts_size: 576
@@ -14,7 +14,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: true
-  test_set_sample_size: 20 # CHANGED
+  test_set_sample_size: 500 # CHANGED
 stl_args:
   series_periodicity: 24
 model_args:
