@@ -331,13 +331,14 @@ class Encoder(nn.Module):
         The positional encoding is based on the paper by Vaswani et al. (2017).
         The positional encoding is added to the input layer to give the model a sense of order.
         """
-        dim_model = self.transformer_args["dim_model"]
-        max_len = self.uts_size
-        positional_encoding_matrix = torch.zeros(max_len, dim_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dim_model = self.transformer_args["dim_model"].to(device)
+        max_len = self.uts_size.to(device)
+        positional_encoding_matrix = torch.zeros(max_len, dim_model).to(device)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1).to(device)
         div_term = torch.exp(
             torch.arange(0, dim_model, 2).float() * -(np.log(10000.0) / dim_model)
-        )
+        ).to(device)
         positional_encoding_matrix[:, 0::2] = torch.sin(position * div_term)
         positional_encoding_matrix[:, 1::2] = torch.cos(position * div_term)
         positional_encoding_matrix = positional_encoding_matrix.unsqueeze(0)
