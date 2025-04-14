@@ -56,6 +56,13 @@ model_args:
         - [8, 16, 5, 1]
         - [16, 32, 5, 1]
         - [32, 64, 5, 1]
+      transformer_args:
+        num_heads: 1
+        num_layers: 2
+        dim_model: 8
+        dim_feedforward: 256
+        dropout_rate: 0.1
+        activation: "relu"
       number_of_conditions: 12
       feedforward_layers:
         - [512, relu]

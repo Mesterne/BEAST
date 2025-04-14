@@ -48,6 +48,19 @@ model_args:
       input_size_without_conditions: 576
       mts_size: 576
       latent_size: 64
+      rnn_hidden_state_size: None
+      convolutional_layers:
+        - [3, 8, 5, 1]
+        - [8, 16, 5, 1]
+        - [16, 32, 5, 1]
+        - [32, 64, 5, 1]
+      transformer_args:
+        num_heads: 1
+        num_layers: 2
+        dim_model: 8
+        dim_feedforward: 256
+        dropout_rate: 0.1
+        activation: "relu"
       number_of_conditions: 12
       hidden_layers:
         - [512, linear, relu]
