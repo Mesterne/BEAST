@@ -332,8 +332,8 @@ class Encoder(nn.Module):
         The positional encoding is added to the input layer to give the model a sense of order.
         """
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        dim_model = self.transformer_args["dim_model"].to(device)
-        max_len = self.uts_size.to(device)
+        dim_model = self.transformer_args["dim_model"]
+        max_len = self.uts_size
         positional_encoding_matrix = torch.zeros(max_len, dim_model).to(device)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1).to(device)
         div_term = torch.exp(
