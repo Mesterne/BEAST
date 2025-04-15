@@ -70,6 +70,17 @@ model_args:
         - [256, relu]
         - [256, relu]
         - [128, relu]
+      conv_decoder:
+        use_conv_decoder: false
+        feedforward_layers:
+          - [128]
+          - [256]
+          - [512]
+        conv_transpose_layers:
+          - [64, 32, 5, 1]
+          - [32, 16, 5, 1]
+          - [16, 8, 5, 1]
+          - [8, 3, 5, 1]
   forecasting_model_args:
     window_size: 168
     network_size:
