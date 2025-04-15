@@ -42,9 +42,11 @@ class MTSCVAE(nn.Module):
         )
         self.decoder = Decoder(
             self.mts_size,
+            self.uts_size,
             self.number_of_conditions,
             self.latent_size,
             model_params["feedforward_layers"],
+            model_params["conv_decoder"],
         )
 
     def forward(self, input: np.ndarray) -> np.ndarray:
@@ -405,25 +407,32 @@ class Decoder(nn.Module):
     def __init__(
         self,
         mts_size: int,
+        uts_size: int,
         number_of_conditions: int,
         latent_size: int,
         feedforward_layers: dict,
+        conv_decoder_args: dict,
     ) -> None:
         super(Decoder, self).__init__()
         self.latent_size = latent_size
         self.number_of_conditions = number_of_conditions
         self.mts_size = mts_size
-
+        self.uts_size = uts_size
+        self.num_uts = self.mts_size // self.uts_size
         self.input_size = latent_size + number_of_conditions
         final_hidden_layer_size = int(feedforward_layers[0][0])
 
-        self.input_layer = nn.Sequential(
-            nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
-        )
-
-        self.generate_feedforward_layers(feedforward_layers)
-
-        self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
+        self.use_conv_decoder = conv_decoder_args["use_conv_decoder"]
+        if self.use_conv_decoder:
+            logger.info("Building decoder with convolutional layers")
+            self.generate_conv_decoder_layers(conv_dec_args=conv_decoder_args)
+        else:
+            logger.info("Building decoder with feedforward layers")
+            self.input_layer = nn.Sequential(
+                nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
+            )
+            self.generate_feedforward_layers(feedforward_layers)
+            self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
 
     def generate_feedforward_layers(self, feedforward_layers: dict):
         reversed_feedforward_layers = feedforward_layers[::-1]
@@ -448,6 +457,67 @@ class Decoder(nn.Module):
                     f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
                 )
 
+    def get_connecting_layer_size(self, conv_transpose_layer_list: list) -> int:
+        """
+        Calculate input size of conv_transpose layer based on the desired output size of the decoder.
+        Based on the following formula:
+        https://pytorch.org/docs/stable/generated/torch.nn.ConvTranspose1d.html
+        To find the initial input size L_in given a desired ouput size L_out, we rearrange the formula to find the input size.
+        Thus the formula is the same as for the normal convolution, only swithching L_in and L_out.
+        """
+        kernel_size = conv_transpose_layer_list[0][2]
+        padding = kernel_size - 1  # For causal convolutions
+        dilation = 1
+        stride = conv_transpose_layer_list[0][3]
+
+        # length = self.uts_size
+        # for i in range(len(conv_transpose_layer_list)):
+        #     length = (
+        #         stride * (length - 1) - 2 * padding + dilation * (kernel_size - 1) + 1
+        #     )
+        # length = np.floor(length).astype(int)
+        length = self.uts_size
+        for i in range(len(conv_transpose_layer_list)):
+            length = (
+                (length + (2 * padding) - (dilation * (kernel_size - 1)) - 1) / stride
+            ) + 1
+            length = np.floor(length).astype(int)
+        self.init_channel_size = conv_transpose_layer_list[0][0]
+        return length * self.init_channel_size
+
+    def generate_conv_decoder_layers(self, conv_dec_args: list):
+        self.feedforward_layers = nn.Sequential()
+        feedforward_list = conv_dec_args["feedforward_layers"]
+        input_size = self.input_size
+        for i in range(len(feedforward_list)):
+            self.feedforward_layers.append(
+                nn.Linear(input_size, feedforward_list[i][0])
+            )
+            self.feedforward_layers.append(nn.ReLU())
+            input_size = feedforward_list[i][0]
+        # NOTE: Feedforward network need a final output size that results in L_out = 192.
+        conv_transpose_list = conv_dec_args["conv_transpose_layers"]
+        connecting_layer_size = self.get_connecting_layer_size(conv_transpose_list)
+        self.feedforward_layers.append(nn.Linear(input_size, connecting_layer_size))
+        self.feedforward_layers.append(nn.ReLU())
+        self.conv_transpose_layers = nn.Sequential()
+        for i in range(len(conv_transpose_list)):
+            in_channels = conv_transpose_list[i][0]
+            out_channels = conv_transpose_list[i][1]
+            kernel_size = conv_transpose_list[i][2]
+            stride = conv_transpose_list[i][3]
+            padding = kernel_size - 1
+            self.conv_transpose_layers.append(
+                nn.ConvTranspose1d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=padding,
+                )
+            )
+            self.conv_transpose_layers.append(nn.ReLU())
+
     def forward(self, feature_info: np.ndarray, latent: Tensor) -> Tensor:
         assert (
             feature_info.shape[1] == self.number_of_conditions
@@ -459,11 +529,20 @@ class Decoder(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         input = cat((latent, feature_info), dim=1).to(device)
-        hidden_layer_input = self.input_layer(input)
-        for i in range(len(self.feedforward_layers)):
-            if i == 0:
-                decoded_input = self.feedforward_layers[i](hidden_layer_input)
-            else:
-                decoded_input = self.feedforward_layers[i](decoded_input)
-        output = self.output(decoded_input)
+
+        if self.use_conv_decoder:
+            feedforward_output = self.feedforward_layers(input)
+            conv_transpose_input = feedforward_output.reshape(
+                feedforward_output.shape[0], self.init_channel_size, -1
+            )
+            conv_transpose_output = self.conv_transpose_layers(conv_transpose_input)
+            output = conv_transpose_output.reshape(feedforward_output.shape[0], -1)
+        else:
+            hidden_layer_input = self.input_layer(input)
+            for i in range(len(self.feedforward_layers)):
+                if i == 0:
+                    decoded_input = self.feedforward_layers[i](hidden_layer_input)
+                else:
+                    decoded_input = self.feedforward_layers[i](decoded_input)
+            output = self.output(decoded_input)
         return output
