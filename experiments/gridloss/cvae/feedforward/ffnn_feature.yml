@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv # CHANGED
+  training_data: train.csv
   test_data: test.csv
   window_size: 192
   mts_size: 576
@@ -14,7 +14,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: true
-  test_set_sample_size: 500 # CHANGED
+  test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
@@ -71,6 +71,17 @@ model_args:
         - [256, relu]
         - [256, relu]
         - [128, relu]
+      conv_decoder:
+        use_conv_decoder: false
+        feedforward_layers:
+          - [128]
+          - [256]
+          - [512]
+        conv_transpose_layers:
+          - [64, 32, 5, 1]
+          - [32, 16, 5, 1]
+          - [16, 8, 5, 1]
+          - [8, 3, 5, 1]
   forecasting_model_args:
     window_size: 168
     network_size:
