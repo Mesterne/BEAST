@@ -244,6 +244,7 @@ class Encoder(nn.Module):
                 )
             )
             self.input_layer.append(nn.ReLU())
+            # self.input_layer.append(nn.LeakyReLU(negative_slope=0.01))
 
     def generate_attention_layer(self) -> None:
         pass
@@ -397,8 +398,13 @@ class Encoder(nn.Module):
                 encoded_input = self.feedforward_layers[i](feedforward_input)
             else:
                 encoded_input = self.feedforward_layers[i](encoded_input)
-        latent_mean: Tensor = self.mean(encoded_input)
-        latent_log_var: Tensor = self.log_var(encoded_input)
+        # NOTE: Add layer normalization to allow for more informative latent space
+        normalized_encoded_input = nn.LayerNorm(encoded_input.shape[1]).to(
+            encoded_input.device
+        )(encoded_input)
+        latent_mean: Tensor = self.mean(normalized_encoded_input)
+        latent_log_var: Tensor = self.log_var(normalized_encoded_input)
+
         return latent_mean, latent_log_var
 
 
@@ -493,13 +499,13 @@ class Decoder(nn.Module):
             self.feedforward_layers.append(
                 nn.Linear(input_size, feedforward_list[i][0])
             )
-            self.feedforward_layers.append(nn.ReLU())
+            self.feedforward_layers.append(nn.LeakyReLU(negative_slope=0.01))
             input_size = feedforward_list[i][0]
         # NOTE: Feedforward network need a final output size that results in L_out = 192.
         conv_transpose_list = conv_dec_args["conv_transpose_layers"]
         connecting_layer_size = self.get_connecting_layer_size(conv_transpose_list)
         self.feedforward_layers.append(nn.Linear(input_size, connecting_layer_size))
-        self.feedforward_layers.append(nn.ReLU())
+        self.feedforward_layers.append(nn.LeakyReLU(negative_slope=0.01))
         self.conv_transpose_layers = nn.Sequential()
         for i in range(len(conv_transpose_list)):
             in_channels = conv_transpose_list[i][0]
@@ -516,7 +522,7 @@ class Decoder(nn.Module):
                     padding=padding,
                 )
             )
-            self.conv_transpose_layers.append(nn.ReLU())
+            self.conv_transpose_layers.append(nn.LeakyReLU(negative_slope=0.01))
 
     def forward(self, feature_info: np.ndarray, latent: Tensor) -> Tensor:
         assert (
