@@ -198,8 +198,11 @@ class Encoder(nn.Module):
             return self.rnn_hidden_state_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[3]:
             conv_output_length = self.calc_conv_out_len(self.convolutional_layers_list)
-            conv_output_channels = self.convolutional_layers_list[-1][1]
-            conv_output_size = conv_output_length * conv_output_channels
+            # conv_output_channels = self.convolutional_layers_list[-1][1]
+            conv_output_size = (
+                conv_output_length  # NOTE Testing mean pooling across channels
+            )
+            # conv_output_size = conv_output_length * conv_output_channels
             return conv_output_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[4]:
             raise NotImplementedError("Attention layer is not implemented yet")
@@ -369,9 +372,12 @@ class Encoder(nn.Module):
             )
         if self.architecture == NETWORK_ARCHITECTURES[3]:
             conv_out = self.input_layer(input)
-            conv_out_flattened = conv_out.view(
-                conv_out.shape[0], conv_out.shape[1] * conv_out.shape[2]
-            )
+            conv_out_flattened = conv_out.mean(
+                dim=1
+            )  # NOTE Testing mean pooling across channels
+            # conv_out_flattened = conv_out.view(
+            #     conv_out.shape[0], conv_out.shape[1] * conv_out.shape[2]
+            # )
             combination_layer_input = cat((conv_out_flattened, feature_info), dim=1)
         if self.architecture == NETWORK_ARCHITECTURES[5]:
             input_embedding = self.embedding_layer(input)
