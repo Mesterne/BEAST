@@ -41,7 +41,7 @@ model_args:
       num_epochs: 400
       batch_size: 64
       learning_rate: 0.0001
-      early_stopping_patience: 50
+      early_stopping_patience: 10
     conditional_gen_model_args:
       architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature" # "feature" or "feature_delta"
@@ -77,9 +77,9 @@ model_args:
           - [256]
           - [512]
         conv_transpose_layers:
-          - [64, 32, 5, 1]
-          - [32, 16, 5, 1]
+          - [16, 16, 5, 1]
           - [16, 8, 5, 1]
+          - [8, 8, 5, 1]
           - [8, 3, 5, 1]
   forecasting_model_args:
     window_size: 168
