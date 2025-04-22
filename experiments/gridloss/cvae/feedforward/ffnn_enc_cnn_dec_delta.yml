@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv
+  training_data: train.csv # CHANGED
   test_data: test.csv
   window_size: 192
   mts_size: 576
@@ -39,7 +39,7 @@ model_args:
     model_name: mts_cvae
     architecture: 'feedforward'
     training_args:
-      num_epochs: 400
+      num_epochs: 20
       batch_size: 64
       learning_rate: 0.0001
       early_stopping_patience: 50
@@ -76,9 +76,9 @@ model_args:
           - [256]
           - [512]
         conv_transpose_layers:
-          - [64, 32, 5, 1]
-          - [32, 16, 5, 1]
+          - [16, 16, 5, 1]
           - [16, 8, 5, 1]
+          - [8, 8, 5, 1]
           - [8, 3, 5, 1]
   forecasting_model_args:
     window_size: 168
