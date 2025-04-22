@@ -49,6 +49,7 @@ model_args:
       architecture: "rnn" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature_delta"
       input_size_without_conditions: 576
+      output_size: 576
       latent_size: 64
       rnn_hidden_state_size: 256
       convolutional_layers:

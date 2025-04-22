@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -25,24 +25,30 @@ class MTSCVAE(nn.Module):
     def __init__(self, model_params: dict) -> None:
         super(MTSCVAE, self).__init__()
         self.mts_size = model_params["mts_size"]
+        self.input_size_without_conditions = model_params[
+            "input_size_without_conditions"
+        ]
         self.number_of_conditions = model_params["number_of_conditions"]
         self.latent_size = model_params["latent_size"]
         self.condition_type = model_params["condition_type"]
+        self.output_size = model_params["output_size"]
         self.uts_size = model_params["uts_size"]
         self.encoder = Encoder(
-            self.mts_size,
-            self.number_of_conditions,
-            self.latent_size,
-            model_params["feedforward_layers"],
-            self.uts_size,
-            model_params["architecture"],
-            model_params["rnn_hidden_state_size"],
-            model_params["convolutional_layers"],
-            model_params["transformer_args"],
+            mts_size=self.mts_size,
+            input_size_without_conditions=self.input_size_without_conditions,
+            number_of_conditions=self.number_of_conditions,
+            latent_size=self.latent_size,
+            feedforward_layers=model_params["feedforward_layers"],
+            uts_size=self.uts_size,
+            architecture=model_params["architecture"],
+            rnn_hidden_state_size=model_params["rnn_hidden_state_size"],
+            convolutional_layers=model_params["convolutional_layers"],
+            transformer_args=model_params["transformer_args"],
         )
         self.decoder = Decoder(
             self.mts_size,
             self.uts_size,
+            self.output_size,
             self.number_of_conditions,
             self.latent_size,
             model_params["feedforward_layers"],
@@ -59,21 +65,26 @@ class MTSCVAE(nn.Module):
 
         # First mts_size elements are the MTS, the rest is either feature values or feature deltas
         assert (
-            input.shape[1] == self.mts_size + self.number_of_conditions
-        ), f"Input size mismatch. Expected {self.mts_size + self.number_of_conditions}, got {input.shape[1]}"
+            input.shape[1]
+            == self.input_size_without_conditions + self.number_of_conditions
+        ), f"Input size mismatch. Expected {self.input_size_without_conditions + self.number_of_conditions}, got {input.shape[1]}"
 
-        mts: np.ndarray = input[:, : self.mts_size]
-        feature_info: np.ndarray = input[:, self.mts_size :]
+        input_except_conditions: np.ndarray = input[
+            :, : self.input_size_without_conditions
+        ]
+        feature_info: np.ndarray = input[:, self.input_size_without_conditions :]
 
         assert (
-            mts.shape[1] == self.mts_size
-        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
+            input_except_conditions.shape[1] == self.input_size_without_conditions
+        ), f"Input without condtions size mismatch. Expected {self.input_size_without_conditions}, got {input_except_conditions.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Conditions size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
         # Encoding step
-        latent_mean, latent_log_var = self.encoder(mts, feature_info)
+        latent_mean, latent_log_var = self.encoder(
+            input_except_conditions, feature_info
+        )
 
         # Reparameterization trick
         latent_vector = self.reparamterization_trick(latent_mean, latent_log_var)
@@ -122,6 +133,7 @@ class Encoder(nn.Module):
     def __init__(
         self,
         mts_size: int,
+        input_size_without_conditions: int,
         number_of_conditions: int,
         latent_size: int,
         feedforward_layers: dict,
@@ -135,6 +147,7 @@ class Encoder(nn.Module):
         self.mts_size = mts_size
         self.uts_size = uts_size
         self.num_uts = self.mts_size // self.uts_size
+        self.input_size_without_conditions = input_size_without_conditions
         self.number_of_conditions = number_of_conditions
         self.latent_size = latent_size
         self.architecture = architecture
@@ -351,18 +364,18 @@ class Encoder(nn.Module):
         return positional_encoding_matrix
 
     def forward(
-        self, mts: np.ndarray, feature_info: np.ndarray
+        self, input_without_conditions: np.ndarray, feature_info: np.ndarray
     ) -> Tuple[Tensor, Tensor]:
         """Encoder in VAE from (Kingma and Welling, 2013) return the mean and the log of the variance."""
 
         assert (
-            mts.shape[1] == self.mts_size
-        ), f"MTS size mismatch. Expected {self.mts_size}, got {mts.shape[1]}"
+            input_without_conditions.shape[1] == self.input_size_without_conditions
+        ), f"MTS size mismatch. Expected {self.input_size_without_conditions}, got {input_without_conditions.shape[1]}"
         assert (
             feature_info.shape[1] == self.number_of_conditions
         ), f"Feature size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
-        input = self.format_input(mts)
+        input = self.format_input(input_without_conditions)
 
         if self.architecture == NETWORK_ARCHITECTURES[1]:
             lstm_out, _ = self.input_layer(input)
@@ -393,7 +406,9 @@ class Encoder(nn.Module):
                 (transformer_out_flattened, feature_info), dim=1
             )
         if self.architecture == NETWORK_ARCHITECTURES[0]:
-            combination_layer_input = cat((mts, feature_info), dim=1)
+            combination_layer_input = cat(
+                (input_without_conditions, feature_info), dim=1
+            )
 
         feedforward_input = self.input_condition_combination_layer(
             combination_layer_input
@@ -420,6 +435,7 @@ class Decoder(nn.Module):
         self,
         mts_size: int,
         uts_size: int,
+        output_size: int,
         number_of_conditions: int,
         latent_size: int,
         feedforward_layers: dict,
@@ -444,7 +460,7 @@ class Decoder(nn.Module):
                 nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
             )
             self.generate_feedforward_layers(feedforward_layers)
-            self.output: Tensor = nn.Linear(final_hidden_layer_size, mts_size)
+            self.output: Tensor = nn.Linear(final_hidden_layer_size, output_size)
 
     def generate_feedforward_layers(self, feedforward_layers: dict):
         reversed_feedforward_layers = feedforward_layers[::-1]

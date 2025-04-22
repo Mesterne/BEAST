@@ -49,6 +49,7 @@ model_args:
       architecture: "convolution" # rnn, feedforward, rnn_enc_dec, convolution, attention
       condition_type: "feature_delta"
       input_size_without_conditions: 576
+      output_size: 576
       latent_size: 64
       rnn_hidden_state_size: None
       convolutional_layers: # in_channels, out_channels, kernel_size, stride (padding from kernel_size - 1 and dilation doubles each layer)

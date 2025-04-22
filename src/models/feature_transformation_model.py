@@ -12,7 +12,8 @@ class FeatureTransformationModel(ABC):
         y_train: np.ndarray,
         X_val: np.ndarray,
         y_val: np.ndarray,
-        log_to_wandb=False,
+        plot_loss=False,
+        model_name="Unamed_feature_transformation_model",
     ) -> Tuple[List[float], List[float]]:
         pass
 

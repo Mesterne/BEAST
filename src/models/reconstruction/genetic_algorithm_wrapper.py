@@ -1,11 +1,12 @@
-from typing import List, Tuple
+from typing import List, Tuple, override
 
 import numpy as np
-from statsmodels.tsa.seasonal import DecomposeResult as DecompResults
 from tqdm import tqdm
 
 from src.models.reconstruction.genetic_algorithm import GeneticAlgorithm
+from src.models.reconstruction.reconstruction_model import ReconstructionModel
 from src.utils.features import (
+    decomp_and_features,
     seasonal_strength,
     trend_linearity,
     trend_slope,
@@ -18,30 +19,46 @@ from src.utils.transformations import (
 )
 
 
-class GeneticAlgorithmWrapper:
-    def __init__(
+class GeneticAlgorithmWrapper(ReconstructionModel):
+    @override
+    def __init__(self, model_params: dict, config: dict):
+        self.model_params = model_params
+        self.config = config
+        self.trained = False
+
+    @override
+    def train(
         self,
-        ga_params: dict,
-        mts_dataset: np.ndarray,
-        mts_decomp: List[DecompResults],
-        num_uts_in_mts: int,
-        num_features_per_uts: int,
-    ):
-        self.model_params = ga_params
+        mts_dataset,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        plot_loss: bool = False,
+        model_name: str = "genetic algrotihm",
+    ) -> None:
+        num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
+        num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
+        seasonal_period: int = self.config["stl_args"]["series_periodicity"]
+
         self.mts_dataset = mts_dataset
-        self.mts_decomp = mts_decomp
+        self.mts_decomp, _ = decomp_and_features(
+            mts=self.mts_dataset,
+            num_features_per_uts=num_features_per_uts,
+            series_periodicity=seasonal_period,
+            decomps_only=True,
+        )
         self.num_features_per_uts = num_features_per_uts
         self.num_uts_in_mts = num_uts_in_mts
         self.data_set_size = len(mts_dataset)
+        self.trained = True
 
-    def fit(self) -> None:
-        pass
-
+    @override
     def transform(
         self,
         predicted_features: np.ndarray,
         original_mts_indices: np.ndarray,
-    ) -> Tuple[List, List, List, np.ndarray]:
+    ) -> Tuple[List, List]:
         """Transform MTS using genetic algorithm.
 
         Args:
@@ -51,6 +68,9 @@ class GeneticAlgorithmWrapper:
         Returns:
             Tuple[List, List, List, np.ndarray]: List of transformed MTS, List of transformed MTS features, List of factors used for transformation, Predicted features
         """
+        assert (
+            self.trained
+        ), "Reconstruction model needs to be trained before transformation"
         predicted_features = predicted_features.copy()
 
         ####  Get Genetic Algorithm Parameters ##########
@@ -179,6 +199,4 @@ class GeneticAlgorithmWrapper:
         return (
             all_mts_transformed,
             all_mts_transformed_features,
-            all_mts_transformed_factors,
-            predicted_features_reshape,
         )

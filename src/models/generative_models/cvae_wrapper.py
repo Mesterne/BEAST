@@ -42,6 +42,7 @@ class CVAEWrapper(FeatureTransformationModel):
         X_val: np.ndarray,
         y_val: np.ndarray,
         plot_loss=False,
+        model_name="",
     ) -> Tuple[List[float], List[float]]:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Training model with device: {device}")
@@ -76,6 +77,7 @@ class CVAEWrapper(FeatureTransformationModel):
             f"Number of model parameters: {sum(p.numel() for p in self.model.parameters())}"
         )
 
+        patience_counter = 0
         for epoch in tqdm(range(self.num_epochs)):
             self.model.train()
             running_loss = 0.0
@@ -85,12 +87,14 @@ class CVAEWrapper(FeatureTransformationModel):
             for inputs, targets in train_dataloader:
                 optimizer.zero_grad()
                 outputs, latent_means, latent_logvars = self.model(inputs)
+
                 loss = loss_function(outputs, targets, latent_means, latent_logvars)
                 loss_kl_divergence = self.KL_divergence(latent_means, latent_logvars)
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
                 )
                 loss.backward()
+
                 optimizer.step()
                 running_loss += loss.item() * inputs.size(0)
                 running_loss_kl_divergence += loss_kl_divergence.item() * inputs.size(0)
@@ -109,6 +113,9 @@ class CVAEWrapper(FeatureTransformationModel):
             train_loss_history_kl_divergence.append(epoch_loss_kl_divergence)
             train_loss_history_reconstruction.append(epoch_loss_reconstruction)
 
+            assert not np.isnan(
+                train_loss_history
+            ).any(), "Loss history contains nan. This can indicate exploding or vanishing gradients. Control the outputs of your loss functions. Adjust learning rate"
             # NOTE: Evaluates reconstruction
             self.model.eval()
             running_val_loss = 0.0
@@ -140,13 +147,13 @@ class CVAEWrapper(FeatureTransformationModel):
             plot_training_and_validation_loss(
                 training_loss=train_loss_history,
                 validation_loss=validation_loss_history,
-                model_name="CVAE_model_full",
+                model_name=model_name,
             )
             plot_detailed_training_loss(
                 training_loss=train_loss_history,
                 training_loss_kl_divergence=train_loss_history_kl_divergence,
                 train_loss_reconstruction=train_loss_history_reconstruction,
-                model_name="CVAE_model",
+                model_name=model_name,
             )
 
         return train_loss_history, validation_loss_history
@@ -158,15 +165,19 @@ class CVAEWrapper(FeatureTransformationModel):
         # If the model is feature based, it takes the features as conditions and in inference,
         # samples the distribution, with feature conditions. To generate mts
         if self.model.condition_type == "feature":
-            input_features = X[:, self.model.mts_size :]
+            input_features = X[:, self.model.input_size_without_conditions :]
             # Run generate_mts for each row in X
             generated_mts: np.ndarray = self.model.generate_mts(input_features)
         # Other models take the entire MTS and conditions to generate new MTS
         else:
-            input_mts: np.ndarray = X[:, : self.model.mts_size]
-            input_conditions: np.ndarray = X[:, self.model.mts_size :]
+            input_without_conditions: np.ndarray = X[
+                :, : self.model.input_size_without_conditions
+            ]
+            input_conditions: np.ndarray = X[
+                :, self.model.input_size_without_conditions :
+            ]
             generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_mts, input_conditions
+                input_without_conditions, input_conditions
             )
 
         return generated_mts

@@ -6,12 +6,11 @@ import pandas as pd
 import seaborn as sns
 
 from src.data.constants import OUTPUT_DIR
+from src.utils.logging_config import logger
 
 
 def plot_training_and_validation_loss(
-    training_loss: np.ndarray,
-    validation_loss: np.ndarray,
-    model_name: str = "unnamed_model",
+    training_loss: np.ndarray, validation_loss: np.ndarray, model_name: str
 ) -> None:
 
     training_loss = np.log(training_loss)
@@ -24,6 +23,9 @@ def plot_training_and_validation_loss(
             "Type": ["Training"] * len(training_loss)
             + ["Validation"] * len(validation_loss),
         }
+    )
+    logger.info(
+        f"Plotting train/validation loss for model: {model_name}, for {len(epochs)} epochs"
     )
 
     plt.figure(figsize=(10, 6))

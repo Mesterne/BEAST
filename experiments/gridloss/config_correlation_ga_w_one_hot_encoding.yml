@@ -4,6 +4,8 @@ dataset_args:
   training_data: train.csv
   test_data: test.csv
   window_size: 192
+  mts_size: 576
+  uts_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -16,7 +18,8 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  genetic_algorithm_args:
+  reconstruction_model_args:
+    model_type: 'ga'
     num_generations: 100
     num_parents_mating: 2
     solutions_per_population: 10

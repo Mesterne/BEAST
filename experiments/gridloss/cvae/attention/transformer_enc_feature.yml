@@ -49,6 +49,7 @@ model_args:
       architecture: "transformer" # rnn, feedforward, rnn_enc_dec, convolution, attention, transformer
       condition_type: "feature"
       input_size_without_conditions: 576
+      output_size: 576
       latent_size: 64
       rnn_hidden_state_size: None
       convolutional_layers:

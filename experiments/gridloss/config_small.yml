@@ -4,6 +4,8 @@ dataset_args:
   training_data: train.csv
   test_data: test.csv
   window_size: 192
+  mts_size: 576
+  uts_size: 192
   step_size: 24
   timeseries_to_use:
     - grid1-load
@@ -16,7 +18,8 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  genetic_algorithm_args:
+  reconstruction_model_args:
+    model_type: 'ga'
     num_generations: 100
     num_parents_mating: 2
     solutions_per_population: 10
@@ -33,15 +36,15 @@ model_args:
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
     model_name: feedforward_neural_network
+    input_size: 24
     output_size: 12
-    hidden_network_sizes:
-      - 256
+    hidden_layers:
+      - [256, linear, relu]
     training_args:
       num_epochs: 1
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
-    conditional_gen_model_args:
   forecasting_model_args:
     window_size: 168
     network_size:
