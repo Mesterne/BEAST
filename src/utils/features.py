@@ -31,7 +31,9 @@ def trend_linearity(trend_comp: pd.Series) -> float:
     )
     predictions = model.predict(np.arange(len(trend_comp)).reshape(-1, 1))
     residuals = trend_comp - predictions
-    return 1 - np.var(residuals) / np.var(trend_comp)
+    return 1 - np.var(residuals) / np.clip(
+        np.var(trend_comp), a_min=1e-6, a_max=None
+    )  # Clip to avoid division by zero after scaling dataset
 
 
 def seasonal_strength(seasonal_comp: pd.Series, resid_comp: pd.Series) -> float:

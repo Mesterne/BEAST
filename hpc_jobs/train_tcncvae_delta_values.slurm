@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=rnn_enc_cvae_delta
+#SBATCH --job-name=tcn_enc_cvae_delta
 #SBATCH --time=0-23:00:00
 
 #SBATCH --partition=GPUQ
@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/cvae/recurrent/rnn_enc_delta.yml'
+python src/main.py 'experiments/gridloss/cvae/convolution/tcn_enc_delta.yml'

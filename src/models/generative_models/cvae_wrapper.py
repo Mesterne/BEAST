@@ -9,7 +9,9 @@ from tqdm import tqdm
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.plots.plot_training_and_validation_loss import (
-    plot_detailed_training_loss, plot_training_and_validation_loss)
+    plot_detailed_training_loss,
+    plot_training_and_validation_loss,
+)
 from src.utils.logging_config import logger
 
 
@@ -70,6 +72,10 @@ class CVAEWrapper(FeatureTransformationModel):
 
         best_validation_loss = float("inf")
         best_model_weigths = copy.deepcopy(self.model.state_dict())
+
+        logger.info(
+            f"Number of model parameters: {sum(p.numel() for p in self.model.parameters())}"
+        )
 
         patience_counter = 0
         for epoch in tqdm(range(self.num_epochs)):
