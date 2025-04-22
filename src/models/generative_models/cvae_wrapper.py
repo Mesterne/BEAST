@@ -72,6 +72,10 @@ class CVAEWrapper(FeatureTransformationModel):
         best_validation_loss = float("inf")
         best_model_weigths = copy.deepcopy(self.model.state_dict())
 
+        logger.info(
+            f"Number of model parameters: {sum(p.numel() for p in self.model.parameters())}"
+        )
+
         for epoch in tqdm(range(self.num_epochs)):
             self.model.train()
             running_loss = 0.0
