@@ -18,8 +18,7 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  reconstruction_model_args:
-    model_type: 'ga'
+  genetic_algorithm_args:
     num_runs: 1
     num_generations: 100
     num_parents_mating: 2
@@ -37,20 +36,23 @@ model_args:
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
     model_name: mts_cvae
+    input_size: 24
+    output_size: 12
+    hidden_network_sizes:
+      - 256
     training_args:
       num_epochs: 20
       batch_size: 64
       learning_rate: 0.0001
       early_stopping_patience: 10
     conditional_gen_model_args:
-      architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
-      condition_type: "feature" # "feature" or "feature_delta"
+      architecture: "convolution" # rnn, feedforward, rnn_enc_dec, convolution, attention
+      condition_type: "feature"
       input_size_without_conditions: 576
-      mts_size: 576
       output_size: 576
       latent_size: 64
       rnn_hidden_state_size: None
-      convolutional_layers:
+      convolutional_layers: # in_channels, out_channels, kernel_size, stride (padding from kernel_size - 1 and dilation doubles each layer)
         - [3, 8, 5, 1]
         - [8, 16, 5, 1]
         - [16, 32, 5, 1]
@@ -63,7 +65,6 @@ model_args:
         dropout_rate: 0.1
         activation: "relu"
       number_of_conditions: 12
-      rnn_hidden_state_size:
       feedforward_layers:
         - [512, relu]
         - [512, relu]
@@ -71,7 +72,7 @@ model_args:
         - [256, relu]
         - [128, relu]
       conv_decoder:
-        use_conv_decoder: false
+        use_conv_decoder: true
         feedforward_layers:
           - [128]
           - [256]
@@ -81,6 +82,7 @@ model_args:
           - [16, 8, 5, 1]
           - [8, 8, 5, 1]
           - [8, 3, 5, 1]
+
   forecasting_model_args:
     window_size: 168
     network_size:
