@@ -494,8 +494,9 @@ class Decoder(nn.Module):
 
         length = self.uts_size
         for i in range(num_layers):
-            dilation_exponent = num_layers - i
-            dilation = 2**dilation_exponent
+            # dilation_exponent = num_layers - i
+            # dilation = 2**dilation_exponent
+            dilation = 1
             length = (
                 (length + (2 * padding) - (dilation * (kernel_size - 1)) - 1) / stride
             ) + 1
