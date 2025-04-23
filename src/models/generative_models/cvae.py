@@ -524,8 +524,8 @@ class Decoder(nn.Module):
         self.conv_transpose_layers = nn.Sequential()
         num_layers = len(conv_transpose_list)
         for i in range(num_layers):
-            dilation_exponent = num_layers - i
-            dilation = 2**dilation_exponent
+            # dilation_exponent = num_layers - i
+            # dilation = 2**dilation_exponent
             in_channels = conv_transpose_list[i][0]
             out_channels = conv_transpose_list[i][1]
             kernel_size = conv_transpose_list[i][2]
@@ -538,7 +538,8 @@ class Decoder(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=padding,
-                    dilation=dilation,
+                    # dilation=dilation,
+                    dilation=1,
                 )
             )
             self.conv_transpose_layers.append(nn.LeakyReLU(negative_slope=0.01))
