@@ -29,6 +29,7 @@ parts/
 sdist/
 var/
 wheels/
+.mamba/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
