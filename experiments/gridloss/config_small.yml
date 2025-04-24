@@ -1,13 +1,16 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv
-  test_data: test.csv
+  training_data: train_small.csv
   window_size: 192
   mts_size: 576
   uts_size: 192
   step_size: 24
   timeseries_to_use:
+    - grid1-load
+    - grid1-loss
+    - grid1-temp
+  test_timeseries_to_use:
     - grid1-load
     - grid1-loss
     - grid1-temp

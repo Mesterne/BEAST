@@ -4,8 +4,9 @@ import pandas as pd
 import seaborn as sns
 
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
-from src.utils.evaluation.forecaster_evaluation import mse_for_forecast
+from src.utils.evaluation.forecaster_evaluation import mse_for_all_predictions, mse_for_each_forecast
 from src.utils.generate_dataset import create_training_windows
+from src.utils.logging_config import logger
 
 
 def compare_original_and_transformed_forecasting(
@@ -81,6 +82,7 @@ def compare_old_and_new_model(
     window_length = len(window_value)
     forecast_length = len(worst_forecast_old)
 
+    # Forecast plot
     data = pd.DataFrame(
         {
             "Forecast Type": ["Window Value"] * window_length
@@ -102,26 +104,47 @@ def compare_old_and_new_model(
     plt.ylabel("Value")
 
     # Plot overall improvements
-    mse_old_train = mse_for_forecast(y_train, inferred_old_train)
-    mse_new_train = mse_for_forecast(y_train, inferred_new_train)
+    mse_old_train = mse_for_each_forecast(y_train, inferred_old_train)
+    mse_old_train_total = mse_for_all_predictions(y_train, inferred_old_train)
+    mse_new_train = mse_for_each_forecast(y_train, inferred_new_train)
+    mse_new_train_total = mse_for_all_predictions(y_train, inferred_new_train)
+    mse_delta_train = mse_new_train - mse_old_train
 
-    mse_old_val = mse_for_forecast(y_val, inferred_old_val)
-    mse_new_val = mse_for_forecast(y_val, inferred_new_val)
 
-    mse_old_test = mse_for_forecast(y_test, inferred_old_test)
-    mse_new_test = mse_for_forecast(y_test, inferred_new_test)
+    mse_old_val = mse_for_each_forecast(y_val, inferred_old_val)
+    mse_old_val_total = mse_for_all_predictions(y_val, inferred_old_val)
+    mse_new_val = mse_for_each_forecast(y_val, inferred_new_val)
+    mse_new_val_total = mse_for_all_predictions(y_val, inferred_new_val)
+    mse_delta_val = mse_new_val - mse_old_val
+
+    mse_old_test = mse_for_each_forecast(y_test, inferred_old_test)
+    mse_old_test_total = mse_for_all_predictions(y_test, inferred_old_test)
+    mse_new_test = mse_for_each_forecast(y_test, inferred_new_test)
+    mse_new_test_total = mse_for_all_predictions(y_test, inferred_new_test)
+    mse_delta_test = mse_new_test - mse_old_test
+
+    # Plot delta
+    mse_delta_plot = plt.figure(figsize=(10, 6))
+    sns.kdeplot(mse_delta_train, label='Train', fill=True)
+    sns.kdeplot(mse_delta_val, label='Validation', fill=True)
+    sns.kdeplot(mse_delta_test, label='Test', fill=True)
+    plt.title('Distribution of MSE Deltas')
+    plt.xlabel('MSE Delta')
+    plt.ylabel('Density')
+    plt.legend()
+    plt.tight_layout()
 
     # Plot results in seaborn, return fig
     data = {
         "Dataset": ["Train", "Train", "Validation", "Validation", "Test", "Test"],
         "Model": ["Old", "New", "Old", "New", "Old", "New"],
         "MSE": [
-            mse_old_train,
-            mse_new_train,
-            mse_old_val,
-            mse_new_val,
-            mse_old_test,
-            mse_new_test,
+            mse_old_train_total,
+            mse_new_train_total,
+            mse_old_val_total,
+            mse_new_val_total,
+            mse_old_test_total,
+            mse_new_test_total,
         ],
     }
     df = pd.DataFrame(data)
@@ -144,4 +167,4 @@ def compare_old_and_new_model(
 
     plt.tight_layout()
 
-    return forecast_plot, mse_plot
+    return forecast_plot, mse_plot, mse_delta_plot
