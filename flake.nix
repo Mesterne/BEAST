@@ -34,6 +34,8 @@
             fi
 
             micromamba activate BEAST_ENV
+
+            exec zsh -l
           '';
         };
       }
