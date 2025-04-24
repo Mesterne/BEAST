@@ -85,11 +85,13 @@ class GenerativeModel(TimeseriesTransformationModel):
                 mts_array=mts_dataset,
                 transformation_indices=train_transformation_indices,
                 number_of_uts_in_mts=num_uts_in_mts,
+                mts_features=mts_features_array,
             )
             X_validation, y_validation = create_ohe_conditioned_dataset_for_inference(
                 mts_array=mts_dataset,
                 transformation_indices=train_transformation_indices,
                 number_of_uts_in_mts=num_uts_in_mts,
+                mts_features=mts_features_array,
             )
         else:
             X_train, y_train = create_conditioned_dataset_for_training(
@@ -165,6 +167,7 @@ class GenerativeModel(TimeseriesTransformationModel):
                 mts_array=mts_dataset,
                 transformation_indices=evaluation_set_indices,
                 number_of_uts_in_mts=num_uts_in_mts,
+                mts_features=mts_features_array,
             )
         else:
             X, y = create_conditioned_dataset_for_inference(

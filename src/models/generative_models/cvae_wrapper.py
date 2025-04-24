@@ -164,10 +164,12 @@ class CVAEWrapper(FeatureTransformationModel):
     ) -> np.ndarray:
         # If the model is feature based, it takes the features as conditions and in inference,
         # samples the distribution, with feature conditions. To generate mts
+        self.model.eval()
         if self.model.condition_type == "feature":
             input_features = X[:, self.model.input_size_without_conditions :]
             # Run generate_mts for each row in X
-            generated_mts: np.ndarray = self.model.generate_mts(input_features)
+            with torch.no_grad():
+                generated_mts: np.ndarray = self.model.generate_mts(input_features)
         # Other models take the entire MTS and conditions to generate new MTS
         else:
             input_without_conditions: np.ndarray = X[
@@ -176,9 +178,10 @@ class CVAEWrapper(FeatureTransformationModel):
             input_conditions: np.ndarray = X[
                 :, self.model.input_size_without_conditions :
             ]
-            generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_without_conditions, input_conditions
-            )
+            with torch.no_grad():
+                generated_mts: np.ndarray = self.model.transform_mts_from_original(
+                    input_without_conditions, input_conditions
+                )
 
         return generated_mts
 
@@ -187,6 +190,7 @@ def create_ohe_conditioned_dataset_for_training(
     mts_array: np.ndarray,
     transformation_indices: np.ndarray,
     number_of_uts_in_mts: int,
+    mts_features: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
@@ -196,16 +200,25 @@ def create_ohe_conditioned_dataset_for_training(
     X_mts = mts_array[transformation_indices[:, 0]]
     y_mts = mts_array[transformation_indices[:, 1]]
 
+    X_features = mts_features[transformation_indices[:, 0]]
+
+    num_features_per_uts = X_features.shape[1] // number_of_uts_in_mts
+
     X = []
     y = []
     for mts_index, _ in enumerate(X_mts):
         original_mts = X_mts[mts_index]
+        original_features = X_features[mts_index]
+        input_mts = original_mts.flatten()
         target_mts = y_mts[mts_index].flatten()
         for uts_index in range(0, number_of_uts_in_mts):
-            activated_uts = original_mts[uts_index]
-            conditions = [0] * number_of_uts_in_mts
-            conditions[uts_index] = 1
-            X.append(np.concatenate((activated_uts, conditions)))
+            start_index = uts_index * num_features_per_uts
+            end_index = start_index + num_features_per_uts
+            activated_features = original_features[start_index:end_index].flatten()
+            uts_one_hot = np.zeros(number_of_uts_in_mts, dtype=int)
+            uts_one_hot[uts_index] = 1
+            conditions = np.concatenate((activated_features, uts_one_hot))
+            X.append(np.concatenate((input_mts, conditions)))
             y.append(target_mts)
     return np.array(X), np.array(y)
 
@@ -214,6 +227,7 @@ def create_ohe_conditioned_dataset_for_inference(
     mts_array: np.ndarray,
     transformation_indices: np.ndarray,
     number_of_uts_in_mts: int,
+    mts_features: np.ndarray,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Takes the entire MTS dataset with features and based on the condition type and creates X with conditions
@@ -223,15 +237,24 @@ def create_ohe_conditioned_dataset_for_inference(
     X_mts = mts_array[transformation_indices[:, 0]]
     y_mts = mts_array[transformation_indices[:, 1]]
 
+    X_features = mts_features[transformation_indices[:, 0]]
+
+    num_features_per_uts = X_features.shape[1] // number_of_uts_in_mts
+
     X = []
     y = []
     for mts_index, _ in enumerate(X_mts):
         target_mts = y_mts[mts_index].flatten()
+        input_mts = X_mts[mts_index].flatten()
+        original_features = X_features[mts_index]
         uts_index = np.random.choice(range(0, number_of_uts_in_mts))
-        activated_uts = y_mts[mts_index][uts_index]
-        conditions = [0] * number_of_uts_in_mts
-        conditions[uts_index] = 1
-        X.append(np.concatenate((activated_uts, conditions)))
+        start_index = uts_index * num_features_per_uts
+        end_index = start_index + num_features_per_uts
+        activated_features = original_features[start_index:end_index].flatten()
+        uts_one_hot = np.zeros(number_of_uts_in_mts, dtype=int)
+        uts_one_hot[uts_index] = 1
+        conditions = np.concatenate((activated_features, uts_one_hot))
+        X.append(np.concatenate((input_mts, conditions)))
         y.append(target_mts)
     return np.array(X), np.array(y)
 
