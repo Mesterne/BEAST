@@ -20,12 +20,13 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
-    create_train_val_test_split,
-)
-from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import \
+    create_train_val_test_split  # noqa: E402
+from src.data_transformations.preprocessing import \
+    scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import \
+    ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -49,7 +50,7 @@ plt.style.use("ggplot")
 
 # Load the configuration file
 config: Dict[str, Any] = read_yaml(args["config_path"])
-data_dir: str = os.path.join(
+training_data_dir: str = os.path.join(
     config["dataset_args"]["directory"], config["dataset_args"]["training_data"]
 )
 num_uts_in_mts: int = len(config["dataset_args"]["timeseries_to_use"])
@@ -67,8 +68,14 @@ logger.info(
 
 # Load data and generate dataset of multivariate time series context windows
 mts_dataset_array: np.ndarray = get_mts_dataset(
-    data_dir=data_dir,
+    data_dir=training_data_dir,
     time_series_to_use=config["dataset_args"]["timeseries_to_use"],
+    context_length=config["dataset_args"]["window_size"],
+    step_size=config["dataset_args"]["step_size"],
+)
+mts_dataset_array_test: np.ndarray = get_mts_dataset(
+    data_dir=training_data_dir,
+    time_series_to_use=config["dataset_args"]["test_timeseries_to_use"],
     context_length=config["dataset_args"]["window_size"],
     step_size=config["dataset_args"]["step_size"],
 )
@@ -79,9 +86,10 @@ mts_features_array, mts_decomps = generate_feature_dataframe(
     num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
 )
 
+test_mts_dataset_array_size = mts_dataset_array_test.shape[0]
+mts_dataset_array = np.concatenate([mts_dataset_array, mts_dataset_array_test], axis=0)
 
 logger.info("Successfully generated feature dataframe")
-
 
 (
     train_transformation_indices,
@@ -89,6 +97,7 @@ logger.info("Successfully generated feature dataframe")
     test_transformation_indices,
 ) = create_train_val_test_split(
     mts_dataset_array=mts_dataset_array,
+    test_size=test_mts_dataset_array_size,
     config=config,
 )
 

@@ -27,10 +27,13 @@ def euclidean_distance_between_arrays(array1: np.ndarray, array2: np.ndarray):
 
 def create_train_val_test_split(
     mts_dataset_array: np.ndarray,
+    test_size: int,
     config: Dict[str, any],
 ):
     """ """
     logger.info(f"Generating transformation index pairs for training...")
+
+
     mts_features_array, _ = generate_feature_dataframe(
         data=mts_dataset_array,
         series_periodicity=config["stl_args"]["series_periodicity"],
@@ -40,20 +43,24 @@ def create_train_val_test_split(
     dist_of_features = plot_feature_distribution(mts_features_array)
     dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
 
-    mts_pca_array: np.ndarray = PCAWrapper().fit_transform(mts_features_array)
+    indices = np.arange(len(mts_features_array))
+    test_indices = indices[:test_size]
+    indices_used_for_training = indices[test_size:]
+
+    validation_size = int(EVALUATION_FRACTION * len(indices_used_for_training))
+    np.random.shuffle(indices_used_for_training)
+
+    validation_indices = indices[:validation_size]
+    train_indices = indices[validation_size:]
+
+    pca = PCAWrapper()
+    pca.fit_transform(mts_features_array[train_indices])
+    mts_pca_array: np.ndarray = pca.transform(mts_features_array)
     logger.info("Successfully generated MTS PCA space")
 
     logger.info("Splitting PCA space into train, validation and test indices...")
-    indices = np.arange(len(mts_pca_array))
 
-    validation_size = int(EVALUATION_FRACTION * len(indices))
 
-    # Validation, test and train indices are on the global object
-    np.random.shuffle(indices)
-
-    validation_indices = indices[:validation_size]
-    test_indices = indices[validation_size : validation_size + validation_size]
-    train_indices = indices[validation_size + validation_size :]
 
     plot_train_val_test_split(
         mts_dataset_pca=mts_pca_array,
