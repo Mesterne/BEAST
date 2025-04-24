@@ -46,13 +46,13 @@ model_args:
       learning_rate: 0.0001
       early_stopping_patience: 10
     conditional_gen_model_args:
-      architecture: "convolution" # rnn, feedforward, rnn_enc_dec, convolution, attention
+      architecture: "transformer" # rnn, feedforward, rnn_enc_dec, convolution, attention, transformer
       condition_type: "feature"
       input_size_without_conditions: 576
       output_size: 576
       latent_size: 64
       rnn_hidden_state_size: None
-      convolutional_layers: # in_channels, out_channels, kernel_size, stride (padding from kernel_size - 1 and dilation doubles each layer)
+      convolutional_layers:
         - [3, 8, 5, 1]
         - [8, 16, 5, 1]
         - [16, 32, 5, 1]
@@ -72,7 +72,7 @@ model_args:
         - [256, relu]
         - [128, relu]
       conv_decoder:
-        use_conv_decoder: false
+        use_conv_decoder: true
         feedforward_layers:
           - [128]
           - [256]
@@ -82,7 +82,6 @@ model_args:
           - [16, 8, 5, 1]
           - [8, 8, 5, 1]
           - [8, 3, 5, 1]
-
   forecasting_model_args:
     window_size: 168
     network_size:

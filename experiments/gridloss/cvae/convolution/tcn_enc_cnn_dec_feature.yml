@@ -72,7 +72,7 @@ model_args:
         - [256, relu]
         - [128, relu]
       conv_decoder:
-        use_conv_decoder: false
+        use_conv_decoder: true
         feedforward_layers:
           - [128]
           - [256]

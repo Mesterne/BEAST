@@ -158,7 +158,7 @@ class Encoder(nn.Module):
         final_hidden_layer_size = int(feedforward_layers[-1][0])
 
         self.add_input_layer()
-        self.generate_feedforward_layers()
+        self.generate_base_encoder_block()
 
         self.combination_layer_input_size = (
             self.determine_combination_layer_input_size()
@@ -263,7 +263,7 @@ class Encoder(nn.Module):
             # self.input_layer.append(nn.LeakyReLU(negative_slope=0.01))
 
     def generate_attention_layer(self) -> None:
-        pass
+        raise NotImplementedError("Attention layer is not implemented yet")
 
     def generate_transformer_layer(self, transformer_args: dict) -> None:
         """
@@ -287,27 +287,26 @@ class Encoder(nn.Module):
             self.num_uts, self.transformer_args["dim_model"]
         )
 
-    def generate_feedforward_layers(self):
+    def generate_base_encoder_block(self):
         layer_sizes = np.asarray(self.feedforward_layers_list)[:, 0].astype(int)
         layer_activations = np.asarray(self.feedforward_layers_list)[:, 1]
         logger.info(
             f"Building encoder with hidden layer sizes: {layer_sizes}; and activations: {layer_activations}"
         )
 
-        self.feedforward_layers = nn.ModuleList()
+        self.base_encoder_layers = nn.ModuleList()
         for i in range(len(layer_sizes) - 1):
-            self.feedforward_layers.append(
+            encoder_layer = nn.Sequential(
                 nn.Linear(
                     layer_sizes[i],
                     layer_sizes[i + 1],
-                )
+                ),
+                nn.LayerNorm(layer_sizes[i + 1]),
+                nn.LeakyReLU(negative_slope=0.01),
+                nn.Dropout(p=0.1),
             )
-            if layer_activations[i] == "relu":
-                self.feedforward_layers.append(nn.ReLU())
-            else:
-                raise ValueError(
-                    f"Unknown hidden layer activation: {layer_activations[i]}"
-                )
+
+            self.base_encoder_layers.append(encoder_layer)
 
     def calc_conv_out_len(self, conv_layer_list: list) -> int:
         """
@@ -410,21 +409,17 @@ class Encoder(nn.Module):
                 (input_without_conditions, feature_info), dim=1
             )
 
-        feedforward_input = self.input_condition_combination_layer(
+        base_encoder_input = self.input_condition_combination_layer(
             combination_layer_input
         )
 
-        for i in range(len(self.feedforward_layers)):
+        for i in range(len(self.base_encoder_layers)):
             if i == 0:
-                encoded_input = self.feedforward_layers[i](feedforward_input)
+                encoded_input = self.base_encoder_layers[i](base_encoder_input)
             else:
-                encoded_input = self.feedforward_layers[i](encoded_input)
-        # NOTE: Add layer normalization to allow for more informative latent space
-        normalized_encoded_input = nn.LayerNorm(encoded_input.shape[1]).to(
-            encoded_input.device
-        )(encoded_input)
-        latent_mean: Tensor = self.mean(normalized_encoded_input)
-        latent_log_var: Tensor = self.log_var(normalized_encoded_input)
+                encoded_input = self.base_encoder_layers[i](encoded_input)
+        latent_mean: Tensor = self.mean(encoded_input)
+        latent_log_var: Tensor = self.log_var(encoded_input)
 
         return latent_mean, latent_log_var
 
@@ -459,10 +454,10 @@ class Decoder(nn.Module):
             self.input_layer = nn.Sequential(
                 nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
             )
-            self.generate_feedforward_layers(feedforward_layers)
+            self.generate_base_decoder_layers(feedforward_layers)
             self.output: Tensor = nn.Linear(final_hidden_layer_size, output_size)
 
-    def generate_feedforward_layers(self, feedforward_layers: dict):
+    def generate_base_decoder_layers(self, feedforward_layers: dict):
         reversed_feedforward_layers = feedforward_layers[::-1]
         hidden_layer_sizes = np.asarray(reversed_feedforward_layers)[:, 0].astype(int)
         hidden_layer_activations = np.asarray(reversed_feedforward_layers)[:, 1]
@@ -470,20 +465,18 @@ class Decoder(nn.Module):
             f"Building decoder with hidden layer sizes: {hidden_layer_sizes};and activations: {hidden_layer_activations}"
         )
 
-        self.feedforward_layers = nn.ModuleList()
+        self.base_decoder_layers = nn.ModuleList()
         for i in range(len(hidden_layer_sizes) - 1):
-            self.feedforward_layers.append(
+            decoder_layer = nn.Sequential(
                 nn.Linear(
                     hidden_layer_sizes[i],
                     hidden_layer_sizes[i + 1],
-                )
+                ),
+                nn.LayerNorm(hidden_layer_sizes[i + 1]),
+                nn.LeakyReLU(negative_slope=0.01),
+                nn.Dropout(p=0.1),
             )
-            if hidden_layer_activations[i] == "relu":
-                self.feedforward_layers.append(nn.ReLU())
-            else:
-                raise ValueError(
-                    f"Unknown hidden layer activation: {hidden_layer_activations[i]}"
-                )
+            self.base_decoder_layers.append(decoder_layer)
 
     def get_connecting_layer_size(self, conv_transpose_layer_list: list) -> int:
         """
@@ -493,19 +486,17 @@ class Decoder(nn.Module):
         To find the initial input size L_in given a desired ouput size L_out, we rearrange the formula to find the input size.
         Thus the formula is the same as for the normal convolution, only swithching L_in and L_out.
         """
+        num_layers = len(conv_transpose_layer_list)
+
         kernel_size = conv_transpose_layer_list[0][2]
         padding = kernel_size - 1  # For causal convolutions
-        dilation = 1
         stride = conv_transpose_layer_list[0][3]
 
-        # length = self.uts_size
-        # for i in range(len(conv_transpose_layer_list)):
-        #     length = (
-        #         stride * (length - 1) - 2 * padding + dilation * (kernel_size - 1) + 1
-        #     )
-        # length = np.floor(length).astype(int)
         length = self.uts_size
-        for i in range(len(conv_transpose_layer_list)):
+        for i in range(num_layers):
+            # dilation_exponent = num_layers - i
+            # dilation = 2**dilation_exponent
+            dilation = 1
             length = (
                 (length + (2 * padding) - (dilation * (kernel_size - 1)) - 1) / stride
             ) + 1
@@ -514,22 +505,28 @@ class Decoder(nn.Module):
         return length * self.init_channel_size
 
     def generate_conv_decoder_layers(self, conv_dec_args: list):
-        self.feedforward_layers = nn.Sequential()
+        self.base_decoder_layers = nn.Sequential()
         feedforward_list = conv_dec_args["feedforward_layers"]
         input_size = self.input_size
         for i in range(len(feedforward_list)):
-            self.feedforward_layers.append(
-                nn.Linear(input_size, feedforward_list[i][0])
+            decoder_layer = nn.Sequential(
+                nn.Linear(input_size, feedforward_list[i][0]),
+                nn.LayerNorm(feedforward_list[i][0]),
+                nn.LeakyReLU(negative_slope=0.01),
+                nn.Dropout(p=0.1),
             )
-            self.feedforward_layers.append(nn.LeakyReLU(negative_slope=0.01))
+            self.base_decoder_layers.append(decoder_layer)
             input_size = feedforward_list[i][0]
         # NOTE: Feedforward network need a final output size that results in L_out = 192.
         conv_transpose_list = conv_dec_args["conv_transpose_layers"]
         connecting_layer_size = self.get_connecting_layer_size(conv_transpose_list)
-        self.feedforward_layers.append(nn.Linear(input_size, connecting_layer_size))
-        self.feedforward_layers.append(nn.LeakyReLU(negative_slope=0.01))
+        self.base_decoder_layers.append(nn.Linear(input_size, connecting_layer_size))
+        self.base_decoder_layers.append(nn.LeakyReLU(negative_slope=0.01))
         self.conv_transpose_layers = nn.Sequential()
-        for i in range(len(conv_transpose_list)):
+        num_layers = len(conv_transpose_list)
+        for i in range(num_layers):
+            # dilation_exponent = num_layers - i
+            # dilation = 2**dilation_exponent
             in_channels = conv_transpose_list[i][0]
             out_channels = conv_transpose_list[i][1]
             kernel_size = conv_transpose_list[i][2]
@@ -542,6 +539,8 @@ class Decoder(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=padding,
+                    # dilation=dilation,
+                    dilation=1,
                 )
             )
             self.conv_transpose_layers.append(nn.LeakyReLU(negative_slope=0.01))
@@ -559,18 +558,18 @@ class Decoder(nn.Module):
         input = cat((latent, feature_info), dim=1).to(device)
 
         if self.use_conv_decoder:
-            feedforward_output = self.feedforward_layers(input)
-            conv_transpose_input = feedforward_output.reshape(
-                feedforward_output.shape[0], self.init_channel_size, -1
+            base_decoder_output = self.base_decoder_layers(input)
+            conv_transpose_input = base_decoder_output.reshape(
+                base_decoder_output.shape[0], self.init_channel_size, -1
             )
             conv_transpose_output = self.conv_transpose_layers(conv_transpose_input)
-            output = conv_transpose_output.reshape(feedforward_output.shape[0], -1)
+            output = conv_transpose_output.reshape(base_decoder_output.shape[0], -1)
         else:
             hidden_layer_input = self.input_layer(input)
-            for i in range(len(self.feedforward_layers)):
+            for i in range(len(self.base_decoder_layers)):
                 if i == 0:
-                    decoded_input = self.feedforward_layers[i](hidden_layer_input)
+                    decoded_input = self.base_decoder_layers[i](hidden_layer_input)
                 else:
-                    decoded_input = self.feedforward_layers[i](decoded_input)
+                    decoded_input = self.base_decoder_layers[i](decoded_input)
             output = self.output(decoded_input)
         return output
