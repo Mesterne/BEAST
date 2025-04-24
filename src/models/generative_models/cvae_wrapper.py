@@ -164,10 +164,12 @@ class CVAEWrapper(FeatureTransformationModel):
     ) -> np.ndarray:
         # If the model is feature based, it takes the features as conditions and in inference,
         # samples the distribution, with feature conditions. To generate mts
+        self.model.eval()
         if self.model.condition_type == "feature":
             input_features = X[:, self.model.input_size_without_conditions :]
             # Run generate_mts for each row in X
-            generated_mts: np.ndarray = self.model.generate_mts(input_features)
+            with torch.no_grad():
+                generated_mts: np.ndarray = self.model.generate_mts(input_features)
         # Other models take the entire MTS and conditions to generate new MTS
         else:
             input_without_conditions: np.ndarray = X[
@@ -176,9 +178,10 @@ class CVAEWrapper(FeatureTransformationModel):
             input_conditions: np.ndarray = X[
                 :, self.model.input_size_without_conditions :
             ]
-            generated_mts: np.ndarray = self.model.transform_mts_from_original(
-                input_without_conditions, input_conditions
-            )
+            with torch.no_grad():
+                generated_mts: np.ndarray = self.model.transform_mts_from_original(
+                    input_without_conditions, input_conditions
+                )
 
         return generated_mts
 
