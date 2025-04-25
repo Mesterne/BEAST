@@ -23,14 +23,28 @@ class CVAEWrapper(FeatureTransformationModel):
         self.num_epochs = training_params["num_epochs"]
         self.early_stopping_patience = training_params["early_stopping_patience"]
 
-    def loss_function(self, input, output, mean, log_var):
-        kl_divergence = self.KL_divergence(mean, log_var)
+    def loss_function(
+        self,
+        input,
+        output,
+        mean,
+        log_var,
+        current_epoch=None,
+        use_warmup=False,
+    ):
+        kl_divergence = self.KL_divergence(mean, log_var, current_epoch, use_warmup)
         reconstruction_loss = self.reconstruction_loss(input, output)
         return kl_divergence + reconstruction_loss
 
-    def KL_divergence(self, mean, log_var):
+    def KL_divergence(self, mean, log_var, current_epoch=None, use_warmup=False):
         """Based on (Kingma and Welling, 2013) Appendix B"""
-        return -0.5 * torch.sum(1 + log_var - mean**2 - torch.exp(log_var))
+        # Mean to balance with reconstruction loss
+        kl_divergence = -0.5 * torch.sum(1 + log_var - mean**2 - torch.exp(log_var))
+        if not use_warmup:
+            return kl_divergence
+        num_kl_warmup_epochs = 10
+        weight = min(1, current_epoch + 1 / num_kl_warmup_epochs)
+        return weight * kl_divergence
 
     def reconstruction_loss(self, input, output):
         return torch.mean((input - output) ** 2)
@@ -88,8 +102,20 @@ class CVAEWrapper(FeatureTransformationModel):
                 optimizer.zero_grad()
                 outputs, latent_means, latent_logvars = self.model(inputs)
 
-                loss = loss_function(outputs, targets, latent_means, latent_logvars)
-                loss_kl_divergence = self.KL_divergence(latent_means, latent_logvars)
+                loss = loss_function(
+                    outputs,
+                    targets,
+                    latent_means,
+                    latent_logvars,
+                    epoch,
+                    use_warmup=True,
+                )
+                loss_kl_divergence = self.KL_divergence(
+                    latent_means,
+                    latent_logvars,
+                    epoch,
+                    use_warmup=True,
+                )
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
                 )
@@ -122,7 +148,14 @@ class CVAEWrapper(FeatureTransformationModel):
             with torch.no_grad():
                 for inputs, targets in validation_dataloader:
                     outputs, latent_means, latent_logvars = self.model(inputs)
-                    loss = loss_function(outputs, targets, latent_means, latent_logvars)
+                    loss = loss_function(
+                        outputs,
+                        targets,
+                        latent_means,
+                        latent_logvars,
+                        epoch,
+                        use_warmup=True,
+                    )
                     running_val_loss += loss.item() * inputs.size(0)
 
             val_epoch_loss = running_val_loss / len(validation_dataloader.dataset)
