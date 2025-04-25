@@ -7,7 +7,8 @@ from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.forecasting_utils import compare_old_and_new_model
-from src.utils.generate_dataset import create_training_windows_from_mts  # noqa: E402
+from src.utils.generate_dataset import \
+    create_training_windows_from_mts  # noqa: E402
 
 
 class ForecasterEvaluator:
@@ -96,15 +97,17 @@ class ForecasterEvaluator:
             y_val=y_new_train,
             plot_loss=False,
         )
-        forecast_plot, mse_plot, mse_delta_plot, mase_plot = compare_old_and_new_model(
-            X_test=self.X_mts_test,
-            y_test=self.y_mts_test,
-            X_val=self.X_mts_validation,
-            y_val=self.y_mts_validation,
-            X_train=self.X_mts_train,
-            y_train=self.y_mts_train,
-            forecasting_model_wrapper_old=self.original_forecasting_model,
-            forecasting_model_wrapper_new=new_forecasting_model,
+        forecast_plot, mse_plot, mse_delta_plot, mase_plot, mase_delta_plot = (
+            compare_old_and_new_model(
+                X_test=self.X_mts_test,
+                y_test=self.y_mts_test,
+                X_val=self.X_mts_validation,
+                y_val=self.y_mts_validation,
+                X_train=self.X_mts_train,
+                y_train=self.y_mts_train,
+                forecasting_model_wrapper_old=self.original_forecasting_model,
+                forecasting_model_wrapper_new=new_forecasting_model,
+            )
         )
         forecast_plot.savefig(
             os.path.join(
@@ -122,4 +125,9 @@ class ForecasterEvaluator:
         )
         mase_plot.savefig(
             os.path.join(OUTPUT_DIR, f"forecasting_model_comparison_{type}_mase.png")
+        )
+        mase_delta_plot.savefig(
+            os.path.join(
+                OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mase.png"
+            )
         )
