@@ -16,6 +16,9 @@
       in {
         default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            black
+            isort 
+
             micromamba
             zsh
           ];
