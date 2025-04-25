@@ -33,7 +33,6 @@ def create_train_val_test_split(
     """ """
     logger.info(f"Generating transformation index pairs for training...")
 
-
     mts_features_array, _ = generate_feature_dataframe(
         data=mts_dataset_array,
         series_periodicity=config["stl_args"]["series_periodicity"],
@@ -59,8 +58,6 @@ def create_train_val_test_split(
     logger.info("Successfully generated MTS PCA space")
 
     logger.info("Splitting PCA space into train, validation and test indices...")
-
-
 
     plot_train_val_test_split(
         mts_dataset_pca=mts_pca_array,

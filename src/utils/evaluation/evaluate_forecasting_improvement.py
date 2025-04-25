@@ -116,7 +116,9 @@ class ForecasterEvaluator:
         )
 
         mse_delta_plot.savefig(
-            os.path.join(OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mse.png")
+            os.path.join(
+                OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mse.png"
+            )
         )
         mase_plot.savefig(
             os.path.join(OUTPUT_DIR, f"forecasting_model_comparison_{type}_mase.png")
