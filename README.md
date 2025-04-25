@@ -1,4 +1,4 @@
-# 🐉 BEAST: Benchmarking Enhanced Analysis of Shifting Time Series
+# 🐉 BEASTS: Benchmarking Enhanced Analysis of Shifting Time Series
 
 Welcome to **BEAST**! This powerful tool leverages a database of existing multivariate time series to generate new, realistic time series. By simulating distribution shifts, BEAST helps assess model robustness and ensures forecasting models improve after retraining.
 
