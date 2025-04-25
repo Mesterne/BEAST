@@ -4,7 +4,7 @@ import pandas as pd
 import seaborn as sns
 
 from src.plots.timeseries_forecast_comparison import plot_timeseries_forecast_comparison
-from src.utils.evaluation.forecaster_evaluation import mse_for_all_predictions, mse_for_each_forecast
+from src.utils.evaluation.forecaster_evaluation import mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions, mse_for_each_forecast
 from src.utils.generate_dataset import create_training_windows
 from src.utils.logging_config import logger
 
@@ -50,6 +50,22 @@ def compare_original_and_transformed_forecasting(
     )
     return forecast_plot
 
+def compute_metrics(y, old_pred, new_pred, insample):
+    mse_old = mse_for_each_forecast(y, old_pred)
+    mse_new = mse_for_each_forecast(y, new_pred)
+    mse_total_old = mse_for_all_predictions(y, old_pred)
+    mse_total_new = mse_for_all_predictions(y, new_pred)
+    mase_old = mase_for_each_forecast(y, old_pred, insample)
+    mase_new = mase_for_each_forecast(y, new_pred, insample)
+    mase_total_old = mase_for_all_predictions(y, old_pred, insample)
+    mase_total_new = mase_for_all_predictions(y, new_pred, insample)
+
+    return {
+        'mse_each': (mse_old, mse_new),
+        'mse_total': (mse_total_old, mse_total_new),
+        'mase_each': (mase_old, mase_new),
+        'mase_total': (mase_total_old, mase_total_new),
+    }
 
 def compare_old_and_new_model(
     X_train,
@@ -103,68 +119,58 @@ def compare_old_and_new_model(
     plt.xlabel("Forecast Stage")
     plt.ylabel("Value")
 
-    # Plot overall improvements
-    mse_old_train = mse_for_each_forecast(y_train, inferred_old_train)
-    mse_old_train_total = mse_for_all_predictions(y_train, inferred_old_train)
-    mse_new_train = mse_for_each_forecast(y_train, inferred_new_train)
-    mse_new_train_total = mse_for_all_predictions(y_train, inferred_new_train)
-    mse_delta_train = mse_new_train - mse_old_train
+    # Metric computation
+    train_metrics = compute_metrics(y_train, inferred_old_train, inferred_new_train, X_train)
+    val_metrics = compute_metrics(y_val, inferred_old_val, inferred_new_val, X_val)
+    test_metrics = compute_metrics(y_test, inferred_old_test, inferred_new_test, X_test)
 
-
-    mse_old_val = mse_for_each_forecast(y_val, inferred_old_val)
-    mse_old_val_total = mse_for_all_predictions(y_val, inferred_old_val)
-    mse_new_val = mse_for_each_forecast(y_val, inferred_new_val)
-    mse_new_val_total = mse_for_all_predictions(y_val, inferred_new_val)
-    mse_delta_val = mse_new_val - mse_old_val
-
-    mse_old_test = mse_for_each_forecast(y_test, inferred_old_test)
-    mse_old_test_total = mse_for_all_predictions(y_test, inferred_old_test)
-    mse_new_test = mse_for_each_forecast(y_test, inferred_new_test)
-    mse_new_test_total = mse_for_all_predictions(y_test, inferred_new_test)
-    mse_delta_test = mse_new_test - mse_old_test
-
-    # Plot delta
+    # MSE Delta KDE plot
     mse_delta_plot = plt.figure(figsize=(10, 6))
-    sns.kdeplot(mse_delta_train, label='Train', fill=True)
-    sns.kdeplot(mse_delta_val, label='Validation', fill=True)
-    sns.kdeplot(mse_delta_test, label='Test', fill=True)
-    plt.title('Distribution of MSE Deltas')
+    sns.kdeplot(train_metrics['mse_each'][1] - train_metrics['mse_each'][0], label='Train', fill=True)
+    sns.kdeplot(val_metrics['mse_each'][1] - val_metrics['mse_each'][0], label='Validation', fill=True)
+    sns.kdeplot(test_metrics['mse_each'][1] - test_metrics['mse_each'][0], label='Test', fill=True)
+    plt.title('Distribution of MSE Deltas (New - Old)')
     plt.xlabel('MSE Delta')
     plt.ylabel('Density')
     plt.legend()
     plt.tight_layout()
 
-    # Plot results in seaborn, return fig
-    data = {
+    # MSE barplot
+    mse_plot = plt.figure(figsize=(10, 6))
+    df = pd.DataFrame({
         "Dataset": ["Train", "Train", "Validation", "Validation", "Test", "Test"],
-        "Model": ["Old", "New", "Old", "New", "Old", "New"],
+        "Model": ["Old", "New"] * 3,
         "MSE": [
-            mse_old_train_total,
-            mse_new_train_total,
-            mse_old_val_total,
-            mse_new_val_total,
-            mse_old_test_total,
-            mse_new_test_total,
+            train_metrics['mse_total'][0], train_metrics['mse_total'][1],
+            val_metrics['mse_total'][0], val_metrics['mse_total'][1],
+            test_metrics['mse_total'][0], test_metrics['mse_total'][1],
         ],
-    }
-    df = pd.DataFrame(data)
-
-    # Create the plot
-    mse_plot = plt.figure()
+    })
     ax = sns.barplot(x="Dataset", y="MSE", hue="Model", data=df)
-
-    # Add labels and title
     plt.title("MSE Comparison: Old vs New Model")
     plt.ylabel("Mean Squared Error")
     plt.xlabel("Dataset")
-
-    # Add text annotations with MSE values
-    for i, p in enumerate(ax.patches):
-        height = p.get_height()
-        ax.text(
-            p.get_x() + p.get_width() / 2.0, height + 0.01, f"{height:.4f}", ha="center"
-        )
-
+    for p in ax.patches:
+        ax.text(p.get_x() + p.get_width() / 2., p.get_height() + 0.01, f'{p.get_height():.4f}', ha="center")
     plt.tight_layout()
 
-    return forecast_plot, mse_plot, mse_delta_plot
+    # MASE barplot
+    mase_plot = plt.figure(figsize=(10, 6))
+    df_mase = pd.DataFrame({
+        "Dataset": ["Train", "Train", "Validation", "Validation", "Test", "Test"],
+        "Model": ["Old", "New"] * 3,
+        "MASE": [
+            train_metrics['mase_total'][0], train_metrics['mase_total'][1],
+            val_metrics['mase_total'][0], val_metrics['mase_total'][1],
+            test_metrics['mase_total'][0], test_metrics['mase_total'][1],
+        ],
+    })
+    ax = sns.barplot(x="Dataset", y="MASE", hue="Model", data=df_mase)
+    plt.title("MASE Comparison: Old vs New Model")
+    plt.ylabel("Mean Absolute Scaled Error")
+    plt.xlabel("Dataset")
+    for p in ax.patches:
+        ax.text(p.get_x() + p.get_width() / 2., p.get_height() + 0.01, f'{p.get_height():.4f}', ha="center")
+    plt.tight_layout()
+
+    return forecast_plot, mse_plot, mse_delta_plot, mase_plot

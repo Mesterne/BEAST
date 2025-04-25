@@ -96,7 +96,7 @@ class ForecasterEvaluator:
             y_val=y_new_train,
             plot_loss=False,
         )
-        forecast_plot, mse_plot, mse_delta_plot = compare_old_and_new_model(
+        forecast_plot, mse_plot, mse_delta_plot, mase_plot = compare_old_and_new_model(
             X_test=self.X_mts_test,
             y_test=self.y_mts_test,
             X_val=self.X_mts_validation,
@@ -117,4 +117,7 @@ class ForecasterEvaluator:
 
         mse_delta_plot.savefig(
             os.path.join(OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mse.png")
+        )
+        mase_plot.savefig(
+            os.path.join(OUTPUT_DIR, f"forecasting_model_comparison_{type}_mase.png")
         )
