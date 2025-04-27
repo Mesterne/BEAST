@@ -1,14 +1,15 @@
-from typing import Dict, Optional
+import os
+from typing import Any, Dict
 
 import numpy as np
 
-from src.plots.generated_vs_target_comparison import (
-    create_and_save_plots_of_model_performances,
-)
+from src.data.constants import OUTPUT_DIR
+from src.plots.generated_vs_target_comparison import \
+    create_and_save_plots_of_model_performances
+from src.plots.plot_feature_evaluation_distribution import \
+    plot_feature_mse_distribution
 from src.utils.evaluation.feature_space_evaluation import (
-    calculate_mse_for_each_feature,
-    calculate_total_mse_for_each_mts,
-)
+    calculate_mse_for_each_feature, calculate_total_mse_for_each_mts)
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
@@ -30,19 +31,15 @@ def reshape_and_calculate_features(
 
 
 def evaluate(
-    config: Dict[str, any],
+    config: Dict[str, Any],
     mts_array: np.ndarray,  # Shape (Number of MTS, Number of UTS in MTS, Number of samples in UTS)
     train_transformation_indices: np.ndarray,  # Shape (number of transformation in train set, 2) Entry 1 is the original index, Entry 2 is target
     validation_transformation_indices: np.ndarray,  # Shape (number of transformation in validation set, 2) Entry 1 is the original index, Entry 2 is target
     test_transformation_indices: np.ndarray,  # Shape (number of transformation in test set, 2) Entry 1 is the original index, Entry 2 is target
     inferred_mts_validation: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
     inferred_mts_test: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
-    inferred_intermediate_features_validation: Optional[
-        np.ndarray
-    ] = None,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
-    inferred_intermediate_features_test: Optional[
-        np.ndarray
-    ] = None,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
+    inferred_intermediate_features_validation: np.ndarray,
+    inferred_intermediate_features_test: np.ndarray,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
 ):
     """
     Takes the dataset, defined transformation indices and inferred MTS for the
@@ -88,7 +85,6 @@ def evaluate(
         num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
         series_periodicity=config["stl_args"]["series_periodicity"],
     )
-
     y_features_validation = mts_dataset_features[
         validation_transformation_indices[:, 1]
     ]
@@ -109,6 +105,15 @@ def evaluate(
     )
     total_mse_for_each_mts_test = calculate_total_mse_for_each_mts(
         mse_per_feature=mse_values_for_each_feature_test
+    )
+
+    logger.info("Creating feature evaluation plots...")
+    mse_distribution_feature_space = plot_feature_mse_distribution(
+        feature_space_mse_validation=total_mse_for_each_mts_validation,
+        feature_space_mse_test=total_mse_for_each_mts_test,
+    )
+    mse_distribution_feature_space.savefig(
+        os.path.join(OUTPUT_DIR, "mse_feature_space.png")
     )
 
     logger.info("Creating plots for validation...")
