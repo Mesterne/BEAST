@@ -6,8 +6,8 @@ import numpy as np
 from src.data.constants import OUTPUT_DIR
 from src.plots.generated_vs_target_comparison import \
     create_and_save_plots_of_model_performances
-from src.plots.plot_feature_evaluation_distribution import \
-    plot_feature_mse_distribution
+from src.plots.plot_feature_evaluation_distribution import (
+    plot_feature_evaluation, plot_feature_mse_distribution)
 from src.utils.evaluation.feature_space_evaluation import (
     calculate_mse_for_each_feature, calculate_total_mse_for_each_mts)
 from src.utils.features import decomp_and_features
@@ -85,6 +85,19 @@ def evaluate(
         num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
         series_periodicity=config["stl_args"]["series_periodicity"],
     )
+    print(inferred_features_test.shape)
+    inferred_intermediate_features_validation = (
+        inferred_intermediate_features_validation.reshape(
+            -1,
+            len(config["dataset_args"]["timeseries_to_use"])
+            * config["dataset_args"]["num_features_per_uts"],
+        )
+    )
+    inferred_intermediate_features_test = inferred_intermediate_features_test.reshape(
+        -1,
+        len(config["dataset_args"]["timeseries_to_use"])
+        * config["dataset_args"]["num_features_per_uts"],
+    )
     y_features_validation = mts_dataset_features[
         validation_transformation_indices[:, 1]
     ]
@@ -92,34 +105,69 @@ def evaluate(
 
     # Calcuate MSE
     logger.info("Calculating MSE values...")
-    mse_values_for_each_feature_validation = calculate_mse_for_each_feature(
+    final_mse_values_for_each_feature_validation = calculate_mse_for_each_feature(
         predicted_features=inferred_features_validation,
         target_features=y_features_validation,
     )
-    mse_values_for_each_feature_test = calculate_mse_for_each_feature(
+    final_mse_values_for_each_feature_test = calculate_mse_for_each_feature(
         predicted_features=inferred_features_test,
         target_features=y_features_test,
     )
-    total_mse_for_each_mts_validation = calculate_total_mse_for_each_mts(
-        mse_per_feature=mse_values_for_each_feature_validation
+    final_total_mse_for_each_mts_validation = calculate_total_mse_for_each_mts(
+        mse_per_feature=final_mse_values_for_each_feature_validation
     )
-    total_mse_for_each_mts_test = calculate_total_mse_for_each_mts(
-        mse_per_feature=mse_values_for_each_feature_test
+    final_total_mse_for_each_mts_test = calculate_total_mse_for_each_mts(
+        mse_per_feature=final_mse_values_for_each_feature_test
+    )
+    final_total_mse_features_validation = np.mean(
+        final_total_mse_for_each_mts_validation
+    )
+    final_total_mse_features_test = np.mean(final_total_mse_for_each_mts_test)
+    intermediate_mse_values_for_each_feature_validation = (
+        calculate_mse_for_each_feature(
+            predicted_features=inferred_intermediate_features_validation,
+            target_features=y_features_validation,
+        )
+    )
+    intermediate_mse_values_for_each_feature_test = calculate_mse_for_each_feature(
+        predicted_features=inferred_intermediate_features_test,
+        target_features=y_features_test,
+    )
+    intermediate_total_mse_for_each_mts_validation = calculate_total_mse_for_each_mts(
+        mse_per_feature=intermediate_mse_values_for_each_feature_validation
+    )
+    intermediate_total_mse_for_each_mts_test = calculate_total_mse_for_each_mts(
+        mse_per_feature=intermediate_mse_values_for_each_feature_test
+    )
+    intermediate_total_mse_features_validation = np.mean(
+        intermediate_total_mse_for_each_mts_validation
+    )
+    intermediate_total_mse_features_test = np.mean(
+        intermediate_total_mse_for_each_mts_test
     )
 
     logger.info("Creating feature evaluation plots...")
     mse_distribution_feature_space = plot_feature_mse_distribution(
-        feature_space_mse_validation=total_mse_for_each_mts_validation,
-        feature_space_mse_test=total_mse_for_each_mts_test,
+        feature_space_mse_validation=final_total_mse_for_each_mts_validation,
+        feature_space_mse_test=final_total_mse_for_each_mts_test,
     )
     mse_distribution_feature_space.savefig(
-        os.path.join(OUTPUT_DIR, "mse_feature_space.png")
+        os.path.join(OUTPUT_DIR, "mse_feature_space_distribution.png")
     )
+
+    mse_feature_space = plot_feature_evaluation(
+        inferred_feature_space_mse_validation=intermediate_total_mse_features_validation,
+        final_feature_space_mse_validation=final_total_mse_features_validation,
+        inferred_feature_space_mse_test=intermediate_total_mse_features_test,
+        final_feature_space_mse_test=final_total_mse_features_test,
+        metric_name="MSE",
+    )
+    mse_feature_space.savefig(os.path.join(OUTPUT_DIR, "mse_feature_space.png"))
 
     logger.info("Creating plots for validation...")
     create_and_save_plots_of_model_performances(
-        total_mse_for_each_mts=total_mse_for_each_mts_validation,
-        mse_per_feature=mse_values_for_each_feature_validation,
+        total_mse_for_each_mts=final_total_mse_for_each_mts_validation,
+        mse_per_feature=final_mse_values_for_each_feature_validation,
         mts_dataset_array=mts_array,
         mts_dataset_features=mts_dataset_features,
         transformation_indices=validation_transformation_indices,
