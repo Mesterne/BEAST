@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
 
 class TimeseriesTransformationModel(ABC):
-    def __init__(self, config: Dict[str, any]) -> None:
+    def __init__(self, config: Dict[str, Any]) -> None:
         super().__init__()
         self.model = None
 
