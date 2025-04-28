@@ -5,24 +5,23 @@ import numpy as np
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
-from src.plots.pca_for_each_uts_with_transformed import (
-    plot_pca_for_each_uts_with_transformed,
-)
+from src.plots.pca_for_each_uts_with_transformed import \
+    plot_pca_for_each_uts_with_transformed
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 from src.plots.total_mse_distribution import plot_total_mse_distribution
 from src.utils.logging_config import logger
 
 
 def create_and_save_plots_of_model_performances(
-    total_mse_for_each_mts: np.array,  # Shape: (number of timeseries generated,)
-    mse_per_feature: np.array,  # Shape (number of timeseries generated, number of features)
-    mts_dataset_array: np.array,
-    mts_dataset_features: np.array,
+    total_mse_for_each_mts: np.ndarray,  # Shape: (number of timeseries generated,)
+    mse_per_feature: np.ndarray,  # Shape (number of timeseries generated, number of features)
+    mts_dataset_array: np.ndarray,
+    mts_dataset_features: np.ndarray,
     transformation_indices: np.ndarray,  # Shape (number of transformation in train set, 2) Entry 1 is the original index, Entry 2 is target
-    inferred_mts_array: np.array,  # Shape: (number of time series generated, number of uts, number of time steps)
-    inferred_mts_features: np.array,
+    inferred_mts_array: np.ndarray,  # Shape: (number of time series generated, number of uts, number of time steps)
+    inferred_mts_features: np.ndarray,
     inferred_mts_features_before_ga: Optional[
-        np.array
+        np.ndarray
     ] = None,  # Shape: (number of time series generated, number of features)
 ):
     # For instance when using CVAE we dont have features before generation.

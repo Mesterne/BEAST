@@ -111,23 +111,30 @@ class ForecasterEvaluator:
         )
         forecast_plot.savefig(
             os.path.join(
-                OUTPUT_DIR, f"forecasting_model_comparison_{type}_forecast.png"
+                OUTPUT_DIR,
+                f"retrain_on_{type}_forecasting_model_comparison_forecast.png",
             )
         )
         mse_plot.savefig(
-            os.path.join(OUTPUT_DIR, f"forecasting_model_comparison_{type}_mse.png")
+            os.path.join(
+                OUTPUT_DIR, f"retrain_on_{type}_forecasting_model_comparison_mse.png"
+            )
         )
 
         mse_delta_plot.savefig(
             os.path.join(
-                OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mse.png"
+                OUTPUT_DIR,
+                f"retrain_on_{type}_forecasting_model_improvement_delta_mse.png",
             )
         )
         mase_plot.savefig(
-            os.path.join(OUTPUT_DIR, f"forecasting_model_comparison_{type}_mase.png")
+            os.path.join(
+                OUTPUT_DIR, f"retrain_on_{type}_forecasting_model_comparison_mase.png"
+            )
         )
         mase_delta_plot.savefig(
             os.path.join(
-                OUTPUT_DIR, f"forecasting_model_improvement_{type}_delta_mase.png"
+                OUTPUT_DIR,
+                f"retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
             )
         )

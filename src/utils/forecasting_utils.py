@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.container import BarContainer
 
 from src.utils.evaluation.forecaster_evaluation import (
     mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
@@ -194,9 +195,9 @@ def compare_old_and_new_model(
 
 
 def plot_metric_comparison_train_validation_test(
-    train_metrics: Tuple[float, float],
-    val_metrics: Tuple[float, float],
-    test_metrics: Tuple[float, float],
+    train_metrics: np.ndarray,
+    val_metrics: np.ndarray,
+    test_metrics: np.ndarray,
     metric_name: str = "None",
 ):
     plot = plt.figure(figsize=(10, 6))
@@ -214,7 +215,12 @@ def plot_metric_comparison_train_validation_test(
             ],
         }
     )
-    _ = sns.barplot(x="Dataset", y="metric", hue="Model", data=df)
+    ax = sns.barplot(x="Dataset", y="metric", hue="Model", data=df)
+
+    for container in ax.containers:
+        if isinstance(container, BarContainer):
+            ax.bar_label(container, fmt="%.4f", label_type="edge", padding=3)
+
     plt.title(f"{metric_name} Comparison: Old vs New Model")
     plt.ylabel(f"{metric_name}")
     plt.xlabel("Dataset")

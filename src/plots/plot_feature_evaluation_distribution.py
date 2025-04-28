@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.container import BarContainer
 from matplotlib.figure import Figure
 
 
@@ -66,7 +67,12 @@ def plot_feature_evaluation(
             ],
         }
     )
-    sns.barplot(x="Dataset", y="metric", hue="Type", data=df)
+    ax = sns.barplot(x="Dataset", y="metric", hue="Type", data=df)
+
+    for container in ax.containers:
+        if isinstance(container, BarContainer):
+            ax.bar_label(container, fmt="%.4f", label_type="edge", padding=3)
+
     plt.title(f"{metric_name} Comparison: Old vs New Model")
     plt.ylabel(f"{metric_name}")
     plt.xlabel("Dataset")
