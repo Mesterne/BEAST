@@ -184,10 +184,10 @@ def compare_old_and_new_model(
     )
 
     mase_delta_comparison_plot = plot_delta_comparison_plot(
-        train_metrics=[train_mse_total_old, train_mse_total_new],
-        val_metrics=[val_mse_total_old, val_mse_total_new],
-        test_metrics=[test_mse_total_old, test_mse_total_new],
-        metric_name="MSE",
+        train_metrics=[train_mase_total_old, train_mase_total_new],
+        val_metrics=[val_mase_total_old, val_mase_total_new],
+        test_metrics=[test_mase_total_old, test_mase_total_new],
+        metric_name="MASE",
     )
 
     # MSE barplot
