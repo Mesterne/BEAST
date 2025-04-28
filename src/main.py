@@ -66,6 +66,10 @@ logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
     f"All outputs will be stored in: {OUTPUT_DIR} (Relative to where you ran the program from)"
 )
+if "test_timeseries_to_use" in config["dataset_args"]:
+    test_timeseries_to_use = config["dataset_args"]["test_timeseries_to_use"]
+else:
+    test_timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
 
 ############ DATA INITIALIZATION
 
@@ -78,7 +82,7 @@ mts_dataset_array: np.ndarray = get_mts_dataset(
 )
 mts_dataset_array_test: np.ndarray = get_mts_dataset(
     data_dir=training_data_dir,
-    time_series_to_use=config["dataset_args"]["test_timeseries_to_use"],
+    time_series_to_use=test_timeseries_to_use,
     context_length=config["dataset_args"]["window_size"],
     step_size=config["dataset_args"]["step_size"],
 )

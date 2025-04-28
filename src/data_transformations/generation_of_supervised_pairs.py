@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from tqdm import tqdm
@@ -8,7 +8,8 @@ from tqdm import tqdm
 from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
-from src.plots.plot_transformation_directions import plot_transformation_directions
+from src.plots.plot_transformation_directions import \
+    plot_transformation_directions
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
@@ -28,7 +29,7 @@ def euclidean_distance_between_arrays(array1: np.ndarray, array2: np.ndarray):
 def create_train_val_test_split(
     mts_dataset_array: np.ndarray,
     test_size: int,
-    config: Dict[str, any],
+    config: Dict[str, Any],
 ):
     """ """
     logger.info(f"Generating transformation index pairs for training...")
@@ -43,14 +44,14 @@ def create_train_val_test_split(
     dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
 
     indices = np.arange(len(mts_features_array))
-    test_indices = indices[:test_size]
-    indices_used_for_training = indices[test_size:]
+    test_indices = indices[test_size:]
+    indices_used_for_training = indices[:test_size]
 
     validation_size = int(EVALUATION_FRACTION * len(indices_used_for_training))
     np.random.shuffle(indices_used_for_training)
 
-    validation_indices = indices[:validation_size]
-    train_indices = indices[validation_size:]
+    validation_indices = indices_used_for_training[:validation_size]
+    train_indices = indices_used_for_training[validation_size:]
 
     pca = PCAWrapper()
     pca.fit_transform(mts_features_array[train_indices])
