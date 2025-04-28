@@ -1,0 +1,38 @@
+experiment_results_dir: experiments/gridloss/results
+dataset_args:
+  directory: data/gridloss
+  training_data: train_small.csv
+  window_size: 192
+  mts_size: 576
+  uts_size: 192
+  step_size: 24
+  timeseries_to_use:
+    - grid1-load
+    - grid1-loss
+    - grid1-temp
+  test_timeseries_to_use:
+    - grid1-load
+    - grid1-loss
+    - grid1-temp
+  num_features_per_uts: 4
+  use_one_hot_encoding: false
+  use_identity_mapping: false
+  test_set_sample_size: 10
+stl_args:
+  series_periodicity: 24
+model_args:
+  reconstruction_model_args: {}
+  feature_model_args: {}
+  model_name: 'horizontal_flip'
+  forecasting_model_args:
+    window_size: 168
+    network_size:
+      - 100
+    horizon_length: 24
+    model_name: feedforward_forecaster
+    model_params_storage_dir: models/feedforward
+    training_args:
+      num_epochs: 1
+      batch_size: 128
+      learning_rate: 0.001
+      early_stopping_patience: 25

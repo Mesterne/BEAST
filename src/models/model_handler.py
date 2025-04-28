@@ -26,8 +26,12 @@ class ModelHandler:
         """
         Based on the config file, chooses and sets the internal model to either GenerativeModel or FeatureOptimizationModel.
         """
-        print(self.config["model_args"]["model_name"])
-        if self.config["model_args"]["model_name"] in ["jitter", "scaler"]:
+        if self.config["model_args"]["model_name"] in [
+            "jitter",
+            "scaler",
+            "vertical_flip",
+            "horizontal_flip",
+        ]:
             self.model = BasicModel(self.config)
             logger.info("Running basic model...")
         elif self.config["is_conditional_gen_model"]:
