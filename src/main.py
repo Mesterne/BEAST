@@ -54,9 +54,12 @@ training_data_dir: str = os.path.join(
     config["dataset_args"]["directory"], config["dataset_args"]["training_data"]
 )
 num_uts_in_mts: int = len(config["dataset_args"]["timeseries_to_use"])
-config["is_conditional_gen_model"]: bool = (
-    config["model_args"]["feature_model_args"]["model_name"] == "mts_cvae"
-)
+try:
+    config["is_conditional_gen_model"] = (
+        config["model_args"]["feature_model_args"]["model_name"] == "mts_cvae"
+    )
+except Exception:
+    config["is_conditional_gen_model"] = False
 
 
 logger.info(f"Running with experiment settings:\n{config}")

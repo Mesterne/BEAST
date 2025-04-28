@@ -2,11 +2,12 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from src.models.feature_optimization_models.feature_optimization_model import (
-    FeatureOptimizationModel,
-)
+from src.models.basic_models.BasicModel import BasicModel
+from src.models.feature_optimization_models.feature_optimization_model import \
+    FeatureOptimizationModel
 from src.models.generative_models.generative_model import GenerativeModel
-from src.models.timeseries_transformation_model import TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import \
+    TimeseriesTransformationModel
 from src.utils.logging_config import logger
 
 
@@ -25,7 +26,11 @@ class ModelHandler:
         """
         Based on the config file, chooses and sets the internal model to either GenerativeModel or FeatureOptimizationModel.
         """
-        if self.config["is_conditional_gen_model"]:
+        print(self.config["model_args"]["model_name"])
+        if self.config["model_args"]["model_name"] in ["jitter", "scaler"]:
+            self.model = BasicModel(self.config)
+            logger.info("Running basic model...")
+        elif self.config["is_conditional_gen_model"]:
             self.model = GenerativeModel(self.config)
             logger.info("Running conditional generative model")
         else:

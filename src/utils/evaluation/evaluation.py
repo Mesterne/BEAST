@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -38,8 +38,10 @@ def evaluate(
     test_transformation_indices: np.ndarray,  # Shape (number of transformation in test set, 2) Entry 1 is the original index, Entry 2 is target
     inferred_mts_validation: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
     inferred_mts_test: np.ndarray,  # Shape: (number of transformations in validation set, Number of UTS in MTS * Number of samples in UTS)
-    inferred_intermediate_features_validation: np.ndarray,
-    inferred_intermediate_features_test: np.ndarray,  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
+    inferred_intermediate_features_validation: Optional[np.ndarray],
+    inferred_intermediate_features_test: Optional[
+        np.ndarray
+    ],  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
 ):
     """
     Takes the dataset, defined transformation indices and inferred MTS for the
@@ -85,7 +87,10 @@ def evaluate(
         num_uts_in_mts=len(config["dataset_args"]["timeseries_to_use"]),
         series_periodicity=config["stl_args"]["series_periodicity"],
     )
-    print(inferred_features_test.shape)
+    if inferred_intermediate_features_validation is None:
+        inferred_intermediate_features_validation = inferred_features_validation
+    if inferred_intermediate_features_test is None:
+        inferred_intermediate_features_test = inferred_features_test
     inferred_intermediate_features_validation = (
         inferred_intermediate_features_validation.reshape(
             -1,
