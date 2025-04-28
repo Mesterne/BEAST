@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv
+  training_data: train_small.csv
   test_data: test.csv
   window_size: 192
   mts_size: 576
@@ -12,48 +12,55 @@ dataset_args:
     - grid1-loss
     - grid1-temp
   num_features_per_uts: 4
-  use_one_hot_encoding: true
+  use_one_hot_encoding: false
   use_identity_mapping: false
-  test_set_sample_size: 500
+  test_set_sample_size: 5
 stl_args:
   series_periodicity: 24
 model_args:
   reconstruction_model_args:
-    model_type: 'ga'
-    num_runs: 1
-    num_generations: 100
-    num_parents_mating: 2
-    solutions_per_population: 10
-    init_range_low: -5
-    init_range_high: 5
-    parent_selection_type: "sss"
-    crossover_type: "single_point"
-    mutation_type: "random"
-    mutation_percent_genes: 25
-    legal_values:
-      trend_det_factor: [0.01, 10]
-      trend_slope_factor: [-1, 1]
-      trend_lin_factor: [0.01, 10]
-      seasonal_det_factor: [0.01, 10]
-  feature_model_args:
-    model_name: mts_cvae
+    model_type: 'cvae'
+    architecture: "feedforward"
+    condition_type: "feature"
+    input_size_without_conditions: 576
+    output_size: 576
+    latent_size: 128
+    rnn_hidden_state_size: 
+    convolutional_layers:
+    transformer_args:
+    conv_decoder:
+      use_conv_decoder: false
+    number_of_conditions: 12 # Delta values
+    feedforward_layers:
+      - [1024, relu]
+      - [512, relu]
+      - [256, relu]
     training_args:
-      num_epochs: 400
+      num_epochs: 1
       batch_size: 16
       learning_rate: 0.0001
       early_stopping_patience: 50
+  feature_model_args:
+    model_name: feature_cvae
+    training_args:
+      num_epochs: 1
+      batch_size: 16
+      learning_rate: 0.005
+      early_stopping_patience: 50
     conditional_gen_model_args:
       architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
-      condition_type: "ohe"
-      input_size_without_conditions: 192
-      output_size: 576
+      condition_type: "feature_delta"
+      input_size_without_conditions: 12
+      output_size: 12
       latent_size: 64
       rnn_hidden_state_size:
-      number_of_conditions: 3
+      convolutional_layers:
+      transformer_args:
+      conv_decoder:
+        use_conv_decoder: false
+      number_of_conditions: 12
       feedforward_layers:
         - [512, relu]
-        - [512, relu]
-        - [256, relu]
         - [256, relu]
         - [128, relu]
   forecasting_model_args:
@@ -65,7 +72,7 @@ model_args:
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     training_args:
-      num_epochs: 50
+      num_epochs: 1
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
