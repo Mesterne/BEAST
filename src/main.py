@@ -193,6 +193,10 @@ logger.info("Evaluating foreasting improvement on inferred validation set...")
 evaluator.evaluate_on_evaluation_set(
     inferred_mts_array=inferred_mts_validation, type="validation"
 )
+logger.info("Evaluating foreasting improvement on inferred test set...")
+evaluator.evaluate_on_evaluation_set(
+    inferred_mts_array=inferred_mts_validation, type="test"
+)
 
 
 logger.info("Finished running")
