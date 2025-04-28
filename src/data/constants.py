@@ -28,7 +28,7 @@ UTS_NAMES = [
     "grid1-temp",
 ]
 
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "")
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_outputs")
 
 NETWORK_ARCHITECTURES = [
     "feedforward",
