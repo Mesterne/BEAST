@@ -108,13 +108,13 @@ class CVAEWrapper(FeatureTransformationModel):
                     latent_means,
                     latent_logvars,
                     epoch,
-                    use_warmup=True,
+                    use_warmup=False,
                 )
                 loss_kl_divergence = self.KL_divergence(
                     latent_means,
                     latent_logvars,
                     epoch,
-                    use_warmup=True,
+                    use_warmup=False,
                 )
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
@@ -154,7 +154,7 @@ class CVAEWrapper(FeatureTransformationModel):
                         latent_means,
                         latent_logvars,
                         epoch,
-                        use_warmup=True,
+                        use_warmup=False,
                     )
                     running_val_loss += loss.item() * inputs.size(0)
 
