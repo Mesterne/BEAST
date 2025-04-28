@@ -97,17 +97,23 @@ class ForecasterEvaluator:
             y_val=y_new_train,
             plot_loss=False,
         )
-        forecast_plot, mse_plot, mse_delta_plot, mase_plot, mase_delta_plot = (
-            compare_old_and_new_model(
-                X_test=self.X_mts_test,
-                y_test=self.y_mts_test,
-                X_val=self.X_mts_validation,
-                y_val=self.y_mts_validation,
-                X_train=self.X_mts_train,
-                y_train=self.y_mts_train,
-                forecasting_model_wrapper_old=self.original_forecasting_model,
-                forecasting_model_wrapper_new=new_forecasting_model,
-            )
+        (
+            forecast_plot,
+            mse_plot,
+            mse_delta_plot,
+            mase_plot,
+            mase_delta_plot,
+            mse_delta_comparison,
+            mase_delta_comparison,
+        ) = compare_old_and_new_model(
+            X_test=self.X_mts_test,
+            y_test=self.y_mts_test,
+            X_val=self.X_mts_validation,
+            y_val=self.y_mts_validation,
+            X_train=self.X_mts_train,
+            y_train=self.y_mts_train,
+            forecasting_model_wrapper_old=self.original_forecasting_model,
+            forecasting_model_wrapper_new=new_forecasting_model,
         )
         forecast_plot.savefig(
             os.path.join(
@@ -136,5 +142,18 @@ class ForecasterEvaluator:
             os.path.join(
                 OUTPUT_DIR,
                 f"retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
+            )
+        )
+
+        mse_delta_comparison.savefig(
+            os.path.join(
+                OUTPUT_DIR,
+                f"retrain_on_{type}_forecasting_delta_mse.png",
+            )
+        )
+        mase_delta_comparison.savefig(
+            os.path.join(
+                OUTPUT_DIR,
+                f"retrain_on_{type}_forecasting_delta_mase.png",
             )
         )

@@ -176,6 +176,20 @@ def compare_old_and_new_model(
         metric_name="MASE",
     )
 
+    mse_delta_comparison_plot = plot_delta_comparison_plot(
+        train_metrics=[train_mse_total_old, train_mse_total_new],
+        val_metrics=[val_mse_total_old, val_mse_total_new],
+        test_metrics=[test_mse_total_old, test_mse_total_new],
+        metric_name="MSE",
+    )
+
+    mase_delta_comparison_plot = plot_delta_comparison_plot(
+        train_metrics=[train_mse_total_old, train_mse_total_new],
+        val_metrics=[val_mse_total_old, val_mse_total_new],
+        test_metrics=[test_mse_total_old, test_mse_total_new],
+        metric_name="MSE",
+    )
+
     # MSE barplot
     mse_plot = plot_metric_comparison_train_validation_test(
         train_metrics=[train_mse_total_old, train_mse_total_new],
@@ -191,7 +205,15 @@ def compare_old_and_new_model(
         test_metrics=[test_mase_total_old, test_mase_total_new],
         metric_name="MASE",
     )
-    return forecast_plot, mse_plot, mse_delta_plot, mase_plot, mase_delta_plot
+    return (
+        forecast_plot,
+        mse_plot,
+        mse_delta_plot,
+        mase_plot,
+        mase_delta_plot,
+        mse_delta_comparison_plot,
+        mase_delta_comparison_plot,
+    )
 
 
 def plot_metric_comparison_train_validation_test(
@@ -241,6 +263,52 @@ def plot_metric_comparison_train_validation_test(
         val_metrics[1],
         test_metrics[0],
         test_metrics[1],
+    )
+
+    # Set the y-axis limits to fit the range of the data
+    margin = (y_max - y_min) * 0.1  # 10% margin
+    plt.ylim(y_min - margin, y_max + margin)
+
+    return plot
+
+
+def plot_delta_comparison_plot(
+    train_metrics: np.ndarray,
+    val_metrics: np.ndarray,
+    test_metrics: np.ndarray,
+    metric_name: str = "None",
+):
+    plot = plt.figure(figsize=(10, 6))
+    df = pd.DataFrame(
+        {
+            "Dataset": ["Train", "Validation", "Test"],
+            "metric": [
+                train_metrics[0] - train_metrics[1],
+                val_metrics[0] - val_metrics[1],
+                test_metrics[0] - test_metrics[1],
+            ],
+        }
+    )
+    ax = sns.barplot(x="Dataset", y="metric", data=df)
+
+    for container in ax.containers:
+        if isinstance(container, BarContainer):
+            ax.bar_label(container, fmt="%.4f", label_type="edge", padding=3)
+
+    plt.title(f"{metric_name} Comparison: Delta")
+    plt.ylabel(f"{metric_name} Delta")
+    plt.xlabel("Dataset")
+
+    # Automatically adjust y-axis to fit the values better
+    y_min = min(
+        train_metrics[0] - train_metrics[1],
+        val_metrics[0] - val_metrics[1],
+        test_metrics[0] - test_metrics[1],
+    )
+    y_max = max(
+        train_metrics[0] - train_metrics[1],
+        val_metrics[0] - val_metrics[1],
+        test_metrics[0] - test_metrics[1],
     )
 
     # Set the y-axis limits to fit the range of the data
