@@ -16,7 +16,7 @@ class BasicModel(TimeseriesTransformationModel):
         self.model = self._choose_underlying_model_based_on_config()
 
     def _choose_underlying_model_based_on_config(self):
-        model_name = self.config["model_args"]["feature_model_args"]["model_name"]
+        model_name = self.config["model_args"]["model_name"]
         if model_name == "scaler":
             return Scaler()
         elif model_name == "jitter":

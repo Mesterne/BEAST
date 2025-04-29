@@ -26,7 +26,7 @@ class ModelHandler:
         """
         Based on the config file, chooses and sets the internal model to either GenerativeModel or FeatureOptimizationModel.
         """
-        if self.config["model_args"]["feature_model_args"]["model_name"] in [
+        if self.config["model_args"]["model_name"] in [
             "jitter",
             "scaler",
             "vertical_flip",
