@@ -206,7 +206,7 @@ class Encoder(nn.Module):
     def determine_combination_layer_input_size(self) -> int:
         """Determine the input size of the combination layer based on the architecture."""
         if self.architecture == NETWORK_ARCHITECTURES[0]:
-            return self.mts_size + self.number_of_conditions
+            return self.input_size_without_conditions + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[1]:
             return self.rnn_hidden_state_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[3]:
