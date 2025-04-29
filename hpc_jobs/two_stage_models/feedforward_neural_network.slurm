@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=feedforward_twostage
+#SBATCH --job-name=feedforward_two_stage
 #SBATCH --time=0-12:00:00
 
 #SBATCH --partition=GPUQ
@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/config_ffnn_two_stage.yml'
+python src/main.py 'experiments/gridloss/two_stage/config_ffnn_two_stage.yml'

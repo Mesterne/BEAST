@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=train_correlation_feature_model_with_one_hot_encoding
+#SBATCH --job-name=correlation_two_staage
 #SBATCH --time=0-12:00:00
 
 #SBATCH --partition=GPUQ
@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/config_correlation_ga_w_one_hot_encoding.yml'
+python src/main.py 'experiments/gridloss/two_stage/config_correlation_ga.yml'

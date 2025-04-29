@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=train_perfect_feature_model
+#SBATCH --job-name=perfect_two_stage
 #SBATCH --time=0-12:00:00
 
 #SBATCH --partition=GPUQ
