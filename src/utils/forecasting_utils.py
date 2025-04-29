@@ -66,6 +66,7 @@ def compute_metrics(y, old_pred, new_pred, insample):
 
 
 def compute_deltas(train_old, train_new, val_old, val_new, test_old, test_new):
+    # Bigger is better
     delta_train = train_old - train_new
     delta_val = val_old - val_new
     delta_test = test_old - test_new
@@ -278,7 +279,7 @@ def plot_delta_comparison_plot(
     test_metrics: np.ndarray,
     metric_name: str = "None",
 ):
-    plot = plt.figure(figsize=(10, 6))
+    plot = plt.figure(figsize=(00, 6))
     df = pd.DataFrame(
         {
             "Dataset": ["Train", "Validation", "Test"],
@@ -295,7 +296,7 @@ def plot_delta_comparison_plot(
         if isinstance(container, BarContainer):
             ax.bar_label(container, fmt="%.4f", label_type="edge", padding=3)
 
-    plt.title(f"{metric_name} Comparison: Delta")
+    plt.title(f"{metric_name} Comparison: Delta (Bigger is better)")
     plt.ylabel(f"{metric_name} Delta")
     plt.xlabel("Dataset")
 
@@ -335,7 +336,7 @@ def plot_delta_distributions(delta_train, delta_val, delta_test, metric_name):
         label="Test",
         fill=True,
     )
-    plt.title(f"Distribution of {metric_name} Deltas (New - Old)")
+    plt.title(f"Distribution of {metric_name} Deltas (Bigger is better)")
     plt.xlabel(f"{metric_name} Delta")
     plt.ylabel("Density")
     plt.legend()

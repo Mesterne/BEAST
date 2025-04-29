@@ -1,5 +1,0 @@
-Running from directory: /cluster/home/vegasj/BEAST
-Name of job: train_cvae_delta_values
-ID of job: 21348275
-Nodes used: idun-09-06
-Output directory: /cluster/home/vegasj/BEAST/idun_outputs/train_cvae_delta_values_21348275
