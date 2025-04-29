@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=transformer_enc_cvae_feature
+#SBATCH --job-name=scaler
 #SBATCH --time=0-23:00:00
 
 #SBATCH --partition=GPUQ
@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/basic_models/config_vertical_flip.yml'
+python src/main.py 'experiments/gridloss/basic_models/config_scaler.yml'

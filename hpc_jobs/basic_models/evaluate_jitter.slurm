@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
-#SBATCH --job-name=transformer_enc_cvae_feature
+#SBATCH --job-name=jitter
 #SBATCH --time=0-23:00:00
 
 #SBATCH --partition=GPUQ
