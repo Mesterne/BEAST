@@ -1,6 +1,7 @@
 import os
 from typing import Any, Dict, Optional
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR

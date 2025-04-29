@@ -279,7 +279,7 @@ def plot_delta_comparison_plot(
     test_metrics: np.ndarray,
     metric_name: str = "None",
 ):
-    plot = plt.figure(figsize=(00, 6))
+    plot = plt.figure(figsize=(10, 6))
     df = pd.DataFrame(
         {
             "Dataset": ["Train", "Validation", "Test"],
