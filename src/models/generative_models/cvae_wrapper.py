@@ -42,9 +42,10 @@ class CVAEWrapper(FeatureTransformationModel):
         kl_divergence = -0.5 * torch.sum(1 + log_var - mean**2 - torch.exp(log_var))
         if not use_warmup:
             return kl_divergence
-        num_kl_warmup_epochs = 10
-        weight = min(1, current_epoch + 1 / num_kl_warmup_epochs)
-        return weight * kl_divergence
+        else:
+            num_kl_warmup_epochs = 10
+            weight = min(1, current_epoch + 1 / num_kl_warmup_epochs)
+            return weight * kl_divergence
 
     def reconstruction_loss(self, input, output):
         return torch.mean((input - output) ** 2)
