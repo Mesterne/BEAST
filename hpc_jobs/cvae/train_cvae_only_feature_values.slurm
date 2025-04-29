@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
 #SBATCH --job-name=train_cvae_only_feature_values
-#SBATCH --time=0-23:00:00
+#SBATCH --time=0-12:00:00
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:v100:1
