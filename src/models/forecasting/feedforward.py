@@ -1,11 +1,9 @@
-import torch
-import torch.nn.functional as F
-from torch import optim
-from torch import nn
-from torch import save, load
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+import torch.nn.functional as F
+from torch import load, nn, optim, save
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
+
 from utils.logging_config import logger
 
 

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,9 +6,11 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.container import BarContainer
 
+from src.models.forecasting.forcasting_model import ForecastingModel
 from src.utils.evaluation.forecaster_evaluation import (
     mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
     mse_for_each_forecast)
+from src.utils.generate_dataset import create_training_windows_from_mts
 
 
 def compare_original_and_transformed_forecasting(
@@ -75,24 +77,58 @@ def compute_deltas(train_old, train_new, val_old, val_new, test_old, test_new):
 
 
 def compare_old_and_new_model(
-    X_train,
-    y_train,
-    X_val,
-    y_val,
-    X_test,
-    y_test,
-    forecasting_model_wrapper_old,
-    forecasting_model_wrapper_new,
+    config: Dict[str, Any],
+    train_timeseries: np.ndarray,
+    validation_timeseries: np.ndarray,
+    test_timeseries: np.ndarray,
+    forecasting_model_wrapper_old: ForecastingModel,
+    forecasting_model_wrapper_new: ForecastingModel,
 ):
-    inferred_old_train = forecasting_model_wrapper_old.infer(X=X_train)
-    inferred_new_train = forecasting_model_wrapper_new.infer(X=X_train)
+    inferred_old_train = forecasting_model_wrapper_old.forecast(
+        test_timeseries=train_timeseries
+    )
+    inferred_new_train = forecasting_model_wrapper_new.forecast(
+        test_timeseries=train_timeseries
+    )
 
-    inferred_old_val = forecasting_model_wrapper_old.infer(X=X_val)
-    inferred_new_val = forecasting_model_wrapper_new.infer(X=X_val)
+    inferred_old_val = forecasting_model_wrapper_old.forecast(
+        test_timeseries=validation_timeseries
+    )
+    inferred_new_val = forecasting_model_wrapper_new.forecast(
+        test_timeseries=validation_timeseries
+    )
 
-    inferred_old_test = forecasting_model_wrapper_old.infer(X=X_test)
-    inferred_new_test = forecasting_model_wrapper_new.infer(X=X_test)
+    inferred_old_test = forecasting_model_wrapper_old.forecast(
+        test_timeseries=test_timeseries
+    )
+    inferred_new_test = forecasting_model_wrapper_new.forecast(
+        test_timeseries=test_timeseries
+    )
 
+    X_train, y_train = create_training_windows_from_mts(
+        mts=train_timeseries,
+        target_col_index=1,
+        window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+        forecast_horizon=config["model_args"]["forecasting_model_args"][
+            "horizon_length"
+        ],
+    )
+    X_val, y_val = create_training_windows_from_mts(
+        mts=validation_timeseries,
+        target_col_index=1,
+        window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+        forecast_horizon=config["model_args"]["forecasting_model_args"][
+            "horizon_length"
+        ],
+    )
+    X_test, y_test = create_training_windows_from_mts(
+        mts=test_timeseries,
+        target_col_index=1,
+        window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+        forecast_horizon=config["model_args"]["forecasting_model_args"][
+            "horizon_length"
+        ],
+    )
     # Plot worst forecast before and after
     errors = np.abs(y_val - inferred_old_val)
     errors_summed = np.sum(errors, axis=1)
