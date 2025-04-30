@@ -8,10 +8,13 @@ from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.forecasting.feedforward_forecasting_model import \
     FeedForwardForecastingModel
 from src.models.forecasting.forcasting_model import ForecastingModel
+from src.models.forecasting.n_linear_forecasting_model import \
+    NLinearForecastingModel
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.forecasting_utils import compare_old_and_new_model
 from src.utils.generate_dataset import \
     create_training_windows_from_mts  # noqa: E402
+from src.utils.logging_config import logger
 
 
 class ForecasterEvaluator:
@@ -64,7 +67,12 @@ class ForecasterEvaluator:
 
     def _initialize_forecasting_model(self) -> ForecastingModel:
         model_type = self.config["model_args"]["forecasting_model_args"]["model_type"]
-        return FeedForwardForecastingModel(self.config)
+        if model_type == "feedforward_forecaster":
+            logger.info("Running NLinearForecastingModel for forecasting evaluations")
+            return FeedForwardForecastingModel(self.config)
+        else:
+            logger.info("Running NLinearForecastingModel for forecasting evaluations")
+            return NLinearForecastingModel(self.config)
 
     def evaluate_on_evaluation_set(self, inferred_mts_array, type=""):
         new_train_mts_array = np.vstack([self.train_mts_array, inferred_mts_array])
