@@ -39,26 +39,26 @@ class NLinearForecastingModel(ForecastingModel):
         val_series: List[TimeSeries] = array_to_timeseries(validation_timeseries)
 
         # We scale the time series. As recommended in Darts documentation
-        train_series_scaled: List[TimeSeries] = self.scaler.fit_transform(train_series)
-        val_series_scaled: List[TimeSeries] = self.scaler.transform(val_series)
+        train_series_scaled: List[TimeSeries] = self.scaler.fit_transform(train_series)  # type: ignore[assignment]
+        val_series_scaled: List[TimeSeries] = self.scaler.transform(val_series)  # type: ignore[assignment]
 
         self.model.fit(series=train_series_scaled, val_series=val_series_scaled)
 
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
-        test_series: List[TimeSeries] = array_to_timeseries(test_timeseries)
-        test_series_scaled: List[TimeSeries] = self.scaler.transform(test_series)
+        test_series: List[TimeSeries] = array_to_timeseries(test_timeseries)  # type: ignore[assignment]
+        test_series_scaled: List[TimeSeries] = self.scaler.transform(test_series)  # type: ignore[assignment]
 
         forecast_series = self.model.predict(
             n=self.config["model_args"]["forecasting_model_args"]["horizon_length"],
             series=test_series_scaled,
-        )
+        )  # type: ignore[assignment]
         forecast_series: List[TimeSeries] = self.scaler.inverse_transform(
             forecast_series
-        )
+        )  # type: ignore[assignment]
 
-        results = []
+        results: List = []
 
         for series in forecast_series:
             results.append(series.values()[:, 1])
 
-        return results
+        return np.array(results)
