@@ -7,6 +7,7 @@ import numpy as np
 from src.data.constants import OUTPUT_DIR
 from src.plots.generated_vs_target_comparison import \
     create_and_save_plots_of_model_performances
+from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 from src.plots.plot_feature_evaluation_distribution import (
     plot_feature_evaluation, plot_feature_mse_distribution)
 from src.utils.evaluation.feature_space_evaluation import (
@@ -169,6 +170,23 @@ def evaluate(
         metric_name="MSE",
     )
     mse_feature_space.savefig(os.path.join(OUTPUT_DIR, "mse_feature_space.png"))
+
+    pca_plot_intermediate_validation_features = plot_pca_for_all_generated_mts(
+        mts_dataset_features=mts_dataset_features,
+        mts_generated_features=inferred_intermediate_features_validation,
+        evaluation_set_indices=validation_transformation_indices,
+    )
+    pca_plot_intermediate_validation_features.savefig(
+        os.path.join(OUTPUT_DIR, "total_generation_pca_intermediate_validation.png")
+    )
+    pca_plot_intermediate_test_features = plot_pca_for_all_generated_mts(
+        mts_dataset_features=mts_dataset_features,
+        mts_generated_features=inferred_intermediate_features_test,
+        evaluation_set_indices=test_transformation_indices,
+    )
+    pca_plot_intermediate_test_features.savefig(
+        os.path.join(OUTPUT_DIR, "total_generation_pca_intermediate_test.png")
+    )
 
     logger.info("Creating plots for validation...")
     create_and_save_plots_of_model_performances(
