@@ -31,4 +31,4 @@ export JOB_NAME="${SLURM_JOB_NAME}_${SLURM_JOB_ID}"
 
 # Run Python script from the parent directory
 cd "${WORKDIR}"
-python src/main.py 'experiments/gridloss/config_perfect_feature_model.yml'
+python src/main.py 'experiments/gridloss/two_stage/config_perfect_feature_model.yml'
