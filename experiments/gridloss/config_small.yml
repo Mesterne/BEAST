@@ -56,7 +56,7 @@ model_args:
     model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     training_args:
-      num_epochs: 1
+      num_epochs: 10
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
