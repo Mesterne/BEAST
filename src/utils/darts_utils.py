@@ -1,29 +1,30 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
-import pandas as pd
 from darts import TimeSeries
 
 
-def array_to_timeseries(timeseries_array: np.ndarray) -> List[TimeSeries]:
-    time_index = pd.date_range(
-        start="1960-01-01 00:00",  # NOTE: The date does not matter for our experiments
-        periods=timeseries_array.shape[2],  # Samples
-        freq="h",  # The grid loss data set has hourly samples
-    )
+def array_to_timeseries(
+    timeseries_array: np.ndarray,
+) -> Tuple[List[TimeSeries], List[TimeSeries]]:
+    target_series = []
+    covariate_series = []
 
-    series = []
+    for i in range(timeseries_array.shape[0]):
+        # Target: grid loss
+        target = TimeSeries.from_values(
+            values=timeseries_array[i, 1, :].reshape(-1, 1), columns=["grid_loss"]
+        ).astype(np.float32)
 
-    for i in range(0, timeseries_array.shape[0]):
-        series.append(
-            TimeSeries.from_times_and_values(
-                times=time_index,
-                values=timeseries_array[
-                    i
-                ].T,  # We transpose to get shape (samples, uts)
-                columns=[f"var_{j}" for j in range(timeseries_array.shape[1])],
-            ).astype(
-                np.float32
-            )  # For running models on hardware
-        )
-    return series
+        # Covariates: grid load and grid temp
+        covariates = TimeSeries.from_values(
+            values=np.stack(
+                [timeseries_array[i, 0, :], timeseries_array[i, 2, :]], axis=1
+            ),
+            columns=["grid_load", "grid_temp"],
+        ).astype(np.float32)
+
+        target_series.append(target)
+        covariate_series.append(covariates)
+
+    return target_series, covariate_series

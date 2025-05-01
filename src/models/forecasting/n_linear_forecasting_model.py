@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 
 import numpy as np
+from darts import concatenate
 from darts.dataprocessing.transformers.scaler import Scaler
 from darts.models.forecasting.nlinear import NLinearModel
 from darts.timeseries import TimeSeries
@@ -14,6 +15,7 @@ class NLinearForecastingModel(ForecastingModel):
         self.config = config
         self.model = self._initialize_forecasting_model()
         self.scaler = Scaler()
+        self.covariates_scaler = Scaler()
 
     def _initialize_forecasting_model(self) -> NLinearModel:
         return NLinearModel(
@@ -35,30 +37,39 @@ class NLinearForecastingModel(ForecastingModel):
     def train(
         self, train_timeseries: np.ndarray, validation_timeseries: np.ndarray
     ) -> None:
-        train_series: List[TimeSeries] = array_to_timeseries(train_timeseries)
-        val_series: List[TimeSeries] = array_to_timeseries(validation_timeseries)
+        train_targets, train_covariates = array_to_timeseries(train_timeseries)
+        val_targets, val_covariates = array_to_timeseries(validation_timeseries)
 
         # We scale the time series. As recommended in Darts documentation
-        train_series_scaled: List[TimeSeries] = self.scaler.fit_transform(train_series)  # type: ignore[assignment]
-        val_series_scaled: List[TimeSeries] = self.scaler.transform(val_series)  # type: ignore[assignment]
+        train_targets_scaled = self.scaler.fit_transform(train_targets)
+        val_targets_scaled = self.scaler.transform(val_targets)
 
-        self.model.fit(series=train_series_scaled, val_series=val_series_scaled)
+        train_covariates_scaled = self.covariates_scaler.fit_transform(train_covariates)
+        val_covariates_scaled = self.covariates_scaler.transform(val_covariates)
+
+        self.model.fit(
+            series=train_targets_scaled,
+            past_covariates=train_covariates_scaled,
+            val_series=val_targets_scaled,
+            val_past_covariates=val_covariates_scaled,
+        )
 
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
-        test_series: List[TimeSeries] = array_to_timeseries(test_timeseries)  # type: ignore[assignment]
-        test_series_scaled: List[TimeSeries] = self.scaler.transform(test_series)  # type: ignore[assignment]
+        test_targets, test_covariates = array_to_timeseries(test_timeseries)
+        test_targets_scaled = self.scaler.transform(test_targets)
+
+        test_covariates_scaled = self.covariates_scaler.transform(test_covariates)
 
         forecast_series = self.model.predict(
             n=self.config["model_args"]["forecasting_model_args"]["horizon_length"],
-            series=test_series_scaled,
-        )  # type: ignore[assignment]
-        forecast_series: List[TimeSeries] = self.scaler.inverse_transform(
-            forecast_series
-        )  # type: ignore[assignment]
+            series=test_targets_scaled,
+            past_covariates=test_covariates_scaled,
+        )
+        forecast_series = self.scaler.inverse_transform(forecast_series)
 
         results: List = []
 
         for series in forecast_series:
-            results.append(series.values()[:, 1])
+            results.append(series.values().squeeze())
 
         return np.array(results)
