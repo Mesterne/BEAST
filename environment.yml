@@ -23,4 +23,4 @@ dependencies:
   - nbformat
   - pygad
   - wandb
-  - u8darts-torch
+  - u8darts-all
