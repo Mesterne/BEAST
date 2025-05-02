@@ -11,9 +11,9 @@ dataset_args:
     - grid1-loss
     - grid1-temp
   test_timeseries_to_use:
-    - grid1-load
-    - grid1-loss
-    - grid1-temp
+    - grid2-load
+    - grid2-loss
+    - grid2_1-temp
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: false
@@ -25,15 +25,8 @@ model_args:
   feature_model_args: 
     model_name: 'vertical_flip'
   forecasting_model_args:
+    model_type: n_linear
     window_size: 168
-    network_size:
-      - 100
-      - 100
     horizon_length: 24
-    model_name: feedforward_forecaster
-    model_params_storage_dir: models/feedforward
     training_args:
       num_epochs: 50
-      batch_size: 128
-      learning_rate: 0.001
-      early_stopping_patience: 25
