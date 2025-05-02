@@ -16,7 +16,7 @@ dataset_args:
     - grid2-loss
     - grid2_1-temp
   num_features_per_uts: 4
-  use_one_hot_encoding: true
+  use_one_hot_encoding: false
   use_identity_mapping: true
   test_set_sample_size: 500
 stl_args:
@@ -68,7 +68,7 @@ model_args:
         dim_feedforward: 256
         dropout_rate: 0.1
         activation: "relu"
-      number_of_conditions: 7
+      number_of_conditions: 12
       feedforward_layers:
         - [512, relu]
         - [512, relu]
