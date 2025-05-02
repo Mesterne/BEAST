@@ -66,10 +66,7 @@ logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
     f"All outputs will be stored in: {OUTPUT_DIR} (Relative to where you ran the program from)"
 )
-if "test_timeseries_to_use" in config["dataset_args"]:
-    test_timeseries_to_use = config["dataset_args"]["test_timeseries_to_use"]
-else:
-    test_timeseries_to_use = config["dataset_args"]["timeseries_to_use"]
+test_timeseries_to_use = config["dataset_args"]["test_timeseries_to_use"]
 
 ############ DATA INITIALIZATION
 
