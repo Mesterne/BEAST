@@ -168,7 +168,7 @@ class Encoder(nn.Module):
             nn.Linear(
                 self.combination_layer_input_size, self.feedforward_layers_list[0][0]
             ),
-            nn.ReLU(),
+            nn.LeakyReLU(negative_slope=0.01),
         )
 
         self.mean = nn.Linear(final_hidden_layer_size, self.latent_size)
@@ -177,15 +177,6 @@ class Encoder(nn.Module):
     def add_input_layer(self):
         """Add specific feature extraction architecture to the input layer of the encoder."""
         if self.architecture == "feedforward":
-            # NOTE: Not necessarily what i want. Maybe this can some extra ff layers to increase parameter count?
-            # logger.info("Building encoder with linear input layer")
-            # self.input_layer = nn.Sequential(
-            #     nn.Linear(
-            #         self.combination_layer_input_size,
-            #         self.feedforward_layers_list[0][0],
-            #     ),
-            #     nn.ReLU(),
-            # )
             pass
         if self.architecture == NETWORK_ARCHITECTURES[1]:
             logger.info("Building encoder with LSTM input layer")
@@ -211,11 +202,9 @@ class Encoder(nn.Module):
             return self.rnn_hidden_state_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[3]:
             conv_output_length = self.calc_conv_out_len(self.convolutional_layers_list)
-            # conv_output_channels = self.convolutional_layers_list[-1][1]
             conv_output_size = (
                 conv_output_length  # NOTE Testing mean pooling across channels
             )
-            # conv_output_size = conv_output_length * conv_output_channels
             return conv_output_size + self.number_of_conditions
         if self.architecture == NETWORK_ARCHITECTURES[4]:
             raise NotImplementedError("Attention layer is not implemented yet")
@@ -241,7 +230,6 @@ class Encoder(nn.Module):
         This helps to capture long-term dependencies in the time series.
         """
         self.input_layer = nn.Sequential()
-        # TODO: Consider pooling
         for i in range(len(conv_layer_list)):
             in_channels = conv_layer_list[i][0]
             out_channels = conv_layer_list[i][1]
@@ -259,8 +247,7 @@ class Encoder(nn.Module):
                     dilation=dilation,
                 )
             )
-            self.input_layer.append(nn.ReLU())
-            # self.input_layer.append(nn.LeakyReLU(negative_slope=0.01))
+            self.input_layer.append(nn.LeakyReLU(negative_slope=0.01))
 
     def generate_attention_layer(self) -> None:
         raise NotImplementedError("Attention layer is not implemented yet")
@@ -387,9 +374,6 @@ class Encoder(nn.Module):
             conv_out_flattened = conv_out.mean(
                 dim=1
             )  # NOTE Testing mean pooling across channels
-            # conv_out_flattened = conv_out.view(
-            #     conv_out.shape[0], conv_out.shape[1] * conv_out.shape[2]
-            # )
             combination_layer_input = cat((conv_out_flattened, feature_info), dim=1)
         if self.architecture == NETWORK_ARCHITECTURES[5]:
             input_embedding = self.embedding_layer(input)
@@ -452,7 +436,8 @@ class Decoder(nn.Module):
         else:
             logger.info("Building decoder with feedforward layers")
             self.input_layer = nn.Sequential(
-                nn.Linear(self.input_size, feedforward_layers[-1][0]), nn.ReLU()
+                nn.Linear(self.input_size, feedforward_layers[-1][0]),
+                nn.LeakyReLU(negative_slope=0.01),
             )
             self.generate_base_decoder_layers(feedforward_layers)
             self.output: Tensor = nn.Linear(final_hidden_layer_size, output_size)
@@ -494,8 +479,6 @@ class Decoder(nn.Module):
 
         length = self.uts_size
         for i in range(num_layers):
-            # dilation_exponent = num_layers - i
-            # dilation = 2**dilation_exponent
             dilation = 1
             length = (
                 (length + (2 * padding) - (dilation * (kernel_size - 1)) - 1) / stride
@@ -525,8 +508,6 @@ class Decoder(nn.Module):
         self.conv_transpose_layers = nn.Sequential()
         num_layers = len(conv_transpose_list)
         for i in range(num_layers):
-            # dilation_exponent = num_layers - i
-            # dilation = 2**dilation_exponent
             in_channels = conv_transpose_list[i][0]
             out_channels = conv_transpose_list[i][1]
             kernel_size = conv_transpose_list[i][2]
@@ -539,7 +520,6 @@ class Decoder(nn.Module):
                     kernel_size=kernel_size,
                     stride=stride,
                     padding=padding,
-                    # dilation=dilation,
                     dilation=1,
                 )
             )

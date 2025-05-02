@@ -11,9 +11,9 @@ dataset_args:
     - grid1-loss
     - grid1-temp
   test_timeseries_to_use:
-    - grid1-load
-    - grid1-loss
-    - grid1-temp
+    - grid2-load
+    - grid2-loss
+    - grid2_1-temp
   num_features_per_uts: 4
   use_one_hot_encoding: false
   use_identity_mapping: false
