@@ -20,14 +20,14 @@ def plot_train_val_test_split(
     sns.scatterplot(
         x=mts_dataset_pca[:, 0],
         y=mts_dataset_pca[:, 1],
-        label="Original dataset",
+        label="Training set targets",
         color="grey",
         s=50,
         ax=ax,
     )
 
-    ax.scatter(*validation_pca.T, color="green", s=75, label="Validation set targets")
-    ax.scatter(*test_pca.T, color="red", s=75, label="Test set targets")
+    ax.scatter(*validation_pca.T, color="green", s=50, label="Validation set targets")
+    ax.scatter(*test_pca.T, color="red", s=50, label="Test set targets")
 
     ax.set_title("Distribution of train/validation/test splits")
     ax.set_xlabel("PCA1")

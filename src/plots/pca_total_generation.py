@@ -13,6 +13,7 @@ def plot_pca_for_all_generated_mts(
     mts_dataset_features: np.ndarray,  # Shape
     mts_generated_features: np.ndarray,  # Shape = (num_generated_mts,num_uts_features)
     evaluation_set_indices: np.ndarray,  # Shape (,)
+    plot_for_each_uts: bool = True,
 ) -> Figure:
 
     num_uts: int = len(UTS_NAMES)
@@ -48,38 +49,41 @@ def plot_pca_for_all_generated_mts(
     ax.set_ylabel("PCA2")
     ax.legend()
 
-    # Plot for each UTS
-    for uts_name, ax in zip(UTS_NAMES, axes[1:]):
-        uts_column_indices: List[int] = [
-            j
-            for j, col_name in enumerate(COLUMN_NAMES)
-            if col_name.startswith(uts_name)
-        ]
+    if plot_for_each_uts:
+        # Plot for each UTS
+        for uts_name, ax in zip(UTS_NAMES, axes[1:]):
+            uts_column_indices: List[int] = [
+                j
+                for j, col_name in enumerate(COLUMN_NAMES)
+                if col_name.startswith(uts_name)
+            ]
 
-        uts_dataset_features: np.ndarray = mts_dataset_features[:, uts_column_indices]
-        uts_predicted: np.ndarray = mts_generated_features[:, uts_column_indices]
+            uts_dataset_features: np.ndarray = mts_dataset_features[
+                :, uts_column_indices
+            ]
+            uts_predicted: np.ndarray = mts_generated_features[:, uts_column_indices]
 
-        pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
-        uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(
-            uts_dataset_features
-        )
-        uts_predicted_pca: np.ndarray = pca_transformer.transform(uts_predicted)
+            pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
+            uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(
+                uts_dataset_features
+            )
+            uts_predicted_pca: np.ndarray = pca_transformer.transform(uts_predicted)
 
-        sns.scatterplot(
-            x=uts_dataset_pca[:, 0],
-            y=uts_dataset_pca[:, 1],
-            label="Dataset",
-            color="grey",
-            s=50,
-            ax=ax,
-        )
+            sns.scatterplot(
+                x=uts_dataset_pca[:, 0],
+                y=uts_dataset_pca[:, 1],
+                label="Dataset",
+                color="grey",
+                s=50,
+                ax=ax,
+            )
 
-        ax.scatter(*uts_predicted_pca.T, color="orange", s=150, label="Predicted")
+            ax.scatter(*uts_predicted_pca.T, color="orange", s=150, label="Predicted")
 
-        ax.set_title(f"PCA Plot with Transformed UTS for {uts_name}")
-        ax.set_xlabel("PCA1")
-        ax.set_ylabel("PCA2")
-        ax.legend()
+            ax.set_title(f"PCA Plot with Transformed UTS for {uts_name}")
+            ax.set_xlabel("PCA1")
+            ax.set_ylabel("PCA2")
+            ax.legend()
 
     plt.tight_layout()
     return fig
