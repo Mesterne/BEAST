@@ -5,8 +5,9 @@ import numpy as np
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
-from src.plots.pca_for_each_uts_with_transformed import \
-    plot_pca_for_each_uts_with_transformed
+from src.plots.pca_for_each_uts_with_transformed import (
+    plot_pca_for_each_uts_with_transformed,
+)
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 from src.plots.total_mse_distribution import plot_total_mse_distribution
 from src.utils.logging_config import logger

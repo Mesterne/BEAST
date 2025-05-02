@@ -6,8 +6,7 @@ from src.models.basic_models.horizontal_flip import HorizontalFlip
 from src.models.basic_models.jitter import Jitter
 from src.models.basic_models.scaler import Scaler
 from src.models.basic_models.vertical_flip import VerticalFlip
-from src.models.timeseries_transformation_model import \
-    TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 
 
 class BasicModel(TimeseriesTransformationModel):
