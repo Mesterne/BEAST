@@ -20,9 +20,9 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
+from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
-)  # noqa: E402
+)
 from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
 from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
@@ -60,6 +60,14 @@ try:
 except Exception:
     config["is_conditional_gen_model"] = False
 
+try:
+    # NOTE: directory_name and name of slurm job should be the same for easy identification
+    logger.info(
+        f"Saving/loading model from directory {config['model_args']["feature_model_args"]["directory_name"]}."
+    )
+except KeyError:
+    config["model_args"]["feature_model_args"]["directory_name"] = None
+    logger.info("No directory for saving/loading model specified.")
 
 logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
@@ -142,11 +150,31 @@ model_handler = ModelHandler(config)
 model_handler.choose_model_category()
 
 ############ TRAINING
-model_handler.train(
-    mts_dataset=mts_dataset_array,
-    train_transformation_indices=train_transformation_indices,
-    validation_transformation_indices=validation_transformation_indices,
-)
+model_directory = config["model_args"]["feature_model_args"]["directory_name"]
+if model_directory is not None:
+    models_directory = os.path.join(OUTPUT_DIR, "models")
+    os.makedirs(models_directory, exist_ok=True)
+    model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+    if os.path.exists(model_path):
+        logger.info(f"Pretrained model avalilable at {model_path}. Loading model...")
+        model_handler.load_model()
+    else:
+        logger.info(
+            f"No pretrained model avaliable at {model_path}. Training new model..."
+        )
+        model_handler.train(
+            mts_dataset=mts_dataset_array,
+            train_transformation_indices=train_transformation_indices,
+            validation_transformation_indices=validation_transformation_indices,
+        )
+        model_handler.save_model()
+        logger.info(f"Model saved to {model_path}.")
+else:
+    model_handler.train(
+        mts_dataset=mts_dataset_array,
+        train_transformation_indices=train_transformation_indices,
+        validation_transformation_indices=validation_transformation_indices,
+    )
 
 
 ############ INFERENCE

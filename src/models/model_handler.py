@@ -112,3 +112,13 @@ class ModelHandler:
         )
 
         return predicted_y, intermediate_features
+
+    def load_model(self):
+        if not self.config["is_conditional_gen_model"]:
+            raise NotImplementedError()
+        self.model.load_model()
+
+    def save_model(self):
+        if not self.config["is_conditional_gen_model"]:
+            raise NotImplementedError()
+        self.model.save_model()

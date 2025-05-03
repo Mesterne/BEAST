@@ -1,9 +1,11 @@
+import os
 from typing import Dict, override
 
 import numpy as np
+import torch
 from torch import nn
 
-from data.constants import NETWORK_ARCHITECTURES
+from data.constants import NETWORK_ARCHITECTURES, OUTPUT_DIR
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import (
     CVAEWrapper,
@@ -34,6 +36,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         architecture: str = model_params["architecture"]
         model_params["mts_size"] = config["dataset_args"]["mts_size"]
         model_params["uts_size"] = config["dataset_args"]["uts_size"]
+        self.model_params = model_params
         cvae = self._select_cvae_architecture(architecture, model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
         return model
@@ -192,3 +195,25 @@ class GenerativeModel(TimeseriesTransformationModel):
         predicted_mts = predicted_mts.reshape(-1, num_uts_in_mts, num_samples_in_uts)
 
         return predicted_mts, None
+
+    def load_model(self):
+        model_directory = self.config["model_args"]["feature_model_args"][
+            "directory_name"
+        ]
+        model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+        pretrained_mtscvae: nn.Module = MTSCVAE(self.model_params)
+        pretrained_mtscvae.load_state_dict(torch.load(model_path))
+        pretrained_mtscvae.eval()
+        # NOTE: Reassign the mtscvae of the CVAEWrapper object of this GenerativeModel object
+        # to this pretrained version.
+        assert isinstance(self.model.model, MTSCVAE)
+        self.model.model = pretrained_mtscvae
+
+    def save_model(self):
+        model_directory = self.config["model_args"]["feature_model_args"][
+            "directory_name"
+        ]
+        model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+        assert isinstance(self.model.model, MTSCVAE)
+        # Save the MTSCVAE associated with this GenerativeModel object.
+        torch.save(self.model.model.state_dict(), model_path)
