@@ -14,6 +14,20 @@ COLUMN_NAMES = [
     "grid1-temp_trend-linearity",
     "grid1-temp_seasonal-strength",
 ]
+PLOT_NAMES = [
+    "grid-load_trend-strength",
+    "grid-load_trend-slope",
+    "grid-load_trend-linearity",
+    "grid-load_seasonal-strength",
+    "grid-loss_trend-strength",
+    "grid-loss_trend-slope",
+    "grid-loss_trend-linearity",
+    "grid-loss_seasonal-strength",
+    "grid-temp_trend-strength",
+    "grid-temp_trend-slope",
+    "grid-temp_trend-linearity",
+    "grid-temp_seasonal-strength",
+]
 
 FEATURE_NAMES = [
     "trend-strength",
