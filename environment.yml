@@ -1,4 +1,4 @@
-name: BEAST_ENV
+name: IBUN_BEAST
 channels:
   - defaults
   - conda-forge
