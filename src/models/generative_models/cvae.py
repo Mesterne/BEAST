@@ -48,13 +48,14 @@ class MTSCVAE(nn.Module):
             transformer_args=model_params["transformer_args"],
         )
         self.decoder = Decoder(
-            self.mts_size,
-            self.uts_size,
-            self.output_size,
-            self.number_of_conditions,
-            self.latent_size,
-            model_params["feedforward_layers"],
-            model_params["conv_decoder"],
+            mts_size=self.mts_size,
+            uts_size=self.uts_size,
+            output_size=self.output_size,
+            number_of_conditions=self.number_of_conditions,
+            latent_size=self.latent_size,
+            model_variation=self.model_variation,
+            feedforward_layers=model_params["feedforward_layers"],
+            conv_decoder_args=model_params["conv_decoder"],
         )
 
     def determine_model_variation(self, model_params: dict) -> str | None:
@@ -94,7 +95,7 @@ class MTSCVAE(nn.Module):
             feature_info.shape[1] == self.number_of_conditions
         ), f"Conditions size mismatch. Expected {self.number_of_conditions}, got {feature_info.shape[1]}"
 
-        if self.model_variation is None:
+        if self.model_variation is None or self.model_variation == "VAE":
             # Encoding step
             latent_mean, latent_log_var = self.encoder(
                 input_except_conditions, feature_info
@@ -134,7 +135,7 @@ class MTSCVAE(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tensor_mts = torch.tensor(mts, dtype=torch.float32).to(device)
         tensor_conditions = torch.tensor(conditions, dtype=torch.float32).to(device)
-        if self.model_variation is None:
+        if self.model_variation is None or self.model_variation == "VAE":
             latent_mean, latent_log_var = self.encoder(tensor_mts, tensor_conditions)
             latent_vector = self.reparamterization_trick(
                 latent_mean, latent_log_var
@@ -183,6 +184,8 @@ class Encoder(nn.Module):
         self.combination_layer_input_size = (
             self.determine_combination_layer_input_size()
         )
+        if self.model_variation == "VAE":
+            self.combination_layer_input_size -= self.number_of_conditions
 
         self.input_condition_combination_layer = nn.Sequential(
             nn.Linear(
@@ -191,10 +194,10 @@ class Encoder(nn.Module):
             nn.LeakyReLU(negative_slope=0.01),
         )
 
-        if model_variation is None:
+        if self.model_variation is None or self.model_variation == "VAE":
             self.mean = nn.Linear(final_hidden_layer_size, self.latent_size)
             self.log_var = nn.Linear(final_hidden_layer_size, self.latent_size)
-        if model_variation == "CAE":
+        if self.model_variation == "CAE":
             self.latent_space = nn.Sequential(
                 nn.Linear(final_hidden_layer_size, self.latent_size),
                 nn.LeakyReLU(negative_slope=0.01),
@@ -419,6 +422,12 @@ class Encoder(nn.Module):
                 (input_without_conditions, feature_info), dim=1
             )
 
+        # NOTE: If VAE variation, remove feature_info form the input vector
+        if self.model_variation == "VAE":
+            combination_layer_input = combination_layer_input[
+                :, : (combination_layer_input.shape[1] - self.number_of_conditions)
+            ]
+
         base_encoder_input = self.input_condition_combination_layer(
             combination_layer_input
         )
@@ -429,7 +438,7 @@ class Encoder(nn.Module):
             else:
                 encoded_input = self.base_encoder_layers[i](encoded_input)
 
-        if self.model_variation is None:
+        if self.model_variation is None or self.model_variation == "VAE":
             latent_mean: Tensor = self.mean(encoded_input)
             latent_log_var: Tensor = self.log_var(encoded_input)
             return latent_mean, latent_log_var
@@ -447,6 +456,7 @@ class Decoder(nn.Module):
         output_size: int,
         number_of_conditions: int,
         latent_size: int,
+        model_variation: str | None,
         feedforward_layers: dict,
         conv_decoder_args: dict,
     ) -> None:
@@ -455,8 +465,9 @@ class Decoder(nn.Module):
         self.number_of_conditions = number_of_conditions
         self.mts_size = mts_size
         self.uts_size = uts_size
+        self.model_variation = model_variation
         self.num_uts = self.mts_size // self.uts_size
-        self.input_size = latent_size + number_of_conditions
+        self.input_size = self.determine_input_size()
         final_hidden_layer_size = int(feedforward_layers[0][0])
 
         self.use_conv_decoder = conv_decoder_args["use_conv_decoder"]
@@ -471,6 +482,11 @@ class Decoder(nn.Module):
             )
             self.generate_base_decoder_layers(feedforward_layers)
             self.output: Tensor = nn.Linear(final_hidden_layer_size, output_size)
+
+    def determine_input_size(self):
+        if self.model_variation == "VAE":
+            return self.latent_size
+        return self.latent_size + self.number_of_conditions
 
     def generate_base_decoder_layers(self, feedforward_layers: dict):
         reversed_feedforward_layers = feedforward_layers[::-1]
@@ -566,6 +582,9 @@ class Decoder(nn.Module):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         input = cat((latent, feature_info), dim=1).to(device)
+
+        if self.model_variation == "VAE":
+            input = latent.to(device)
 
         if self.use_conv_decoder:
             base_decoder_output = self.base_decoder_layers(input)
