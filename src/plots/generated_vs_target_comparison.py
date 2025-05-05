@@ -10,7 +10,7 @@ from src.plots.pca_for_each_uts_with_transformed import \
     plot_pca_for_each_uts_with_transformed
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 from src.utils.evaluation.feature_space_evaluation import \
-    calculate_total_mse_for_each_mts
+    calculate_total_evaluation_for_each_mts
 from src.utils.logging_config import logger
 
 
@@ -36,8 +36,10 @@ def create_grid_plot_of_worst_median_best(
     X_mts = mts_dataset_array[transformation_indices[:, 0]]
     y_mts = mts_dataset_array[transformation_indices[:, 1]]
 
-    total_mse_for_each_mts = calculate_total_mse_for_each_mts(
-        predicted_features=inferred_mts_features, target_features=y_features
+    total_mse_for_each_mts = calculate_total_evaluation_for_each_mts(
+        predicted_features=inferred_mts_features,
+        target_features=y_features,
+        metric="MSE",
     )
 
     best_generated_mts_index = np.argmin(total_mse_for_each_mts)
@@ -56,7 +58,9 @@ def create_grid_plot_of_worst_median_best(
         target_mts_features=y_features[best_generated_mts_index],
     )
     ts_plot_of_best_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "best_timeseries_generated_mts.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "best_timeseries_generated_mts.png"
+        )
     )
     plt.close(ts_plot_of_best_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -68,7 +72,9 @@ def create_grid_plot_of_worst_median_best(
         predicted_mts_features=inferred_mts_features[best_generated_mts_index],
     )
     pca_plot_of_best_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "best_timeseries_generated_mts_pca.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "best_timeseries_generated_mts_pca.png"
+        )
     )
     plt.close(pca_plot_of_best_generated_mts)
 
@@ -87,7 +93,9 @@ def create_grid_plot_of_worst_median_best(
         target_mts_features=y_features[worst_generated_mts_index],
     )
     ts_plot_of_worst_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "worst_timeseries_generated_mts.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "worst_timeseries_generated_mts.png"
+        )
     )
     plt.close(ts_plot_of_best_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -99,7 +107,9 @@ def create_grid_plot_of_worst_median_best(
         predicted_mts_features=inferred_mts_features[worst_generated_mts_index],
     )
     pca_plot_of_worst_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "worst_timeseries_generated_mts_pca.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "worst_timeseries_generated_mts_pca.png"
+        )
     )
     plt.close(pca_plot_of_worst_generated_mts)
 
@@ -118,7 +128,9 @@ def create_grid_plot_of_worst_median_best(
         target_mts_features=y_features[median_mts_index],
     )
     ts_plot_of_median_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "median_timeseries_generated_mts.png"
+        )
     )
     plt.close(ts_plot_of_median_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -130,7 +142,9 @@ def create_grid_plot_of_worst_median_best(
         predicted_mts_features=inferred_mts_features[median_mts_index],
     )
     pca_plot_of_median_generated_mts.savefig(
-        os.path.join(OUTPUT_DIR, "median_timeseries_generated_mts_pca.png")
+        os.path.join(
+            OUTPUT_DIR, "Generation grids", "median_timeseries_generated_mts_pca.png"
+        )
     )
     plt.close(pca_plot_of_median_generated_mts)
 

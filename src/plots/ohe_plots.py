@@ -65,7 +65,9 @@ def create_and_save_plots_of_ohe_activated_performances_feature_space(
 
     plot.savefig(
         os.path.join(
-            OUTPUT_DIR, f"FEATURE_SPACE_OHE {dataset}-{metric_name}-ohe-barplot.png"
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            f"FEATURE_SPACE_OHE {dataset}-{metric_name}-ohe-barplot.png",
         ),
         dpi=600,
     )
@@ -114,6 +116,7 @@ def create_and_save_plots_of_ohe_activated_performances_feature_space(
     plot.savefig(
         os.path.join(
             OUTPUT_DIR,
+            "Feature space evaluations",
             f"FEATURE_SPACE_OHE {dataset}-{metric_name}-ohe-total-barplot.png",
         ),
         dpi=600,
@@ -213,6 +216,7 @@ def create_and_save_plots_of_ohe_activated_performances_forecasting_space(
     plot.savefig(
         os.path.join(
             OUTPUT_DIR,
+            "Forecasting space evaluations",
             f"retrain_on_{retrain_on}_OHE_Forecasting_{metric_name}.png",
         ),
         dpi=600,

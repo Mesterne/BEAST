@@ -33,6 +33,10 @@ from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
 from src.utils.logging_config import logger  # noqa: E402
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 
+os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"))
+os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"))
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"))
+
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
 

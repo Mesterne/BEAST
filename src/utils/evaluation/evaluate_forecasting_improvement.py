@@ -103,12 +103,14 @@ class ForecasterEvaluator:
         forecast_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_forecast.png",
             )
         )
         mse_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mse.png",
             )
         )
@@ -116,18 +118,21 @@ class ForecasterEvaluator:
         mse_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mse.png",
             )
         )
         mase_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mase.png",
             )
         )
         mase_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
             )
         )
@@ -135,12 +140,14 @@ class ForecasterEvaluator:
         mse_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mse.png",
             )
         )
         mase_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
+                "Forecasting space evaluations",
                 f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mase.png",
             )
         )

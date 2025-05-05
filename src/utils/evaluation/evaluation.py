@@ -15,7 +15,7 @@ from src.plots.plot_feature_evaluation_bar_plot import \
 from src.plots.plot_feature_evaluation_distribution import \
     plot_feature_evaluation
 from src.utils.evaluation.feature_space_evaluation import \
-    calculate_mse_for_each_feature
+    calculate_evaluation_for_each_feature
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
@@ -47,67 +47,90 @@ def plot_evaluation_summaries_over_feature_space(
     ohe_test: np.ndarray,
     metric: str,
 ):
-    final_mse_values_for_each_feature_validation = calculate_mse_for_each_feature(
-        predicted_features=final_features_validation,
-        target_features=target_features_validation,
-    )
-    final_mse_values_for_each_feature_test = calculate_mse_for_each_feature(
-        predicted_features=final_features_test,
-        target_features=target_features_test,
-    )
 
-    intermediate_mse_values_for_each_feature_validation = (
-        calculate_mse_for_each_feature(
-            predicted_features=intermediate_features_validation,
+    final_evaluation_values_for_each_feature_validation = (
+        calculate_evaluation_for_each_feature(
+            predicted_features=final_features_validation,
             target_features=target_features_validation,
+            metric=metric,
         )
     )
-    intermediate_mse_values_for_each_feature_test = calculate_mse_for_each_feature(
-        predicted_features=intermediate_features_test,
-        target_features=target_features_validation,
+    final_evaluation_values_for_each_feature_test = (
+        calculate_evaluation_for_each_feature(
+            predicted_features=final_features_test,
+            target_features=target_features_test,
+            metric=metric,
+        )
     )
 
-    mse_for_each_feature_validation = plot_metric_for_each_feature_bar_plot(
-        intermediate_evaluation_for_each_feature=intermediate_mse_values_for_each_feature_validation,
-        final_evaluation_for_each_feature=final_mse_values_for_each_feature_validation,
-        metric="MSE",
+    intermediate_evaluation_values_for_each_feature_validation = (
+        calculate_evaluation_for_each_feature(
+            predicted_features=intermediate_features_validation,
+            target_features=target_features_validation,
+            metric=metric,
+        )
+    )
+    intermediate_evaluation_values_for_each_feature_test = (
+        calculate_evaluation_for_each_feature(
+            predicted_features=intermediate_features_test,
+            target_features=target_features_validation,
+            metric=metric,
+        )
+    )
+
+    evaluation_for_each_feature_validation = plot_metric_for_each_feature_bar_plot(
+        intermediate_evaluation_for_each_feature=intermediate_evaluation_values_for_each_feature_validation,
+        final_evaluation_for_each_feature=final_evaluation_values_for_each_feature_validation,
+        metric=metric,
         dataset="Validation",
     )
-    mse_for_each_feature_validation.savefig(
-        os.path.join(OUTPUT_DIR, "FEATURE_SPACE_mse_for_each_feature_validation.png")
+    evaluation_for_each_feature_validation.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            f"FEATURE_SPACE_{metric}_for_each_feature_validation.png",
+        )
     )
-    plt.close(mse_for_each_feature_validation)
-    mse_for_each_feature_test = plot_metric_for_each_feature_bar_plot(
-        intermediate_evaluation_for_each_feature=intermediate_mse_values_for_each_feature_test,
-        final_evaluation_for_each_feature=final_mse_values_for_each_feature_test,
-        metric="MSE",
+    plt.close(evaluation_for_each_feature_validation)
+    evaluation_for_each_feature_test = plot_metric_for_each_feature_bar_plot(
+        intermediate_evaluation_for_each_feature=intermediate_evaluation_values_for_each_feature_test,
+        final_evaluation_for_each_feature=final_evaluation_values_for_each_feature_test,
+        metric=metric,
         dataset="Test",
     )
-    mse_for_each_feature_test.savefig(
-        os.path.join(OUTPUT_DIR, "FEATURE_SPACE_mse_for_each_feature_test.png")
+    evaluation_for_each_feature_test.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            f"FEATURE_SPACE_{metric}_for_each_feature_test.png",
+        )
     )
-    plt.close(mse_for_each_feature_test)
+    plt.close(evaluation_for_each_feature_test)
 
-    mse_feature_space = plot_feature_evaluation(
-        intermediate_mse_values_for_each_feature_validation=intermediate_mse_values_for_each_feature_validation,
-        intermediate_mse_values_for_each_feature_test=intermediate_mse_values_for_each_feature_test,
-        final_mse_values_for_each_feature_validation=final_mse_values_for_each_feature_validation,
-        final_mse_values_for_each_feature_test=final_mse_values_for_each_feature_test,
-        metric_name="MSE",
+    evaluation_feature_space = plot_feature_evaluation(
+        intermediate_mse_values_for_each_feature_validation=intermediate_evaluation_values_for_each_feature_validation,
+        intermediate_mse_values_for_each_feature_test=intermediate_evaluation_values_for_each_feature_test,
+        final_mse_values_for_each_feature_validation=final_evaluation_values_for_each_feature_validation,
+        final_mse_values_for_each_feature_test=final_evaluation_values_for_each_feature_test,
+        metric_name=metric,
     )
-    mse_feature_space.savefig(os.path.join(OUTPUT_DIR, "mse_feature_space.png"))
-    plt.close(mse_feature_space)
+    evaluation_feature_space.savefig(
+        os.path.join(
+            OUTPUT_DIR, "Feature space evaluations", f"{metric}_feature_space.png"
+        )
+    )
+    plt.close(evaluation_feature_space)
 
     create_and_save_plots_of_ohe_activated_performances_feature_space(
         ohe=ohe_val,
-        evaluation=final_mse_values_for_each_feature_validation,
-        metric_name="MSE",
+        evaluation=final_evaluation_values_for_each_feature_validation,
+        metric_name=metric,
         dataset="Validation",
     )
     create_and_save_plots_of_ohe_activated_performances_feature_space(
         ohe=ohe_test,
-        evaluation=final_mse_values_for_each_feature_test,
-        metric_name="MSE",
+        evaluation=final_evaluation_values_for_each_feature_test,
+        metric_name=metric,
         dataset="Validation",
     )
 
@@ -202,6 +225,17 @@ def evaluate(
         ohe_test=ohe_test,
         metric="MSE",
     )
+    plot_evaluation_summaries_over_feature_space(
+        intermediate_features_validation=intermediate_features_validation,
+        intermediate_features_test=intermediate_features_test,
+        final_features_validation=inferred_features_validation,
+        final_features_test=inferred_features_test,
+        target_features_validation=y_features_validation,
+        target_features_test=y_features_test,
+        ohe_val=ohe_val,
+        ohe_test=ohe_test,
+        metric="MAE",
+    )
 
     # PCA Plots
     pca_plot_intermediate_validation_features = plot_pca_for_all_generated_mts(
@@ -211,7 +245,9 @@ def evaluate(
     )
     pca_plot_intermediate_validation_features.savefig(
         os.path.join(
-            OUTPUT_DIR, "FEATURE_SPACE_total_generation_pca_intermediate_validation.png"
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            "FEATURE_SPACE_total_generation_pca_intermediate_validation.png",
         )
     )
     pca_plot_intermediate_test_features = plot_pca_for_all_generated_mts(
@@ -221,7 +257,9 @@ def evaluate(
     )
     pca_plot_intermediate_test_features.savefig(
         os.path.join(
-            OUTPUT_DIR, "FEATURE_SPACE_total_generation_pca_intermediate_test.png"
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            "FEATURE_SPACE_total_generation_pca_intermediate_test.png",
         )
     )
 
