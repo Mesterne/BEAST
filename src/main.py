@@ -175,8 +175,8 @@ evaluate(
     test_transformation_indices=test_transformation_indices,
     inferred_mts_validation=inferred_mts_validation,
     inferred_mts_test=inferred_mts_test,
-    inferred_intermediate_features_validation=inferred_intermediate_features_validation,
-    inferred_intermediate_features_test=inferred_intermediate_features_test,
+    intermediate_features_validation=inferred_intermediate_features_validation,
+    intermediate_features_test=inferred_intermediate_features_test,
     ohe_val=ohe_val,
     ohe_test=ohe_test,
 )
@@ -194,11 +194,11 @@ evaluator = ForecasterEvaluator(
 
 logger.info("Evaluating foreasting improvement on inferred validation set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="validation"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_val, type="validation"
 )
 logger.info("Evaluating foreasting improvement on inferred test set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="test"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
 )
 
 

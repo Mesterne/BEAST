@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -27,7 +27,9 @@ def calculate_mse_for_each_feature(
     return squared_diff
 
 
-def calculate_total_mse_for_each_mts(mse_per_feature: np.array):
+def calculate_total_mse_for_each_mts(
+    predicted_features: np.ndarray, target_features: np.array
+):
     """
     Calculate the total Mean Squared Error (MSE) for each multi-timeseries (MTS).
 
@@ -39,9 +41,12 @@ def calculate_total_mse_for_each_mts(mse_per_feature: np.array):
     Returns:
     np.array: A numpy array of shape (num_timeseries,), where each entry is the total MSE for each generated MTS' features.
     """
+    mse_for_each_feature = calculate_mse_for_each_feature(
+        predicted_features=predicted_features, target_features=target_features
+    )
 
     # Sum the MSE across the feature axis (axis 1)
-    total_mse = np.sum(mse_per_feature, axis=1)
+    total_mse = np.sum(mse_for_each_feature, axis=1)
 
     return total_mse
 
