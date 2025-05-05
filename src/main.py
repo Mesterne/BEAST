@@ -20,12 +20,13 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
-    create_train_val_test_split,
-)  # noqa: E402
-from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import \
+    create_train_val_test_split  # noqa: E402
+from src.data_transformations.preprocessing import \
+    scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import \
+    ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -151,7 +152,7 @@ model_handler.train(
 
 ############ INFERENCE
 logger.info("Running inference on validation set...")
-inferred_mts_validation, inferred_intermediate_features_validation = (
+inferred_mts_validation, inferred_intermediate_features_validation, ohe_val = (
     model_handler.infer(
         mts_dataset=mts_dataset_array,
         evaluation_transformation_indinces=validation_transformation_indices,
@@ -159,7 +160,7 @@ inferred_mts_validation, inferred_intermediate_features_validation = (
 )
 
 logger.info("Running inference on test set...")
-inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
+inferred_mts_test, inferred_intermediate_features_test, ohe_test = model_handler.infer(
     mts_dataset=mts_dataset_array,
     evaluation_transformation_indinces=test_transformation_indices,
 )
@@ -176,6 +177,8 @@ evaluate(
     inferred_mts_test=inferred_mts_test,
     inferred_intermediate_features_validation=inferred_intermediate_features_validation,
     inferred_intermediate_features_test=inferred_intermediate_features_test,
+    ohe_val=ohe_val,
+    ohe_test=ohe_test,
 )
 
 

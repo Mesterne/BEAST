@@ -10,6 +10,7 @@ from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
 from src.models.forecasting.loss_tracker import LossTracker
 from src.utils.darts_utils import array_to_timeseries
+from src.utils.logging_config import logger
 
 
 class NLinearForecastingModel(ForecastingModel):
@@ -85,7 +86,9 @@ class NLinearForecastingModel(ForecastingModel):
         Plots the training and validation loss stored in the LossTracker.
         """
         if not self.loss_tracker.train_loss:
-            print("No training loss recorded. Did you forget to train the model?")
+            logger.warning(
+                "No training loss recorded. Did you forget to train the model?"
+            )
             return
 
         plt.figure(figsize=(8, 5))

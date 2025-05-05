@@ -7,6 +7,8 @@ import numpy as np
 from src.data.constants import OUTPUT_DIR
 from src.plots.generated_vs_target_comparison import \
     create_and_save_plots_of_model_performances
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
 from src.plots.plot_feature_evaluation_bar_plot import \
     plot_metric_for_each_feature_bar_plot
@@ -46,6 +48,8 @@ def evaluate(
     inferred_intermediate_features_test: Optional[
         np.ndarray
     ],  # Shape: (Number of transformations, Number of UTS in MTS, Number of features in UTS)
+    ohe_val: np.ndarray,
+    ohe_test: np.ndarray,
 ):
     """
     Takes the dataset, defined transformation indices and inferred MTS for the
@@ -208,6 +212,13 @@ def evaluate(
     )
     pca_plot_intermediate_test_features.savefig(
         os.path.join(OUTPUT_DIR, "total_generation_pca_intermediate_test.png")
+    )
+
+    create_and_save_plots_of_ohe_activated_performances(
+        ohe=ohe_val,
+        evaluation=final_mse_values_for_each_feature_validation,
+        metric_name="MSE",
+        dataset="Validation",
     )
 
     logger.info("Creating plots for validation...")

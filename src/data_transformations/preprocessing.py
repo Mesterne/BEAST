@@ -63,7 +63,6 @@ def scale_mts_dataset(mts_data, train_indices, validation_indices, test_indices)
 
     # Scale the data
     scaled_mts_data = np.zeros_like(mts_data)
-    print(scaled_mts_data.shape)
     for i in range(num_uts):
         # Scale the training data
         scaled_mts_data[train_mts_indices, i, :] = (
@@ -85,7 +84,5 @@ def scale_mts_dataset(mts_data, train_indices, validation_indices, test_indices)
             .transform(mts_data[test_mts_indices, i, :].reshape(-1, 1))
             .reshape(len(test_mts_indices), -1)
         )
-
-    print(scaled_mts_data.shape)
 
     return scaled_mts_data, uts_scalers
