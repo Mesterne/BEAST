@@ -250,6 +250,7 @@ def evaluate(
             "FEATURE_SPACE_total_generation_pca_intermediate_validation.png",
         )
     )
+    plt.close(pca_plot_intermediate_validation_features)
     pca_plot_intermediate_test_features = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=intermediate_features_test,
@@ -262,6 +263,7 @@ def evaluate(
             "FEATURE_SPACE_total_generation_pca_intermediate_test.png",
         )
     )
+    plt.close(pca_plot_intermediate_test_features)
 
     logger.info("Creating plots for validation...")
     create_grid_plot_of_worst_median_best(

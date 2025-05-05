@@ -2,13 +2,15 @@ import os
 import random
 from typing import Any, Dict, List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
-from src.plots.plot_transformation_directions import plot_transformation_directions
+from src.plots.plot_transformation_directions import \
+    plot_transformation_directions
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
@@ -41,6 +43,7 @@ def create_train_val_test_split(
 
     dist_of_features = plot_feature_distribution(mts_features_array)
     dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
+    plt.close(dist_of_features)
 
     indices = np.arange(len(mts_features_array))
     test_indices = indices[test_size:]
