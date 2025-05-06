@@ -1,8 +1,9 @@
-name: BEAST_ENV
+name: IBUN_BEAST
 channels:
   - defaults
   - conda-forge
   - pytorch
+  - nvidia
 dependencies:
   - python=3.12.6
   - numpy
@@ -15,6 +16,7 @@ dependencies:
   - pytorch
   - torchvision
   - torchaudio
+  - pytorch-cuda=11.8
   - tqdm
   - pyyaml
   - matplotlib-inline
