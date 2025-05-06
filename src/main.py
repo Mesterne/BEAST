@@ -152,11 +152,11 @@ model_handler.choose_model_category()
 ############ TRAINING
 model_directory = config["model_args"]["feature_model_args"]["directory_name"]
 if model_directory is not None:
-    models_directory = os.path.join(OUTPUT_DIR, "models")
+    models_directory = os.path.join(OUTPUT_DIR, "..", "models")
     os.makedirs(models_directory, exist_ok=True)
-    model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+    model_path = os.path.join(OUTPUT_DIR, "..", "models", model_directory)
     if os.path.exists(model_path):
-        logger.info(f"Pretrained model avalilable at {model_path}. Loading model...")
+        logger.info(f"Pretrained model available at {model_path}. Loading model...")
         model_handler.load_model()
     else:
         logger.info(

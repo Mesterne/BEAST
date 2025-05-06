@@ -200,7 +200,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         model_directory = self.config["model_args"]["feature_model_args"][
             "directory_name"
         ]
-        model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+        model_path = os.path.join(OUTPUT_DIR, "..", "models", model_directory)
         pretrained_mtscvae: nn.Module = MTSCVAE(self.model_params)
         pretrained_mtscvae.load_state_dict(torch.load(model_path))
         pretrained_mtscvae.eval()
@@ -213,7 +213,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         model_directory = self.config["model_args"]["feature_model_args"][
             "directory_name"
         ]
-        model_path = os.path.join(OUTPUT_DIR, "models", model_directory)
+        model_path = os.path.join(OUTPUT_DIR, "..", "models", model_directory)
         assert isinstance(self.model.model, MTSCVAE)
         # Save the MTSCVAE associated with this GenerativeModel object.
         torch.save(self.model.model.state_dict(), model_path)
