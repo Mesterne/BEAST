@@ -104,4 +104,3 @@ class NLinearForecastingModel(ForecastingModel):
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(os.path.join(OUTPUT_DIR, f"Loss_{model_name}.png"))
-        plt.close(plt)
