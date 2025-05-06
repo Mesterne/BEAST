@@ -131,7 +131,7 @@ def plot_evaluation_summaries_over_feature_space(
         ohe=ohe_test,
         evaluation=final_evaluation_values_for_each_feature_test,
         metric_name=metric,
-        dataset="Validation",
+        dataset="Test",
     )
 
 
