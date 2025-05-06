@@ -5,15 +5,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.plots.generated_vs_target_comparison import \
-    create_and_save_plots_of_model_performances
+from src.plots.generated_vs_target_comparison import (
+    create_and_save_plots_of_model_performances,
+)
 from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
-from src.plots.plot_feature_evaluation_bar_plot import \
-    plot_metric_for_each_feature_bar_plot
+from src.plots.plot_feature_evaluation_bar_plot import (
+    plot_metric_for_each_feature_bar_plot,
+)
 from src.plots.plot_feature_evaluation_distribution import (
-    plot_feature_evaluation, plot_feature_mse_distribution)
+    plot_feature_evaluation,
+    plot_feature_mse_distribution,
+)
 from src.utils.evaluation.feature_space_evaluation import (
-    calculate_mse_for_each_feature, calculate_total_mse_for_each_mts)
+    calculate_mse_for_each_feature,
+    calculate_total_mse_for_each_mts,
+)
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
