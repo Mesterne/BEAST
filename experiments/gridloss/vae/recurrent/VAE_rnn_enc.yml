@@ -39,6 +39,7 @@ model_args:
       trend_lin_factor: [0.01, 10]
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
+    directory_name: rnn_enc_VAE
     model_name: mts_cvae
     input_size: 24
     output_size: 12
