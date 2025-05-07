@@ -5,26 +5,22 @@ import numpy as np
 from src.data_transformations.generation_of_supervised_pairs import (
     concat_delta_values_to_features,
     concat_delta_values_to_features_for_inference,
-    create_reconstruction_xy_pairs)
-from src.models.feature_optimization_models.feedforward import \
-    FeedForwardFeatureModel
-from src.models.feature_optimization_models.naive_correlation import \
-    CorrelationModel
-from src.models.feature_optimization_models.naive_covariance import \
-    CovarianceModel
-from src.models.feature_optimization_models.perfect_feature_model import \
-    PerfectFeatureModel
+    create_reconstruction_xy_pairs,
+)
+from src.models.feature_optimization_models.feedforward import FeedForwardFeatureModel
+from src.models.feature_optimization_models.naive_correlation import CorrelationModel
+from src.models.feature_optimization_models.naive_covariance import CovarianceModel
+from src.models.feature_optimization_models.perfect_feature_model import (
+    PerfectFeatureModel,
+)
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.models.reconstruction.cvae_reconstruction_model import \
-    CVAEReconstructionModel
-from src.models.reconstruction.genetic_algorithm_wrapper import \
-    GeneticAlgorithmWrapper
+from src.models.reconstruction.cvae_reconstruction_model import CVAEReconstructionModel
+from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
 from src.models.reconstruction.reconstruction_model import ReconstructionModel
-from src.models.timeseries_transformation_model import \
-    TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import TimeseriesTransformationModel
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
