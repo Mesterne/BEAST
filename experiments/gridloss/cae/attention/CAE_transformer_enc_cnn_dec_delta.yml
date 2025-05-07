@@ -17,7 +17,7 @@ dataset_args:
     - grid2_1-temp
   num_features_per_uts: 4
   use_one_hot_encoding: false
-  use_identity_mapping: true
+  use_identity_mapping: false
   test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
@@ -50,13 +50,12 @@ model_args:
       learning_rate: 0.0001
       early_stopping_patience: 10
     conditional_gen_model_args:
-      variation: "VAE"
-      architecture: "rnn" # rnn, feedforward, rnn_enc_dec, convolution, attention
-      condition_type: "feature"
+      architecture: "transformer" # rnn, feedforward, rnn_enc_dec, convolution, attention, transformer
+      condition_type: "feature_delta"
       input_size_without_conditions: 576
       output_size: 576
       latent_size: 64
-      rnn_hidden_state_size: 256
+      rnn_hidden_state_size: None
       convolutional_layers:
         - [3, 8, 5, 1]
         - [8, 16, 5, 1]
@@ -77,7 +76,7 @@ model_args:
         - [256, relu]
         - [128, relu]
       conv_decoder:
-        use_conv_decoder: false
+        use_conv_decoder: true
         feedforward_layers:
           - [128]
           - [256]
@@ -87,7 +86,6 @@ model_args:
           - [16, 8, 5, 1]
           - [8, 8, 5, 1]
           - [8, 3, 5, 1]
-
   forecasting_model_args:
     model_type: n_linear
     window_size: 168

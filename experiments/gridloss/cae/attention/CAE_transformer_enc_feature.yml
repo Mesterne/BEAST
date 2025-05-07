@@ -22,8 +22,7 @@ dataset_args:
 stl_args:
   series_periodicity: 24
 model_args:
-  reconstruction_model_args:
-    model_type: 'ga'
+  genetic_algorithm_args:
     num_runs: 1
     num_generations: 100
     num_parents_mating: 2
@@ -41,17 +40,19 @@ model_args:
       seasonal_det_factor: [0.01, 10]
   feature_model_args:
     model_name: mts_cvae
+    input_size: 24
+    output_size: 12
+    hidden_network_sizes:
+      - 256
     training_args:
       num_epochs: 20
       batch_size: 64
       learning_rate: 0.0001
       early_stopping_patience: 10
     conditional_gen_model_args:
-      variation: "VAE"
-      architecture: "feedforward" # rnn, feedforward, rnn_enc_dec, convolution, attention
-      condition_type: "feature" # "feature" or "feature_delta"
+      architecture: "transformer" # rnn, feedforward, rnn_enc_dec, convolution, attention, transformer
+      condition_type: "feature"
       input_size_without_conditions: 576
-      mts_size: 576
       output_size: 576
       latent_size: 64
       rnn_hidden_state_size: None
@@ -68,7 +69,6 @@ model_args:
         dropout_rate: 0.1
         activation: "relu"
       number_of_conditions: 12
-      rnn_hidden_state_size:
       feedforward_layers:
         - [512, relu]
         - [512, relu]
