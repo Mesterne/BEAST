@@ -74,7 +74,7 @@ class ModelHandler:
 
     def infer(
         self, mts_dataset, evaluation_transformation_indinces: np.ndarray
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Takes the entire dataset, creates the correct inference data (X) for the selected model and runs inference.
 
@@ -112,3 +112,13 @@ class ModelHandler:
         )
 
         return predicted_y, intermediate_features
+
+    def load_model(self):
+        if not self.config["is_conditional_gen_model"]:
+            raise NotImplementedError()
+        self.model.load_model()
+
+    def save_model(self):
+        if not self.config["is_conditional_gen_model"]:
+            raise NotImplementedError()
+        self.model.save_model()

@@ -2,6 +2,7 @@ import os
 import random
 from typing import Any, Dict, List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
@@ -41,6 +42,7 @@ def create_train_val_test_split(
 
     dist_of_features = plot_feature_distribution(mts_features_array)
     dist_of_features.savefig(os.path.join(OUTPUT_DIR, "distribution_of_features.png"))
+    plt.close(dist_of_features)
 
     indices = np.arange(len(mts_features_array))
     test_indices = indices[test_size:]

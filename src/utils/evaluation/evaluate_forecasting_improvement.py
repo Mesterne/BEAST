@@ -4,13 +4,11 @@ from typing import Any, Dict
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.models.forecasting.feedforward import FeedForwardForecaster
 from src.models.forecasting.feedforward_forecasting_model import (
     FeedForwardForecastingModel,
 )
 from src.models.forecasting.forcasting_model import ForecastingModel
 from src.models.forecasting.n_linear_forecasting_model import NLinearForecastingModel
-from src.models.neural_network_wrapper import NeuralNetworkWrapper
 from src.utils.forecasting_utils import compare_old_and_new_model
 from src.utils.generate_dataset import create_training_windows_from_mts  # noqa: E402
 from src.utils.logging_config import logger
@@ -67,13 +65,15 @@ class ForecasterEvaluator:
     def _initialize_forecasting_model(self) -> ForecastingModel:
         model_type = self.config["model_args"]["forecasting_model_args"]["model_type"]
         if model_type == "feedforward_forecaster":
-            logger.info("Running NLinearForecastingModel for forecasting evaluations")
+            logger.info(
+                "Running FeedForwardForecastingModel for forecasting evaluations"
+            )
             return FeedForwardForecastingModel(self.config)
         else:
             logger.info("Running NLinearForecastingModel for forecasting evaluations")
             return NLinearForecastingModel(self.config)
 
-    def evaluate_on_evaluation_set(self, inferred_mts_array, type=""):
+    def evaluate_on_evaluation_set(self, inferred_mts_array, ohe, type=""):
         new_train_mts_array = np.vstack([self.train_mts_array, inferred_mts_array])
 
         new_forecasting_model: ForecastingModel = self._initialize_forecasting_model()
@@ -96,46 +96,57 @@ class ForecasterEvaluator:
             test_timeseries=self.test_mts_array,
             forecasting_model_wrapper_old=self.original_forecasting_model,
             forecasting_model_wrapper_new=new_forecasting_model,
+            ohe=ohe,
+            retrain_on=type,
         )
         forecast_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
-                f"retrain_on_{type}_forecasting_model_comparison_forecast.png",
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_forecast.png",
             )
         )
         mse_plot.savefig(
             os.path.join(
-                OUTPUT_DIR, f"retrain_on_{type}_forecasting_model_comparison_mse.png"
+                OUTPUT_DIR,
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mse.png",
             )
         )
 
         mse_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
-                f"retrain_on_{type}_forecasting_model_improvement_delta_mse.png",
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mse.png",
             )
         )
         mase_plot.savefig(
             os.path.join(
-                OUTPUT_DIR, f"retrain_on_{type}_forecasting_model_comparison_mase.png"
+                OUTPUT_DIR,
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mase.png",
             )
         )
         mase_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
-                f"retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
             )
         )
 
         mse_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
-                f"retrain_on_{type}_forecasting_delta_mse.png",
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mse.png",
             )
         )
         mase_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
-                f"retrain_on_{type}_forecasting_delta_mase.png",
+                "Forecasting space evaluations",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mase.png",
             )
         )

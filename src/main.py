@@ -20,9 +20,9 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
+from src.data_transformations.generation_of_supervised_pairs import (  # noqa: E402
     create_train_val_test_split,
-)  # noqa: E402
+)
 from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
 from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
@@ -31,6 +31,10 @@ from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
 from src.utils.logging_config import logger  # noqa: E402
 from src.utils.yaml_loader import read_yaml  # noqa: E402
+
+os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -60,6 +64,14 @@ try:
 except Exception:
     config["is_conditional_gen_model"] = False
 
+try:
+    # NOTE: directory_name and name of slurm job should be the same for easy identification
+    logger.info(
+        f"Saving/loading model from directory {config['model_args']["feature_model_args"]["directory_name"]}."
+    )
+except KeyError:
+    config["model_args"]["feature_model_args"]["directory_name"] = None
+    logger.info("No directory for saving/loading model specified.")
 
 logger.info(f"Running with experiment settings:\n{config}")
 logger.info(
@@ -142,16 +154,36 @@ model_handler = ModelHandler(config)
 model_handler.choose_model_category()
 
 ############ TRAINING
-model_handler.train(
-    mts_dataset=mts_dataset_array,
-    train_transformation_indices=train_transformation_indices,
-    validation_transformation_indices=validation_transformation_indices,
-)
+model_directory = config["model_args"]["feature_model_args"]["directory_name"]
+if model_directory is not None:
+    models_directory = os.path.join(OUTPUT_DIR, "..", "models")
+    os.makedirs(models_directory, exist_ok=True)
+    model_path = os.path.join(OUTPUT_DIR, "..", "models", model_directory)
+    if os.path.exists(model_path):
+        logger.info(f"Pretrained model available at {model_path}. Loading model...")
+        model_handler.load_model()
+    else:
+        logger.info(
+            f"No pretrained model avaliable at {model_path}. Training new model..."
+        )
+        model_handler.train(
+            mts_dataset=mts_dataset_array,
+            train_transformation_indices=train_transformation_indices,
+            validation_transformation_indices=validation_transformation_indices,
+        )
+        model_handler.save_model()
+        logger.info(f"Model saved to {model_path}.")
+else:
+    model_handler.train(
+        mts_dataset=mts_dataset_array,
+        train_transformation_indices=train_transformation_indices,
+        validation_transformation_indices=validation_transformation_indices,
+    )
 
 
 ############ INFERENCE
 logger.info("Running inference on validation set...")
-inferred_mts_validation, inferred_intermediate_features_validation = (
+inferred_mts_validation, inferred_intermediate_features_validation, ohe_val = (
     model_handler.infer(
         mts_dataset=mts_dataset_array,
         evaluation_transformation_indinces=validation_transformation_indices,
@@ -159,7 +191,7 @@ inferred_mts_validation, inferred_intermediate_features_validation = (
 )
 
 logger.info("Running inference on test set...")
-inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
+inferred_mts_test, inferred_intermediate_features_test, ohe_test = model_handler.infer(
     mts_dataset=mts_dataset_array,
     evaluation_transformation_indinces=test_transformation_indices,
 )
@@ -174,8 +206,10 @@ evaluate(
     test_transformation_indices=test_transformation_indices,
     inferred_mts_validation=inferred_mts_validation,
     inferred_mts_test=inferred_mts_test,
-    inferred_intermediate_features_validation=inferred_intermediate_features_validation,
-    inferred_intermediate_features_test=inferred_intermediate_features_test,
+    intermediate_features_validation=inferred_intermediate_features_validation,
+    intermediate_features_test=inferred_intermediate_features_test,
+    ohe_val=ohe_val,
+    ohe_test=ohe_test,
 )
 
 
@@ -191,11 +225,11 @@ evaluator = ForecasterEvaluator(
 
 logger.info("Evaluating foreasting improvement on inferred validation set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="validation"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_val, type="validation"
 )
 logger.info("Evaluating foreasting improvement on inferred test set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="test"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
 )
 
 
