@@ -6,40 +6,11 @@ from matplotlib.container import BarContainer
 from matplotlib.figure import Figure
 
 
-def plot_feature_mse_distribution(
-    feature_space_mse_validation: np.ndarray, feature_space_mse_test: np.ndarray
-) -> Figure:
-    """
-    Creates distribution plot of the MSE values for each MTS feature predictions.
-    args:
-        feature_space_mse_validation: np.ndarray - 1 dimensional numpy array of the MSE values of the feature model.
-        feature_space_mse_test: np.ndarray - 1 dimensional numpy array of the MSE values of the feature model.
-    """
-    data = pd.DataFrame(
-        {
-            "mse": np.concatenate(
-                [feature_space_mse_validation, feature_space_mse_test]
-            ),
-            "Type": ["Validation"] * len(feature_space_mse_validation)
-            + ["Test"] * len(feature_space_mse_test),
-        }
-    )
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.kdeplot(data=data, x="mse", hue="Type", fill=True, ax=ax)
-
-    ax.set_title("Feature-wise MSE Distribution")
-    ax.set_xlabel("Mean Squared Error (MSE)")
-    ax.set_ylabel("Density")
-
-    return fig
-
-
 def plot_feature_evaluation(
-    inferred_feature_space_mse_validation: float,
-    final_feature_space_mse_validation: float,
-    inferred_feature_space_mse_test: float,
-    final_feature_space_mse_test: float,
+    intermediate_mse_values_for_each_feature_validation: np.ndarray,
+    intermediate_mse_values_for_each_feature_test: np.ndarray,
+    final_mse_values_for_each_feature_validation: np.ndarray,
+    final_mse_values_for_each_feature_test: np.ndarray,
     metric_name: str = "",
 ) -> Figure:
     """
@@ -60,10 +31,10 @@ def plot_feature_evaluation(
             ],
             "Dataset": ["Validation", "Validation", "Test", "Test"],
             "metric": [
-                inferred_feature_space_mse_validation,
-                final_feature_space_mse_validation,
-                inferred_feature_space_mse_test,
-                final_feature_space_mse_test,
+                np.mean(intermediate_mse_values_for_each_feature_validation),
+                np.mean(final_mse_values_for_each_feature_validation),
+                np.mean(intermediate_mse_values_for_each_feature_test),
+                np.mean(final_mse_values_for_each_feature_test),
             ],
         }
     )

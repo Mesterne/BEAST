@@ -7,12 +7,11 @@ import seaborn as sns
 from matplotlib.container import BarContainer
 
 from src.models.forecasting.forcasting_model import ForecastingModel
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space
 from src.utils.evaluation.forecaster_evaluation import (
-    mase_for_all_predictions,
-    mase_for_each_forecast,
-    mse_for_all_predictions,
-    mse_for_each_forecast,
-)
+    mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
+    mse_for_each_forecast)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
@@ -86,6 +85,8 @@ def compare_old_and_new_model(
     test_timeseries: np.ndarray,
     forecasting_model_wrapper_old: ForecastingModel,
     forecasting_model_wrapper_new: ForecastingModel,
+    ohe: np.ndarray,
+    retrain_on: str,
 ):
     inferred_old_train = forecasting_model_wrapper_old.forecast(
         test_timeseries=train_timeseries
@@ -245,6 +246,24 @@ def compare_old_and_new_model(
         test_metrics=[test_mase_total_old, test_mase_total_new],
         metric_name="MASE",
     )
+
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space(
+        ohe=ohe,
+        train_metrics=[train_mse_old, train_mse_new],
+        val_metrics=[val_mse_old, val_mse_new],
+        test_metrics=[test_mse_old, test_mse_new],
+        metric_name="MSE",
+        retrain_on=retrain_on,
+    )
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space(
+        ohe=ohe,
+        train_metrics=[train_mase_old, train_mase_new],
+        val_metrics=[val_mase_old, val_mase_new],
+        test_metrics=[test_mase_old, test_mase_new],
+        metric_name="MASE",
+        retrain_on=retrain_on,
+    )
+
     return (
         forecast_plot,
         mse_plot,
