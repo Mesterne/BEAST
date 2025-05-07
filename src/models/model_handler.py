@@ -74,7 +74,7 @@ class ModelHandler:
 
     def infer(
         self, mts_dataset, evaluation_transformation_indinces: np.ndarray
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
         """
         Takes the entire dataset, creates the correct inference data (X) for the selected model and runs inference.
 

@@ -32,6 +32,10 @@ from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
 from src.utils.logging_config import logger  # noqa: E402
 from src.utils.yaml_loader import read_yaml  # noqa: E402
 
+os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
+
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
 
@@ -179,7 +183,7 @@ else:
 
 ############ INFERENCE
 logger.info("Running inference on validation set...")
-inferred_mts_validation, inferred_intermediate_features_validation = (
+inferred_mts_validation, inferred_intermediate_features_validation, ohe_val = (
     model_handler.infer(
         mts_dataset=mts_dataset_array,
         evaluation_transformation_indinces=validation_transformation_indices,
@@ -187,7 +191,7 @@ inferred_mts_validation, inferred_intermediate_features_validation = (
 )
 
 logger.info("Running inference on test set...")
-inferred_mts_test, inferred_intermediate_features_test = model_handler.infer(
+inferred_mts_test, inferred_intermediate_features_test, ohe_test = model_handler.infer(
     mts_dataset=mts_dataset_array,
     evaluation_transformation_indinces=test_transformation_indices,
 )
@@ -202,8 +206,10 @@ evaluate(
     test_transformation_indices=test_transformation_indices,
     inferred_mts_validation=inferred_mts_validation,
     inferred_mts_test=inferred_mts_test,
-    inferred_intermediate_features_validation=inferred_intermediate_features_validation,
-    inferred_intermediate_features_test=inferred_intermediate_features_test,
+    intermediate_features_validation=inferred_intermediate_features_validation,
+    intermediate_features_test=inferred_intermediate_features_test,
+    ohe_val=ohe_val,
+    ohe_test=ohe_test,
 )
 
 
@@ -219,11 +225,11 @@ evaluator = ForecasterEvaluator(
 
 logger.info("Evaluating foreasting improvement on inferred validation set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="validation"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_val, type="validation"
 )
 logger.info("Evaluating foreasting improvement on inferred test set...")
 evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, type="test"
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
 )
 
 
