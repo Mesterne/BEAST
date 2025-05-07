@@ -5,7 +5,6 @@
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:v100:1
-#SBATCH --constraint=gpu32g
 #SBATCH --mem=32G
 #SBATCH --nodes=1
 
