@@ -1,10 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 
-def calculate_mse_for_each_feature(
-    predicted_features: np.array, target_features: np.array
+def calculate_evaluation_for_each_feature(
+    predicted_features: np.ndarray, target_features: np.ndarray, metric: str
 ):
     """
     Calculate the Mean Squared Error (MSE) for each feature for each timeseries.
@@ -20,14 +20,26 @@ def calculate_mse_for_each_feature(
     np.array: A NumPy array of shape (num_timeseries, 12) where each entry corresponds to the MSE for a specific feature for that specific timeseries.
     """
 
-    # Calculate the squared difference between predicted and target values
-    squared_diff = (predicted_features - target_features) ** 2
+    assert metric in [
+        "MSE",
+        "MAE",
+    ], "Metric must be either MSE or MAE for feature space evaluations"
+    if metric == "MSE":
+        # Calculate the squared difference between predicted and target values
+        squared_diff = (predicted_features - target_features) ** 2
 
-    # The MSE for each feature for each timeseries is the squared difference itself
-    return squared_diff
+        # The MSE for each feature for each timeseries is the squared difference itself
+        return squared_diff
+
+    if metric == "MAE":
+        return np.abs(predicted_features - target_features)
+
+    return (predicted_features - target_features) ** 2
 
 
-def calculate_total_mse_for_each_mts(mse_per_feature: np.array):
+def calculate_total_evaluation_for_each_mts(
+    predicted_features: np.ndarray, target_features: np.ndarray, metric: str
+):
     """
     Calculate the total Mean Squared Error (MSE) for each multi-timeseries (MTS).
 
@@ -39,9 +51,15 @@ def calculate_total_mse_for_each_mts(mse_per_feature: np.array):
     Returns:
     np.array: A numpy array of shape (num_timeseries,), where each entry is the total MSE for each generated MTS' features.
     """
+    eval_for_each_feature = calculate_evaluation_for_each_feature(
+        predicted_features=predicted_features,
+        target_features=target_features,
+        metric=metric,
+    )
 
+    # TODO: Diskuter dette.
     # Sum the MSE across the feature axis (axis 1)
-    total_mse = np.sum(mse_per_feature, axis=1)
+    total_mse = np.sum(eval_for_each_feature, axis=1)
 
     return total_mse
 

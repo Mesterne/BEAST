@@ -1,7 +1,7 @@
 experiment_results_dir: experiments/gridloss/results
 dataset_args:
   directory: data/gridloss
-  training_data: train.csv
+  training_data: train_small.csv
   window_size: 192
   mts_size: 576
   uts_size: 192
@@ -15,9 +15,9 @@ dataset_args:
     - grid2-loss
     - grid2_1-temp
   num_features_per_uts: 4
-  use_one_hot_encoding: false
+  use_one_hot_encoding: true
   use_identity_mapping: false
-  test_set_sample_size: 10
+  test_set_sample_size: 5
 stl_args:
   series_periodicity: 24
 model_args:
@@ -49,15 +49,12 @@ model_args:
       learning_rate: 0.001
       early_stopping_patience: 25
   forecasting_model_args:
-    model_type: 'n_linear'
+    model_type: 'feedforward_forecaster'
     window_size: 168
-    network_size:
-      - 100
     horizon_length: 24
-    model_name: feedforward_forecaster
     model_params_storage_dir: models/feedforward
     training_args:
-      num_epochs: 10
+      num_epochs: 1
       batch_size: 128
       learning_rate: 0.001
       early_stopping_patience: 25
