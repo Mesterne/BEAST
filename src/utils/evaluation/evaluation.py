@@ -9,7 +9,9 @@ from src.plots.generated_vs_target_comparison import \
     create_grid_plot_of_worst_median_best
 from src.plots.ohe_plots import \
     create_and_save_plots_of_ohe_activated_performances_feature_space
-from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
+from src.plots.pca_total_generation import (
+    plot_pca_for_all_generated_mts,
+    plot_pca_for_all_generated_mts_for_each_uts)
 from src.plots.plot_feature_evaluation_bar_plot import \
     plot_metric_for_each_feature_bar_plot
 from src.plots.plot_feature_evaluation_distribution import \
@@ -251,6 +253,23 @@ def evaluate(
         )
     )
     plt.close(pca_plot_intermediate_validation_features)
+
+    pca_plot_for_all_uts_intermediate_validation_features = (
+        plot_pca_for_all_generated_mts_for_each_uts(
+            mts_dataset_features=mts_dataset_features,
+            mts_generated_features=intermediate_features_validation,
+            evaluation_set_indices=validation_transformation_indices,
+        )
+    )
+    pca_plot_for_all_uts_intermediate_validation_features.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            "FEATURE_SPACE_total_generation_pca_intermediate_validation_all_uts.png",
+        )
+    )
+    plt.close(pca_plot_for_all_uts_intermediate_validation_features)
+
     pca_plot_intermediate_test_features = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=intermediate_features_test,
@@ -264,6 +283,21 @@ def evaluate(
         )
     )
     plt.close(pca_plot_intermediate_test_features)
+    pca_plot_for_all_uts_intermediate_test_features = (
+        plot_pca_for_all_generated_mts_for_each_uts(
+            mts_dataset_features=mts_dataset_features,
+            mts_generated_features=intermediate_features_test,
+            evaluation_set_indices=test_transformation_indices,
+        )
+    )
+    pca_plot_for_all_uts_intermediate_test_features.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            "FEATURE_SPACE_total_generation_pca_intermediate_test_all_uts.png",
+        )
+    )
+    plt.close(pca_plot_for_all_uts_intermediate_test_features)
 
     logger.info("Creating plots for validation...")
     create_grid_plot_of_worst_median_best(

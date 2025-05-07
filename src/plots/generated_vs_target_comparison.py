@@ -8,7 +8,9 @@ from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
 from src.plots.pca_for_each_uts_with_transformed import \
     plot_pca_for_each_uts_with_transformed
-from src.plots.pca_total_generation import plot_pca_for_all_generated_mts
+from src.plots.pca_total_generation import (
+    plot_pca_for_all_generated_mts,
+    plot_pca_for_all_generated_mts_for_each_uts)
 from src.utils.evaluation.feature_space_evaluation import \
     calculate_total_evaluation_for_each_mts
 from src.utils.logging_config import logger
@@ -156,3 +158,13 @@ def create_grid_plot_of_worst_median_best(
     )
     pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))
     plt.close(pca_total_plot)
+
+    pca_for_each_uts = plot_pca_for_all_generated_mts_for_each_uts(
+        mts_dataset_features=mts_dataset_features,
+        mts_generated_features=inferred_mts_features,
+        evaluation_set_indices=transformation_indices[:, 1],
+    )
+    pca_for_each_uts.savefig(
+        os.path.join(OUTPUT_DIR, "total_generation_pca_for_each_uts.png")
+    )
+    plt.close(pca_for_each_uts)
