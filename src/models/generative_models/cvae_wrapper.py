@@ -31,9 +31,12 @@ class CVAEWrapper(FeatureTransformationModel):
         log_var,
         current_epoch=None,
         use_warmup=False,
+        model_variation=None,
     ):
-        kl_divergence = self.KL_divergence(mean, log_var, current_epoch, use_warmup)
         reconstruction_loss = self.reconstruction_loss(input, output)
+        if model_variation == "CAE":
+            return reconstruction_loss
+        kl_divergence = self.KL_divergence(mean, log_var, current_epoch, use_warmup)
         return kl_divergence + reconstruction_loss
 
     def KL_divergence(self, mean, log_var, current_epoch=None, use_warmup=False):
@@ -62,6 +65,8 @@ class CVAEWrapper(FeatureTransformationModel):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Training model with device: {device}")
         self.model.to(device)
+
+        model_variation = self.model.model_variation
 
         loss_function = self.loss_function
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
@@ -101,8 +106,14 @@ class CVAEWrapper(FeatureTransformationModel):
 
             for inputs, targets in train_dataloader:
                 optimizer.zero_grad()
-                outputs, latent_means, latent_logvars = self.model(inputs)
-
+                if not model_variation == "CAE":
+                    outputs, latent_means, latent_logvars = self.model(inputs)
+                else:
+                    outputs, latent_means, latent_logvars = (
+                        self.model(inputs),
+                        torch.zeros(self.batch_size),
+                        torch.zeros(self.batch_size),
+                    )
                 loss = loss_function(
                     outputs,
                     targets,
@@ -110,13 +121,15 @@ class CVAEWrapper(FeatureTransformationModel):
                     latent_logvars,
                     epoch,
                     use_warmup=False,
+                    model_variation=model_variation,
                 )
-                loss_kl_divergence = self.KL_divergence(
-                    latent_means,
-                    latent_logvars,
-                    epoch,
-                    use_warmup=False,
-                )
+                if not model_variation == "CAE":
+                    loss_kl_divergence = self.KL_divergence(
+                        latent_means,
+                        latent_logvars,
+                        epoch,
+                        use_warmup=False,
+                    )
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
                 )
@@ -124,20 +137,27 @@ class CVAEWrapper(FeatureTransformationModel):
 
                 optimizer.step()
                 running_loss += loss.item() * inputs.size(0)
-                running_loss_kl_divergence += loss_kl_divergence.item() * inputs.size(0)
+                if not model_variation == "CAE":
+                    running_loss_kl_divergence += (
+                        loss_kl_divergence.item() * inputs.size(0)
+                    )
                 running_loss_reconstruction += loss_reconstruction.item() * inputs.size(
                     0
                 )
 
             epoch_loss = running_loss / len(train_dataloader.dataset)
-            epoch_loss_kl_divergence = running_loss_kl_divergence / len(
-                train_dataloader.dataset
-            )
+            if not model_variation == "CAE":
+                epoch_loss_kl_divergence = running_loss_kl_divergence / len(
+                    train_dataloader.dataset
+                )
             epoch_loss_reconstruction = running_loss_reconstruction / len(
                 train_dataloader.dataset
             )
             train_loss_history.append(epoch_loss)
-            train_loss_history_kl_divergence.append(epoch_loss_kl_divergence)
+            if not model_variation == "CAE":
+                train_loss_history_kl_divergence.append(epoch_loss_kl_divergence)
+            else:
+                train_loss_history_kl_divergence.append(1000)
             train_loss_history_reconstruction.append(epoch_loss_reconstruction)
 
             assert not np.isnan(
@@ -148,7 +168,14 @@ class CVAEWrapper(FeatureTransformationModel):
             running_val_loss = 0.0
             with torch.no_grad():
                 for inputs, targets in validation_dataloader:
-                    outputs, latent_means, latent_logvars = self.model(inputs)
+                    if not model_variation == "CAE":
+                        outputs, latent_means, latent_logvars = self.model(inputs)
+                    else:
+                        outputs, latent_means, latent_logvars = (
+                            self.model(inputs),
+                            torch.zeros(self.batch_size),
+                            torch.zeros(self.batch_size),
+                        )
                     loss = loss_function(
                         outputs,
                         targets,
@@ -156,6 +183,7 @@ class CVAEWrapper(FeatureTransformationModel):
                         latent_logvars,
                         epoch,
                         use_warmup=False,
+                        model_variation=model_variation,
                     )
                     running_val_loss += loss.item() * inputs.size(0)
 
