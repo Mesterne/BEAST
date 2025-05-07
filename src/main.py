@@ -96,14 +96,15 @@ mts_dataset_array_test: np.ndarray = get_mts_dataset(
     step_size=config["dataset_args"]["step_size"],
 )
 
+test_mts_dataset_array_size = mts_dataset_array_test.shape[0]
+mts_dataset_array = np.concatenate([mts_dataset_array, mts_dataset_array_test], axis=0)
+
 mts_features_array, mts_decomps = generate_feature_dataframe(
     data=mts_dataset_array,
     series_periodicity=config["stl_args"]["series_periodicity"],
     num_features_per_uts=config["dataset_args"]["num_features_per_uts"],
 )
 
-test_mts_dataset_array_size = mts_dataset_array_test.shape[0]
-mts_dataset_array = np.concatenate([mts_dataset_array, mts_dataset_array_test], axis=0)
 
 logger.info("Successfully generated feature dataframe")
 

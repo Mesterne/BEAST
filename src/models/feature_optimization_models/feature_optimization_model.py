@@ -230,9 +230,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
     def infer(self, X: np.ndarray) -> np.ndarray:
         predicted_features = self.feature_model.infer(X)
 
-        inferred_mts, intermediate_features = generate_new_time_series(
+        inferred_mts, _ = generate_new_time_series(
             original_indices=self.evaluation_set_indices[:, 0],
             predicted_features=predicted_features,
             reconstruction_model=self.reconstruction_model,
         )
-        return inferred_mts, intermediate_features
+        return inferred_mts, predicted_features
