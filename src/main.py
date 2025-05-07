@@ -20,13 +20,12 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import \
-    create_train_val_test_split  # noqa: E402
-from src.data_transformations.preprocessing import \
-    scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import (
+    create_train_val_test_split,
+)  # noqa: E402
+from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import \
-    ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402

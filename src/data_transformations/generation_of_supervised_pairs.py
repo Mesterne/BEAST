@@ -9,8 +9,7 @@ from tqdm import tqdm
 from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
-from src.plots.plot_transformation_directions import \
-    plot_transformation_directions
+from src.plots.plot_transformation_directions import plot_transformation_directions
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
