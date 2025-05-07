@@ -1,9 +1,9 @@
 name: IBUN_BEAST
 channels:
-  - defaults
-  - conda-forge
   - pytorch
   - nvidia
+  - conda-forge
+  - defaults
 dependencies:
   - python=3.12.6
   - numpy
@@ -13,10 +13,6 @@ dependencies:
   - scikit-learn
   - flake8
   - black
-  - pytorch
-  - torchvision
-  - torchaudio
-  - pytorch-cuda=11.8
   - tqdm
   - pyyaml
   - matplotlib-inline
@@ -25,4 +21,11 @@ dependencies:
   - nbformat
   - pygad
   - wandb
-  - u8darts-all
+  - pip
+  - pip:
+      - "u8darts[all]"
+  # GPU-enabled PyTorch stack
+  - pytorch=2.5.1
+  - torchvision=0.20.1
+  - torchaudio=2.5.1
+  - pytorch-cuda=11.8
