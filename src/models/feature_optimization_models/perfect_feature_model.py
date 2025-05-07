@@ -24,9 +24,4 @@ class PerfectFeatureModel(FeatureTransformationModel):
 
     # NOTE: This only works on validation set.
     def infer(self, X: np.ndarray) -> np.ndarray:
-        if X.shape[0] != self.validation_targets.shape[0]:
-            return X[
-                :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
-            ]
-        else:
-            return self.validation_targets
+        return X[:, : self.number_of_uts_in_mts * self.number_of_features_in_each_uts]

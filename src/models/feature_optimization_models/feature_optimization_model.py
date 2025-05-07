@@ -5,22 +5,26 @@ import numpy as np
 from src.data_transformations.generation_of_supervised_pairs import (
     concat_delta_values_to_features,
     concat_delta_values_to_features_for_inference,
-    create_reconstruction_xy_pairs,
-)
-from src.models.feature_optimization_models.feedforward import FeedForwardFeatureModel
-from src.models.feature_optimization_models.naive_correlation import CorrelationModel
-from src.models.feature_optimization_models.naive_covariance import CovarianceModel
-from src.models.feature_optimization_models.perfect_feature_model import (
-    PerfectFeatureModel,
-)
+    create_reconstruction_xy_pairs)
+from src.models.feature_optimization_models.feedforward import \
+    FeedForwardFeatureModel
+from src.models.feature_optimization_models.naive_correlation import \
+    CorrelationModel
+from src.models.feature_optimization_models.naive_covariance import \
+    CovarianceModel
+from src.models.feature_optimization_models.perfect_feature_model import \
+    PerfectFeatureModel
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.models.reconstruction.cvae_reconstruction_model import CVAEReconstructionModel
-from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.models.reconstruction.cvae_reconstruction_model import \
+    CVAEReconstructionModel
+from src.models.reconstruction.genetic_algorithm_wrapper import \
+    GeneticAlgorithmWrapper
 from src.models.reconstruction.reconstruction_model import ReconstructionModel
-from src.models.timeseries_transformation_model import TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import \
+    TimeseriesTransformationModel
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
@@ -41,22 +45,22 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             "feature_model_args"
         ]
         training_params: Dict[str, Any] = feature_model_params["training_args"]
-        model_type: str = feature_model_params["model_name"]
-        if model_type == "correlation_model":
+        self.model_type: str = feature_model_params["model_name"]
+        if self.model_type == "correlation_model":
             logger.info("Using correlation feature model")
             return CorrelationModel(feature_model_params)
-        elif model_type == "perfect_feature_model":
+        elif self.model_type == "perfect_feature_model":
             logger.info("Using perfect feature model")
             return PerfectFeatureModel(params=feature_model_params)
-        elif model_type == "covariance_model":
+        elif self.model_type == "covariance_model":
             logger.info("Using covariance feature model")
             return CovarianceModel(params=feature_model_params)
-        elif model_type == "feedforward_neural_network":
+        elif self.model_type == "feedforward_neural_network":
             logger.info("Using feedforward_neural_network feature model")
             nn = FeedForwardFeatureModel(feature_model_params)
             model = NeuralNetworkWrapper(nn, training_params=training_params)
             return model
-        elif model_type == "feature_cvae":
+        elif self.model_type == "feature_cvae":
             logger.info("Using feature_cvae feature model")
             cvae_params = feature_model_params["conditional_gen_model_args"]
             cvae_params["mts_size"] = self.config["dataset_args"]["mts_size"]
@@ -65,7 +69,7 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             model = CVAEWrapper(cvae, training_params=training_params)
             return model
         else:
-            raise ValueError(f"Model type {model_type} not supported")
+            raise ValueError(f"Model type {self.model_type} not supported")
 
     def _choose_underlying_reconstruction_model_based_on_config(
         self,
@@ -197,7 +201,7 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
     ):
         num_features_per_uts: int = self.config["dataset_args"]["num_features_per_uts"]
         num_uts_in_mts: int = len(self.config["dataset_args"]["timeseries_to_use"])
-        use_one_hot_encoding: int = self.config["dataset_args"]["use_one_hot_encoding"]
+        use_one_hot_encoding: bool = self.config["dataset_args"]["use_one_hot_encoding"]
 
         self.evaluation_set_indices = evaluation_set_indices
         self.mts_dataset = mts_dataset
@@ -217,6 +221,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             number_of_features_in_mts=num_features_per_uts,
             number_of_uts_in_mts=num_uts_in_mts,
         )
+
+        if self.model_type == "perfect_feature_model":
+            X[:, : y.shape[1]] = y
         return X
 
     @override

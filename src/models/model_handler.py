@@ -3,11 +3,11 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 
 from src.models.basic_models.BasicModel import BasicModel
-from src.models.feature_optimization_models.feature_optimization_model import (
-    FeatureOptimizationModel,
-)
+from src.models.feature_optimization_models.feature_optimization_model import \
+    FeatureOptimizationModel
 from src.models.generative_models.generative_model import GenerativeModel
-from src.models.timeseries_transformation_model import TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import \
+    TimeseriesTransformationModel
 from src.utils.logging_config import logger
 
 
@@ -111,7 +111,7 @@ class ModelHandler:
             // len(self.config["dataset_args"]["timeseries_to_use"]),
         )
 
-        return predicted_y, intermediate_features
+        return predicted_y, intermediate_features, X[:, -3:]
 
     def load_model(self):
         if not self.config["is_conditional_gen_model"]:

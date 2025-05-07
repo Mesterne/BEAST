@@ -67,7 +67,7 @@ class TimeseriesTransformationModel(ABC):
         self,
         mts_dataset: np.ndarray,
         evaluation_set_indices: np.ndarray,
-    ):
+    ) -> np.ndarray:
         """
         Prepares the input data for inference based on a given dataset.
 
