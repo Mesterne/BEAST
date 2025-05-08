@@ -92,11 +92,9 @@ class NLinearForecastingModel(ForecastingModel):
             return
 
         plt.figure(figsize=(8, 5))
-        plt.plot(self.loss_tracker.train_loss, label="Train Loss", color="blue")
+        plt.plot(self.loss_tracker.train_loss, label="Train Loss", color="orange")
         if self.loss_tracker.val_loss:
-            plt.plot(
-                self.loss_tracker.val_loss, label="Validation Loss", color="orange"
-            )
+            plt.plot(self.loss_tracker.val_loss, label="Validation Loss", color="red")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.title(f"Training and Validation Loss - {model_name}")

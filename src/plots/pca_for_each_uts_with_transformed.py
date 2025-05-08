@@ -46,23 +46,30 @@ def plot_pca_for_each_uts_with_transformed(
     sns.scatterplot(
         x=dataset_pca[:, 0],
         y=dataset_pca[:, 1],
-        label="Train",
-        color="grey",
-        s=50,
+        label="Dataset",
+        color="gray",
+        alpha=0.7,
+        s=15,
         ax=ax,
     )
     sns.scatterplot(
         x=evaluation_set_pca[:, 0],
         y=evaluation_set_pca[:, 1],
         label="Evaluation set",
-        color="red",
-        s=50,
+        color="blue",
+        s=15,
         ax=ax,
     )
 
-    ax.scatter(*original_pca.T, color="blue", s=150, label="Original MTS")
-    ax.scatter(*target_pca.T, color="green", s=150, label="Target MTS")
-    ax.scatter(*predicted_pca.T, color="orange", s=150, label="Predicted MTS")
+    ax.scatter(
+        *original_pca.T, color="gray", s=150, edgecolors="black", label="Original MTS"
+    )
+    ax.scatter(
+        *target_pca.T, color="blue", s=150, edgecolors="black", label="Target MTS"
+    )
+    ax.scatter(
+        *predicted_pca.T, color="red", s=150, edgecolors="black", label="Predicted MTS"
+    )
 
     # Draw dotted arrow from Original to Predicted
     ax.annotate(
@@ -107,7 +114,8 @@ def plot_pca_for_each_uts_with_transformed(
             x=uts_dataset_pca[:, 0],
             y=uts_dataset_pca[:, 1],
             label="Dataset",
-            color="grey",
+            color="gray",
+            alpha=0.7,
             s=50,
             ax=ax,
         )
@@ -119,9 +127,9 @@ def plot_pca_for_each_uts_with_transformed(
             s=50,
         )
 
-        ax.scatter(*uts_original_pca.T, color="blue", s=150, label="Original")
-        ax.scatter(*uts_target_pca.T, color="green", s=150, label="Target")
-        ax.scatter(*uts_predicted_pca.T, color="orange", s=150, label="Predicted")
+        ax.scatter(*uts_original_pca.T, color="grey", s=150, label="Original")
+        ax.scatter(*uts_target_pca.T, color="blue", s=150, label="Target")
+        ax.scatter(*uts_predicted_pca.T, color="red", s=150, label="Predicted")
 
         # Draw dotted arrow from Original to Predicted
         ax.annotate(

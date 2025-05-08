@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,15 +7,11 @@ import seaborn as sns
 from matplotlib.container import BarContainer
 
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.plots.ohe_plots import (
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space,
-)
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space
 from src.utils.evaluation.forecaster_evaluation import (
-    mase_for_all_predictions,
-    mase_for_each_forecast,
-    mse_for_all_predictions,
-    mse_for_each_forecast,
-)
+    mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
+    mse_for_each_forecast)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
@@ -27,28 +23,61 @@ def compare_original_and_transformed_forecasting(
     worst_forecast_new,
     true_value,
 ):
-    # Forecast plot
+    custom_palette = {
+        "Original Timeseries": "gray",
+        "Old Forecast": "green",
+        "New Forecast": "red",
+    }
+
+    custom_zorder = {
+        "Original Timeseries": 1,  # Bottom
+        "Old Forecast": 2,
+        "New Forecast": 3,  # Top
+    }
+
+    custom_linewidth = {
+        "Original Timeseries": 1,
+        "Old Forecast": 1,
+        "New Forecast": 1.5,
+    }
+    original_timeseries = np.concatenate([window_value, true_value])
+
+    # Create DataFrame
     data = pd.DataFrame(
         {
-            "Forecast Type": ["Window Value"] * window_length
-            + ["Old Model"] * forecast_length
-            + ["New Model"] * forecast_length
-            + ["True Value"] * forecast_length,
+            "Label": ["Original Timeseries"] * (window_length + forecast_length)
+            + ["Old Forecast"] * forecast_length
+            + ["New Forecast"] * forecast_length,
             "Value": np.concatenate(
-                [window_value, worst_forecast_old, worst_forecast_new, true_value]
+                [original_timeseries, worst_forecast_old, worst_forecast_new]
             ),
             "Index": list(range(-window_length, 0))
             + list(range(1, forecast_length + 1)) * 3,
         }
     )
 
-    forecast_plot = plt.figure(figsize=(8, 5))
-    _ = sns.lineplot(data=data, x="Index", y="Value", hue="Forecast Type")
-    plt.title("Comparison of Worst Forecast: Old vs New Model with Window Value")
-    plt.xlabel("Forecast Stage")
-    plt.ylabel("Value")
+    fig, ax = plt.subplots(figsize=(8, 5))  # Create figure and axes
 
-    return forecast_plot
+    # Plot each group on the same axes
+    for label, group_data in data.groupby("Label"):
+        ax.plot(
+            group_data["Index"],
+            group_data["Value"],
+            label=label,
+            color=custom_palette[label],
+            zorder=custom_zorder[label],
+            linewidth=custom_linewidth[label],
+        )
+
+    ax.set_xticks([])  # Remove x-axis ticks
+    ax.xaxis.set_visible(False)  # Hide the x-axis line
+
+    ax.set_title("Comparison of Worst Forecast: Old vs New Model with Window Value")
+    ax.set_xlabel("Forecast Stage")
+    ax.set_ylabel("Value")
+    ax.legend()
+
+    return fig
 
 
 def compute_metrics(y, old_pred, new_pred, insample):

@@ -26,7 +26,7 @@ def plot_train_val_test_split(
         ax=ax,
     )
 
-    ax.scatter(*validation_pca.T, color="green", s=50, label="Validation set targets")
+    ax.scatter(*validation_pca.T, color="blue", s=50, label="Validation set targets")
     ax.scatter(*test_pca.T, color="red", s=50, label="Test set targets")
 
     ax.set_title("Distribution of train/validation/test splits")

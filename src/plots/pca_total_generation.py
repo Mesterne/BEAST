@@ -27,12 +27,18 @@ def plot_pca_for_all_generated_mts(
         x=dataset_pca[:, 0],
         y=dataset_pca[:, 1],
         label="Dataset",
-        color="grey",
+        color="gray",
+        alpha=0.7,
         s=50,
     )
 
-    ax.scatter(*evaluation_set_pca.T, color="green", s=75, label="Target MTS")
-    ax.scatter(*predicted_pca.T, color="orange", s=75, label="Predicted MTS")
+    ax.scatter(
+        *evaluation_set_pca.T,
+        color="blue",
+        s=75,
+        label="Target MTS",
+    )
+    ax.scatter(*predicted_pca.T, color="red", s=100, label="Inferred MTS")
 
     ax.set_title("PCA Plot with Transformed MTS")
     ax.set_xlabel("PCA1")
@@ -78,13 +84,24 @@ def plot_pca_for_all_generated_mts_for_each_uts(
             x=uts_dataset_pca[:, 0],
             y=uts_dataset_pca[:, 1],
             label="Dataset",
-            color="grey",
+            color="gray",
+            alpha=0.7,
             s=50,
             ax=ax,
         )
 
-        ax.scatter(*uts_evaluation_set_pca.T, color="green", s=75, label="Target")
-        ax.scatter(*uts_predicted_pca.T, color="orange", s=75, label="Predicted")
+        ax.scatter(
+            *uts_evaluation_set_pca.T,
+            color="blue",
+            s=75,
+            label="Target",
+        )
+        ax.scatter(
+            *uts_predicted_pca.T,
+            color="red",
+            s=100,
+            label="Predicted",
+        )
 
         ax.set_title(f"PCA Plot with Transformed UTS for {uts_name}")
         ax.set_xlabel("PCA1")
