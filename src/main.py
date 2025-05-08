@@ -20,12 +20,13 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
-    create_train_val_test_split,
-)  # noqa: E402
-from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import \
+    create_train_val_test_split  # noqa: E402
+from src.data_transformations.preprocessing import \
+    scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import \
+    ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -35,6 +36,7 @@ from src.utils.yaml_loader import read_yaml  # noqa: E402
 os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Generated MTS"), exist_ok=True)
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")

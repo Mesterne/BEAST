@@ -6,16 +6,15 @@ import numpy as np
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
-from src.plots.pca_for_each_uts_with_transformed import (
-    plot_pca_for_each_uts_with_transformed,
-)
+from src.plots.pca_for_each_uts_with_transformed import \
+    plot_pca_for_each_uts_with_transformed
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
-    plot_pca_for_all_generated_mts_for_each_uts,
-)
-from src.utils.evaluation.feature_space_evaluation import (
-    calculate_total_evaluation_for_each_mts,
-)
+    plot_pca_for_all_generated_mts_for_each_uts)
+from src.plots.plot_only_timeseries_generated import \
+    plot_only_timeseries_generated
+from src.utils.evaluation.feature_space_evaluation import \
+    calculate_total_evaluation_for_each_mts
 from src.utils.logging_config import logger
 
 
@@ -171,3 +170,32 @@ def create_grid_plot_of_worst_median_best(
         os.path.join(OUTPUT_DIR, "total_generation_pca_for_each_uts.png")
     )
     plt.close(pca_for_each_uts)
+
+    logger.info("Plotting individual time series")
+    only_timeseries_plot_best = plot_only_timeseries_generated(
+        original_mts=X_mts[best_generated_mts_index],
+        target_mts=y_mts[best_generated_mts_index],
+        transformed_mts=inferred_mts_array[best_generated_mts_index],
+    )
+    only_timeseries_plot_best.savefig(
+        os.path.join(OUTPUT_DIR, "Generated MTS", "best_generated.png")
+    )
+    plt.close(only_timeseries_plot_best)
+    only_timeseries_plot_median = plot_only_timeseries_generated(
+        original_mts=X_mts[median_mts_index],
+        target_mts=y_mts[median_mts_index],
+        transformed_mts=inferred_mts_array[median_mts_index],
+    )
+    only_timeseries_plot_median.savefig(
+        os.path.join(OUTPUT_DIR, "Generated MTS", "median_generated.png")
+    )
+    plt.close(only_timeseries_plot_median)
+    only_timeseries_plot_worst = plot_only_timeseries_generated(
+        original_mts=X_mts[worst_generated_mts_index],
+        target_mts=y_mts[worst_generated_mts_index],
+        transformed_mts=inferred_mts_array[worst_generated_mts_index],
+    )
+    only_timeseries_plot_worst.savefig(
+        os.path.join(OUTPUT_DIR, "Generated MTS", "worst_generated.png")
+    )
+    plt.close(only_timeseries_plot_worst)

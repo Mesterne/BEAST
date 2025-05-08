@@ -42,6 +42,13 @@ UTS_NAMES = [
     "grid1-temp",
 ]
 
+
+BEATUIFUL_UTS_NAMES = [
+    "Grid Load",
+    "Grid Loss",
+    "Grid Temp",
+]
+
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "local_outputs")
 
 NETWORK_ARCHITECTURES = [
