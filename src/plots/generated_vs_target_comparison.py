@@ -64,7 +64,8 @@ def create_grid_plot_of_worst_median_best(
     ts_plot_of_best_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "best_timeseries_generated_mts.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(ts_plot_of_best_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -78,7 +79,8 @@ def create_grid_plot_of_worst_median_best(
     pca_plot_of_best_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "best_timeseries_generated_mts_pca.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(pca_plot_of_best_generated_mts)
 
@@ -99,7 +101,8 @@ def create_grid_plot_of_worst_median_best(
     ts_plot_of_worst_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "worst_timeseries_generated_mts.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(ts_plot_of_best_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -113,7 +116,8 @@ def create_grid_plot_of_worst_median_best(
     pca_plot_of_worst_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "worst_timeseries_generated_mts_pca.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(pca_plot_of_worst_generated_mts)
 
@@ -134,7 +138,8 @@ def create_grid_plot_of_worst_median_best(
     ts_plot_of_median_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "median_timeseries_generated_mts.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(ts_plot_of_median_generated_mts)
     logger.info("Generating prediction PCA plot...")
@@ -148,7 +153,8 @@ def create_grid_plot_of_worst_median_best(
     pca_plot_of_median_generated_mts.savefig(
         os.path.join(
             OUTPUT_DIR, "Generation grids", "median_timeseries_generated_mts_pca.png"
-        )
+        ),
+        dpi=600,
     )
     plt.close(pca_plot_of_median_generated_mts)
 
@@ -167,7 +173,7 @@ def create_grid_plot_of_worst_median_best(
         evaluation_set_indices=transformation_indices[:, 1],
     )
     pca_for_each_uts.savefig(
-        os.path.join(OUTPUT_DIR, "total_generation_pca_for_each_uts.png")
+        os.path.join(OUTPUT_DIR, "total_generation_pca_for_each_uts.png"), dpi=600
     )
     plt.close(pca_for_each_uts)
 
@@ -178,7 +184,7 @@ def create_grid_plot_of_worst_median_best(
         transformed_mts=inferred_mts_array[best_generated_mts_index],
     )
     only_timeseries_plot_best.savefig(
-        os.path.join(OUTPUT_DIR, "Generated MTS", "best_generated.png")
+        os.path.join(OUTPUT_DIR, "Generated MTS", "best_generated.png"), dpi=600
     )
     plt.close(only_timeseries_plot_best)
     only_timeseries_plot_median = plot_only_timeseries_generated(
@@ -187,7 +193,7 @@ def create_grid_plot_of_worst_median_best(
         transformed_mts=inferred_mts_array[median_mts_index],
     )
     only_timeseries_plot_median.savefig(
-        os.path.join(OUTPUT_DIR, "Generated MTS", "median_generated.png")
+        os.path.join(OUTPUT_DIR, "Generated MTS", "median_generated.png"), dpi=600
     )
     plt.close(only_timeseries_plot_median)
     only_timeseries_plot_worst = plot_only_timeseries_generated(
@@ -196,6 +202,6 @@ def create_grid_plot_of_worst_median_best(
         transformed_mts=inferred_mts_array[worst_generated_mts_index],
     )
     only_timeseries_plot_worst.savefig(
-        os.path.join(OUTPUT_DIR, "Generated MTS", "worst_generated.png")
+        os.path.join(OUTPUT_DIR, "Generated MTS", "worst_generated.png"), dpi=600
     )
     plt.close(only_timeseries_plot_worst)

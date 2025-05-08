@@ -35,6 +35,6 @@ def plot_train_val_test_split(
     ax.legend()
 
     plt.tight_layout()
-    fig.savefig(os.path.join(OUTPUT_DIR, "train_validation_test_split.png"))
+    fig.savefig(os.path.join(OUTPUT_DIR, "train_validation_test_split.png"), dpi=600)
     plt.close(fig)
     return fig

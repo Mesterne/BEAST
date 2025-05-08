@@ -38,7 +38,7 @@ def plot_training_and_validation_loss(
     plt.tight_layout()
 
     # Save the plot as PNG
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{model_name}_loss_plot.png"))
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{model_name}_loss_plot.png"), dpi=600)
     plt.close()
 
 
@@ -75,6 +75,7 @@ def plot_detailed_training_loss(
 
     # Save the plot as PNG
     plt.savefig(
-        os.path.join(OUTPUT_DIR, f"{model_name}_detailed_training_loss_plot.png")
+        os.path.join(OUTPUT_DIR, f"{model_name}_detailed_training_loss_plot.png"),
+        dpi=600,
     )
     plt.close()
