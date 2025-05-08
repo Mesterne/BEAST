@@ -37,13 +37,13 @@ def plot_only_timeseries_generated(
 
         if i == 0:
             handles.extend([line_original, line_target, line_transformed])
-            labels.extend(["Original", "Target", "Generated"])
+            labels.extend(["Original", "Target", "Inferred"])
 
         axes[i].set_title(f"{uts_name}")
         axes[i].set_xticks([])
         axes[i].xaxis.set_visible(False)
 
-    plt.subplots_adjust(left=0.05, right=0.90)
+    plt.subplots_adjust(left=0.03, right=0.92)
     fig.legend(
         handles=handles,
         labels=labels,
