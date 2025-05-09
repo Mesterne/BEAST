@@ -203,6 +203,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         model_path = os.path.join(OUTPUT_DIR, "..", "models", model_directory)
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         pretrained_mtscvae: nn.Module = MTSCVAE(self.model_params)
+        pretrained_mtscvae.to(device)
         pretrained_mtscvae.load_state_dict(
             torch.load(model_path, map_location=device, weights_only=True)
         )
