@@ -7,11 +7,15 @@ import seaborn as sns
 from matplotlib.container import BarContainer
 
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.plots.ohe_plots import \
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space
+from src.plots.ohe_plots import (
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space,
+)
 from src.utils.evaluation.forecaster_evaluation import (
-    mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
-    mse_for_each_forecast)
+    mase_for_all_predictions,
+    mase_for_each_forecast,
+    mse_for_all_predictions,
+    mse_for_each_forecast,
+)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
