@@ -22,6 +22,7 @@ class CVAEWrapper(FeatureTransformationModel):
         self.batch_size = training_params["batch_size"]
         self.num_epochs = training_params["num_epochs"]
         self.early_stopping_patience = training_params["early_stopping_patience"]
+        self.use_kld_warmup = training_params["use_kld_warmup"]
 
     def loss_function(
         self,
@@ -120,7 +121,7 @@ class CVAEWrapper(FeatureTransformationModel):
                     latent_means,
                     latent_logvars,
                     epoch,
-                    use_warmup=False,
+                    use_warmup=self.use_kld_warmup,
                     model_variation=model_variation,
                 )
                 if not model_variation == "CAE":
@@ -128,7 +129,7 @@ class CVAEWrapper(FeatureTransformationModel):
                         latent_means,
                         latent_logvars,
                         epoch,
-                        use_warmup=False,
+                        use_warmup=self.use_kld_warmup,
                     )
                 loss_reconstruction = self.reconstruction_loss(
                     input=outputs, output=targets
@@ -182,7 +183,7 @@ class CVAEWrapper(FeatureTransformationModel):
                         latent_means,
                         latent_logvars,
                         epoch,
-                        use_warmup=False,
+                        use_warmup=self.use_kld_warmup,
                         model_variation=model_variation,
                     )
                     running_val_loss += loss.item() * inputs.size(0)

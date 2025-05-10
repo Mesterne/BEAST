@@ -31,6 +31,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
+        training_params = self._set_kld_warmup(training_params)
         model_params["mts_size"] = config["dataset_args"]["mts_size"]
         model_params["uts_size"] = config["dataset_args"]["uts_size"]
         architecture: str = model_params["architecture"]
@@ -40,6 +41,15 @@ class GenerativeModel(TimeseriesTransformationModel):
         cvae = self._select_cvae_architecture(architecture, model_params)
         model = CVAEWrapper(cvae, training_params=training_params)
         return model
+
+    def _set_kld_warmup(self, training_params):
+        """Handle cases where config file does not contain use_kld_warmup key"""
+        try:
+            if training_params["use_kld_warmup"]:
+                return True
+            return False
+        except KeyError():
+            return False
 
     def _select_cvae_architecture(
         self, architecture: str, model_params: Dict[str, any]
