@@ -31,7 +31,7 @@ class GenerativeModel(TimeseriesTransformationModel):
         training_params: Dict[str, any] = config["model_args"]["feature_model_args"][
             "training_args"
         ]
-        training_params = self._set_kld_warmup(training_params)
+        training_params["use_kld_warmup"] = self._set_kld_warmup(training_params)
         model_params["mts_size"] = config["dataset_args"]["mts_size"]
         model_params["uts_size"] = config["dataset_args"]["uts_size"]
         architecture: str = model_params["architecture"]
@@ -48,7 +48,7 @@ class GenerativeModel(TimeseriesTransformationModel):
             if training_params["use_kld_warmup"]:
                 return True
             return False
-        except KeyError():
+        except KeyError:
             return False
 
     def _select_cvae_architecture(
