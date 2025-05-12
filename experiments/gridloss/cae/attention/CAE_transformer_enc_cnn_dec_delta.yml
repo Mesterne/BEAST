@@ -51,6 +51,7 @@ model_args:
       learning_rate: 0.0001
       early_stopping_patience: 10
     conditional_gen_model_args:
+      variation: "CAE"
       architecture: "transformer" # rnn, feedforward, rnn_enc_dec, convolution, attention, transformer
       condition_type: "feature_delta"
       input_size_without_conditions: 576
