@@ -1,6 +1,7 @@
-from sklearn.decomposition import PCA
 import numpy as np
 import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 
 class PCAWrapper:
@@ -18,6 +19,7 @@ class PCAWrapper:
             n_components (int): The number of principal components to retain.
         """
         self.pca = PCA(n_components=n_components)
+        self.scaler = StandardScaler()
         self.is_fitted = False
 
     def fit_transform(self, mts_features: np.ndarray) -> np.ndarray:
@@ -30,7 +32,10 @@ class PCAWrapper:
         Returns:
             np.ndarray: The transformed features in the lower-dimensional space.
         """
-        mts_pca_2d = self.pca.fit_transform(mts_features)
+        # Scale the input features
+        mts_features_scaled = self.scaler.fit_transform(mts_features)
+
+        mts_pca_2d = self.pca.fit_transform(mts_features_scaled)
         self.is_fitted = True
 
         return mts_pca_2d
@@ -52,5 +57,6 @@ class PCAWrapper:
             raise RuntimeError(
                 "The PCA model must be fitted using fit_transform() before calling transform()."
             )
-        pca_components = self.pca.transform(mts_features)
+        mts_features_scaled = self.scaler.transform(mts_features)
+        pca_components = self.pca.transform(mts_features_scaled)
         return pca_components
