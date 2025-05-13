@@ -5,18 +5,11 @@ from tqdm import tqdm
 
 from src.models.reconstruction.genetic_algorithm import GeneticAlgorithm
 from src.models.reconstruction.reconstruction_model import ReconstructionModel
-from src.utils.features import (
-    decomp_and_features,
-    seasonal_strength,
-    trend_linearity,
-    trend_slope,
-    trend_strength,
-)
+from src.utils.features import (decomp_and_features, seasonal_strength,
+                                trend_linearity, trend_slope, trend_strength)
 from src.utils.logging_config import logger
-from src.utils.transformations import (
-    manipulate_seasonal_component,
-    manipulate_trend_component,
-)
+from src.utils.transformations import (manipulate_seasonal_component,
+                                       manipulate_trend_component)
 
 
 class GeneticAlgorithmWrapper(ReconstructionModel):
@@ -93,6 +86,8 @@ class GeneticAlgorithmWrapper(ReconstructionModel):
         ][1]
         trend_lin_factor_low = self.model_params["legal_values"]["trend_lin_factor"][0]
         trend_lin_factor_high = self.model_params["legal_values"]["trend_lin_factor"][1]
+        m_low = self.model_params["legal_values"]["additional_trend_factor"][0]
+        m_high = self.model_params["legal_values"]["additional_trend_factor"][1]
         seasonal_det_factor_low = self.model_params["legal_values"][
             "seasonal_det_factor"
         ][0]
@@ -100,13 +95,14 @@ class GeneticAlgorithmWrapper(ReconstructionModel):
             "seasonal_det_factor"
         ][1]
 
-        num_genes = self.num_features_per_uts
+        num_genes = self.num_features_per_uts + 1
 
         # Constraint on GA solutions
         legal_factor_values = [
             np.linspace(trend_det_factor_low, trend_det_factor_high, 100),
             np.linspace(trend_slope_factor_low, trend_slope_factor_high, 100),
             np.linspace(trend_lin_factor_low, trend_lin_factor_high, 100),
+            np.linspace(m_low, m_high, 100),
             np.linspace(seasonal_det_factor_low, seasonal_det_factor_high, 100),
         ]
 

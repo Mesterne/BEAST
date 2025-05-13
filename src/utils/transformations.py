@@ -1,4 +1,5 @@
 import logging
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
@@ -17,6 +18,7 @@ def manipulate_trend_component(
         g * model.coef_ * np.arange(len(trend_comp)) + (1 / h * residuals)
     )
     additional_trend = m * model.intercept_ * np.arange(len(trend_comp))
+    additional_trend = additional_trend / len(trend_comp)
     return new_trend + additional_trend
 
 
@@ -26,10 +28,11 @@ def manipulate_seasonal_component(seasonal_comp: pd.Series, k: float) -> pd.Seri
 
 if __name__ == "__main__":
     import os
-    from generate_dataset import generate_windows_dataset
-    from features import decomp_and_features
-    from plotly.subplots import make_subplots
+
     import plotly.graph_objects as go
+    from features import decomp_and_features
+    from generate_dataset import generate_windows_dataset
+    from plotly.subplots import make_subplots
 
     # Read data
     data_dir_path = os.path.join("data", "gridloss", "train.csv")
