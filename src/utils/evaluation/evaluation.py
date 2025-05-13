@@ -5,23 +5,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.plots.generated_vs_target_comparison import (
-    create_grid_plot_of_worst_median_best,
-)
-from src.plots.ohe_plots import (
-    create_and_save_plots_of_ohe_activated_performances_feature_space,
-)
+from src.plots.generated_vs_target_comparison import \
+    create_grid_plot_of_worst_median_best
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances_feature_space
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
-    plot_pca_for_all_generated_mts_for_each_uts,
-)
-from src.plots.plot_feature_evaluation_bar_plot import (
-    plot_metric_for_each_feature_bar_plot,
-)
-from src.plots.plot_feature_evaluation_distribution import plot_feature_evaluation
-from src.utils.evaluation.feature_space_evaluation import (
-    calculate_evaluation_for_each_feature,
-)
+    plot_pca_for_all_generated_mts_for_each_uts)
+from src.plots.plot_feature_evaluation_bar_plot import \
+    plot_metric_for_each_feature_bar_plot
+from src.plots.plot_feature_evaluation_distribution import \
+    plot_feature_evaluation
+from src.utils.evaluation.feature_space_evaluation import \
+    calculate_evaluation_for_each_feature
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
@@ -247,7 +243,8 @@ def evaluate(
     pca_plot_intermediate_validation_features = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=intermediate_features_validation,
-        evaluation_set_indices=validation_transformation_indices,
+        train_transformations=train_transformation_indices,
+        evaluation_transformations=validation_transformation_indices,
     )
     pca_plot_intermediate_validation_features.savefig(
         os.path.join(
@@ -262,7 +259,8 @@ def evaluate(
         plot_pca_for_all_generated_mts_for_each_uts(
             mts_dataset_features=mts_dataset_features,
             mts_generated_features=intermediate_features_validation,
-            evaluation_set_indices=validation_transformation_indices,
+            train_transformations=train_transformation_indices,
+            evaluation_transformations=validation_transformation_indices,
         )
     )
     pca_plot_for_all_uts_intermediate_validation_features.savefig(
@@ -277,7 +275,8 @@ def evaluate(
     pca_plot_intermediate_test_features = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=intermediate_features_test,
-        evaluation_set_indices=test_transformation_indices,
+        train_transformations=train_transformation_indices,
+        evaluation_transformations=test_transformation_indices,
     )
     pca_plot_intermediate_test_features.savefig(
         os.path.join(
@@ -291,7 +290,8 @@ def evaluate(
         plot_pca_for_all_generated_mts_for_each_uts(
             mts_dataset_features=mts_dataset_features,
             mts_generated_features=intermediate_features_test,
-            evaluation_set_indices=test_transformation_indices,
+            train_transformations=train_transformation_indices,
+            evaluation_transformations=test_transformation_indices,
         )
     )
     pca_plot_for_all_uts_intermediate_test_features.savefig(
@@ -307,7 +307,8 @@ def evaluate(
     create_grid_plot_of_worst_median_best(
         mts_dataset_array=mts_array,
         mts_dataset_features=mts_dataset_features,
-        transformation_indices=validation_transformation_indices,
+        train_transformation_indices=train_transformation_indices,
+        evaluation_transformation_indices=validation_transformation_indices,
         inferred_mts_array=inferred_mts_validation,
         inferred_mts_features_before_ga=intermediate_features_validation,
         inferred_mts_features=inferred_features_validation,

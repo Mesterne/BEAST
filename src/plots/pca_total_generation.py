@@ -12,15 +12,22 @@ from src.utils.pca import PCAWrapper
 def plot_pca_for_all_generated_mts(
     mts_dataset_features: np.ndarray,  # Shape
     mts_generated_features: np.ndarray,  # Shape = (num_generated_mts,num_uts_features)
-    evaluation_set_indices: np.ndarray,  # Shape (,)
+    train_transformations: np.ndarray,
+    evaluation_transformations: np.ndarray,  # Shape (,)
 ):
     fig = plt.figure(figsize=(12, 8))
 
+    original_train_indices = np.unique(train_transformations[:, 1])
+    evaluation_indices = np.unique(evaluation_transformations[:, 1])
+
+    train_features = mts_dataset_features[original_train_indices]
+    evaluation_features = mts_dataset_features[evaluation_indices]
+
     pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
 
-    dataset_pca: np.ndarray = pca_transformer.fit_transform(mts_dataset_features)
+    dataset_pca: np.ndarray = pca_transformer.fit_transform(train_features)
     predicted_pca: np.ndarray = pca_transformer.transform(mts_generated_features)
-    evaluation_set_pca: np.ndarray = dataset_pca[evaluation_set_indices, :]
+    evaluation_set_pca: np.ndarray = pca_transformer.transform(evaluation_features)
 
     # Plot scatter points
     ax = sns.scatterplot(
@@ -52,8 +59,12 @@ def plot_pca_for_all_generated_mts(
 def plot_pca_for_all_generated_mts_for_each_uts(
     mts_dataset_features: np.ndarray,  # Shape
     mts_generated_features: np.ndarray,  # Shape = (num_generated_mts,num_uts_features)
-    evaluation_set_indices: np.ndarray,  # Shape (,)
+    train_transformations: np.ndarray,
+    evaluation_transformations: np.ndarray,  # Shape (,)
 ) -> Figure:
+
+    original_train_indices = np.unique(train_transformations[:, 1])
+    evaluation_indices = np.unique(evaluation_transformations[:, 1])
 
     num_uts: int = len(UTS_NAMES)
     fig, axes = plt.subplots(nrows=num_uts, ncols=1, figsize=(12, 8 * (num_uts)))
@@ -71,14 +82,23 @@ def plot_pca_for_all_generated_mts_for_each_uts(
         ]
 
         uts_dataset_features: np.ndarray = mts_dataset_features[:, uts_column_indices]
+        uts_dataset_train_features: np.ndarray = uts_dataset_features[
+            original_train_indices
+        ]
+        uts_dataset_evaluation_features: np.ndarray = uts_dataset_features[
+            evaluation_indices
+        ]
+
         uts_predicted: np.ndarray = mts_generated_features[:, uts_column_indices]
 
         pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
         uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(
-            uts_dataset_features
+            uts_dataset_train_features
+        )
+        uts_evaluation_pca: np.ndarray = pca_transformer.transform(
+            uts_dataset_evaluation_features
         )
         uts_predicted_pca: np.ndarray = pca_transformer.transform(uts_predicted)
-        uts_evaluation_set_pca: np.ndarray = uts_dataset_pca[evaluation_set_indices, :]
 
         sns.scatterplot(
             x=uts_dataset_pca[:, 0],
@@ -91,7 +111,7 @@ def plot_pca_for_all_generated_mts_for_each_uts(
         )
 
         ax.scatter(
-            *uts_evaluation_set_pca.T,
+            *uts_evaluation_pca.T,
             color="blue",
             s=75,
             label="Target",

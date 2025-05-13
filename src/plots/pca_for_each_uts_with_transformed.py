@@ -11,6 +11,7 @@ from src.utils.pca import PCAWrapper
 
 def plot_pca_for_each_uts_with_transformed(
     mts_dataset_features: np.ndarray,  # Shape = (num_mts, num_uts_features)
+    train_transformations: np.ndarray,
     mts_features_evaluation_set: np.ndarray,  # Shape = (num_mts, num_uts_features)
     original_mts_features: np.ndarray,  # Shape = (num_uts_features,)
     target_mts_features: np.ndarray,  # Shape = (num_uts_features,)
@@ -33,7 +34,11 @@ def plot_pca_for_each_uts_with_transformed(
     target_mts_features = target_mts_features.reshape(1, -1)
     predicted_mts_features = predicted_mts_features.reshape(1, -1)
 
-    dataset_pca: np.ndarray = pca_transformer.fit_transform(mts_dataset_features)
+    train_indices = np.unique(train_transformations[:, 1])
+
+    dataset_pca: np.ndarray = pca_transformer.fit_transform(
+        mts_dataset_features[train_indices]
+    )
     evaluation_set_pca: np.ndarray = pca_transformer.transform(
         mts_features_evaluation_set
     )
@@ -93,6 +98,7 @@ def plot_pca_for_each_uts_with_transformed(
         ]
 
         uts_features_all: np.ndarray = mts_dataset_features[:, uts_column_indices]
+        uts_features_train: np.ndarray = uts_features_all[train_indices]
         uts_features_evaluation_set: np.ndarray = mts_features_evaluation_set[
             :, uts_column_indices
         ]
@@ -101,7 +107,7 @@ def plot_pca_for_each_uts_with_transformed(
         uts_predicted: np.ndarray = predicted_mts_features[:, uts_column_indices]
 
         pca_transformer: PCAWrapper = PCAWrapper(n_components=2)
-        uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(uts_features_all)
+        uts_dataset_pca: np.ndarray = pca_transformer.fit_transform(uts_features_train)
         uts_evaluation_set_pca: np.ndarray = pca_transformer.transform(
             uts_features_evaluation_set
         )
