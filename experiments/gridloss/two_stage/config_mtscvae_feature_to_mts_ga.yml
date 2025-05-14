@@ -18,7 +18,7 @@ dataset_args:
   num_features_per_uts: 4
   use_one_hot_encoding: true
   use_identity_mapping: false
-  test_set_sample_size: 5
+  test_set_sample_size: 500
 stl_args:
   series_periodicity: 24
 model_args:
@@ -47,7 +47,7 @@ model_args:
   feature_model_args:
     model_name: feature_cvae
     training_args:
-      num_epochs: 1
+      num_epochs: 20
       batch_size: 16
       learning_rate: 0.0005
       early_stopping_patience: 25
