@@ -9,6 +9,7 @@ from src.plots.generated_vs_target_comparison import \
     create_grid_plot_of_worst_median_best
 from src.plots.ohe_plots import \
     create_and_save_plots_of_ohe_activated_performances_feature_space
+from src.plots.overlapping_mts_plot import plot_overlapping_mts
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
     plot_pca_for_all_generated_mts_for_each_uts)
@@ -171,6 +172,17 @@ def evaluate(
         inferred_intermediate_features_test: Optional input with intermediate feature values calculated during inference. Shape = (Number of transformations in test set, Number of UTS in MTS, Number of features in UTS),
 
     """
+
+    validation_overlapping_mts_plot = plot_overlapping_mts(
+        set_of_mts=inferred_mts_validation
+    )
+    validation_overlapping_mts_plot.savefig(
+        os.path.join(OUTPUT_DIR, "Generated MTS", "validation_overlapping.png")
+    )
+    test_overlapping_mts_plot = plot_overlapping_mts(set_of_mts=inferred_mts_test)
+    test_overlapping_mts_plot.savefig(
+        os.path.join(OUTPUT_DIR, "Generated MTS", "test_overlapping.png")
+    )
 
     logger.info(
         "Calculating features for original dataset, inferred validation timeseries and inferred test timeseries"

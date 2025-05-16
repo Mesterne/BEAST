@@ -35,7 +35,6 @@ class PCAWrapper:
         # Scale the input features
         mts_features_scaled = self.scaler.fit_transform(mts_features)
 
-        print(f"SE HER: {mts_features_scaled.shape}")
         mts_pca_2d = self.pca.fit_transform(mts_features_scaled)
         self.is_fitted = True
 
