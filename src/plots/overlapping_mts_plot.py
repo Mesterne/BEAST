@@ -25,6 +25,6 @@ def plot_overlapping_mts(set_of_mts: np.ndarray):
         axes[i].set_xticks([])
         axes[i].xaxis.set_visible(False)
 
-    plt.subplots_adjust(left=0.03, right=0.04)
+    plt.subplots_adjust(left=0.03, right=0.99)
 
     return fig
