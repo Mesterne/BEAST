@@ -207,10 +207,10 @@ if config["is_conditional_gen_model"]:
     for i in range(0, inferred_mts_validation.shape[0]):
         for j in range(0, num_uts_in_mts):
             inferred_mts_validation[i, j] = uts_scalers[j].inverse_transform(
-                inferred_mts_validation[i, j]
+                inferred_mts_validation[i, j].reshape(1, -1)
             )
             inferred_mts_test[i, j] = uts_scalers[j].inverse_transform(
-                inferred_mts_test[i, j]
+                inferred_mts_test[i, j].reshape(1, -1)
             )
 
 evaluate(

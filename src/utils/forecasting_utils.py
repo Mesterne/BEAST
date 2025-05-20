@@ -202,7 +202,7 @@ def compare_old_and_new_model(
         forecast_plot.savefig(
             os.path.join(
                 "Forecast Grids",
-                f"{errors_summed[i]:.4f}_forecast_retrain_on_{retrain_on}_idx_{i}",
+                f"{errors_summed[i]:.4f}_forecast_retrain_on_{retrain_on}_idx_{i}.png",
             )
         )
 
