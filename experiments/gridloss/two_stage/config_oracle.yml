@@ -1,0 +1,36 @@
+experiment_results_dir: experiments/gridloss/results
+dataset_args:
+  directory: data/gridloss
+  training_data: train.csv
+  test_data: test.csv
+  window_size: 192
+  mts_size: 576
+  uts_size: 192
+  step_size: 24
+  timeseries_to_use:
+    - grid1-load
+    - grid1-loss
+    - grid1-temp
+  test_timeseries_to_use:
+    - grid2-load
+    - grid2-loss
+    - grid2_1-temp
+  num_features_per_uts: 4
+  use_one_hot_encoding: true
+  use_identity_mapping: false
+  test_set_sample_size: 500
+stl_args:
+  series_periodicity: 24
+model_args:
+  reconstruction_model_args:
+    model_type: 'oracle_model'
+  feature_model_args:
+    model_name: oracle_model
+    training_args:
+    conditional_gen_model_args:
+  forecasting_model_args:
+    model_type: n_linear
+    window_size: 168
+    horizon_length: 24
+    training_args:
+      num_epochs: 50

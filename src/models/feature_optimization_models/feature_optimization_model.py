@@ -1,26 +1,32 @@
-from typing import Dict, List, Tuple, override
+from typing import Any, Dict, List, Tuple, override
 
 import numpy as np
 
 from src.data_transformations.generation_of_supervised_pairs import (
     concat_delta_values_to_features,
     concat_delta_values_to_features_for_inference,
-    create_reconstruction_xy_pairs,
-)
-from src.models.feature_optimization_models.feedforward import FeedForwardFeatureModel
-from src.models.feature_optimization_models.naive_correlation import CorrelationModel
-from src.models.feature_optimization_models.naive_covariance import CovarianceModel
-from src.models.feature_optimization_models.perfect_feature_model import (
-    PerfectFeatureModel,
-)
+    create_reconstruction_xy_pairs)
+from src.models.feature_optimization_models.feedforward import \
+    FeedForwardFeatureModel
+from src.models.feature_optimization_models.naive_correlation import \
+    CorrelationModel
+from src.models.feature_optimization_models.naive_covariance import \
+    CovarianceModel
+from src.models.feature_optimization_models.perfect_feature_model import \
+    PerfectFeatureModel
 from src.models.feature_transformation_model import FeatureTransformationModel
 from src.models.generative_models.cvae import MTSCVAE
 from src.models.generative_models.cvae_wrapper import CVAEWrapper
 from src.models.neural_network_wrapper import NeuralNetworkWrapper
-from src.models.reconstruction.cvae_reconstruction_model import CVAEReconstructionModel
-from src.models.reconstruction.genetic_algorithm_wrapper import GeneticAlgorithmWrapper
+from src.models.reconstruction.cvae_reconstruction_model import \
+    CVAEReconstructionModel
+from src.models.reconstruction.genetic_algorithm_wrapper import \
+    GeneticAlgorithmWrapper
+from src.models.reconstruction.oracle_reconstruction_model import \
+    OracleReconstructionModel
 from src.models.reconstruction.reconstruction_model import ReconstructionModel
-from src.models.timeseries_transformation_model import TimeseriesTransformationModel
+from src.models.timeseries_transformation_model import \
+    TimeseriesTransformationModel
 from src.utils.ga_utils import generate_new_time_series
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
@@ -45,7 +51,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
         if self.model_type == "correlation_model":
             logger.info("Using correlation feature model")
             return CorrelationModel(feature_model_params)
-        elif self.model_type == "perfect_feature_model":
+        elif (
+            self.model_type == "perfect_feature_model"
+            or self.model_type == "oracle_model"
+        ):
             logger.info("Using perfect feature model")
             return PerfectFeatureModel(params=feature_model_params)
         elif self.model_type == "covariance_model":
@@ -93,6 +102,9 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
                 model_params=self.config["model_args"]["reconstruction_model_args"],
                 config=self.config,
             )
+            return model
+        elif model_type == "oracle_model":
+            model = OracleReconstructionModel(model_params={}, config=self.config)
             return model
 
     @override
@@ -218,7 +230,10 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             number_of_uts_in_mts=num_uts_in_mts,
         )
 
-        if self.model_type == "perfect_feature_model":
+        if (
+            self.model_type == "perfect_feature_model"
+            or self.model_type == "oracle_model"
+        ):
             X[:, : y.shape[1]] = y
         return X
 
@@ -231,4 +246,6 @@ class FeatureOptimizationModel(TimeseriesTransformationModel):
             predicted_features=predicted_features,
             reconstruction_model=self.reconstruction_model,
         )
+        if self.model_type == "oracle_model":
+            inferred_mts = self.mts_dataset[self.evaluation_set_indices[:, 1]]
         return inferred_mts, predicted_features
