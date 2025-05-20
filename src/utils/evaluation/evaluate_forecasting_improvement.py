@@ -41,6 +41,7 @@ class ForecasterEvaluator:
             train_timeseries=self.train_mts_array,
             validation_timeseries=self.validation_mts_array,
         )
+        self.original_forecasting_model.plot_loss(model_name="NLinearOld")
 
     def _extract_train_val_test(self):
         return (
@@ -82,6 +83,7 @@ class ForecasterEvaluator:
             train_timeseries=new_train_mts_array,
             validation_timeseries=self.validation_mts_array,
         )
+        new_forecasting_model.plot_loss(model_name="NLinearNew")
         (
             mse_plot,
             mse_delta_plot,

@@ -14,5 +14,9 @@ class ForecastingModel(ABC):
         pass
 
     @abstractmethod
+    def plot_loss(self, model_name: str):
+        pass
+
+    @abstractmethod
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
         pass

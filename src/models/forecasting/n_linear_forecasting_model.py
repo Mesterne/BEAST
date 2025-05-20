@@ -60,7 +60,6 @@ class NLinearForecastingModel(ForecastingModel):
             val_series=val_targets_scaled,
             val_past_covariates=val_covariates_scaled,
         )
-        self.plot_loss()
 
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
         test_targets, test_covariates = array_to_timeseries(test_timeseries)
@@ -81,7 +80,7 @@ class NLinearForecastingModel(ForecastingModel):
             results.append(series.values().squeeze())
         return np.array(results)
 
-    def plot_loss(self, model_name: str = "ForecastingNLinearModel") -> None:
+    def plot_loss(self, model_name: str) -> None:
         """
         Plots the training and validation loss stored in the LossTracker.
         """

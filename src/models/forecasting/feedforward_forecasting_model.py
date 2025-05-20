@@ -58,6 +58,9 @@ class FeedForwardForecastingModel(ForecastingModel):
             plot_loss=True,
         )
 
+    def plot_loss(self, model_name: str):
+        return super().plot_loss(model_name)
+
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
         X_mts_test, _ = self._create_training_windows(partition=test_timeseries)
         return self.model.infer(X_mts_test)
