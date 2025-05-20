@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict
 
 import matplotlib.pyplot as plt
@@ -7,15 +8,11 @@ import seaborn as sns
 from matplotlib.container import BarContainer
 
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.plots.ohe_plots import (
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space,
-)
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space
 from src.utils.evaluation.forecaster_evaluation import (
-    mase_for_all_predictions,
-    mase_for_each_forecast,
-    mse_for_all_predictions,
-    mse_for_each_forecast,
-)
+    mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
+    mse_for_each_forecast)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
@@ -173,23 +170,41 @@ def compare_old_and_new_model(
     # Plot worst forecast before and after
     errors = np.abs(y_val - inferred_old_val)
     errors_summed = np.sum(errors, axis=1)
-    worst_index = np.argmax(errors_summed)
-    worst_forecast_old = inferred_old_val[worst_index]
-    worst_forecast_new = inferred_new_val[worst_index]
-    window_value = X_val[worst_index][168:336]
-    true_value = y_val[worst_index]
+    sorted_indices = np.argsort(errors_summed)
 
-    window_length = len(window_value)
-    forecast_length = len(worst_forecast_old)
+    bottom_5 = sorted_indices[:5]
+    top_5 = sorted_indices[-5:]
+    midpoint = len(sorted_indices) // 2
+    half_window = 2  # 2 before and 2 after the median
+    start = max(midpoint - half_window, 0)
+    end = start + 5
+    median_5 = sorted_indices[start:end]
 
-    forecast_plot = compare_original_and_transformed_forecasting(
-        window_length=window_length,
-        window_value=window_value,
-        forecast_length=forecast_length,
-        worst_forecast_old=worst_forecast_old,
-        worst_forecast_new=worst_forecast_new,
-        true_value=true_value,
-    )
+    indices = np.concatenate([top_5, bottom_5, median_5])
+
+    for i in indices:
+        worst_forecast_old = inferred_old_val[i]
+        worst_forecast_new = inferred_new_val[i]
+        window_value = X_val[i][168:336]
+        true_value = y_val[i]
+
+        window_length = len(window_value)
+        forecast_length = len(worst_forecast_old)
+
+        forecast_plot = compare_original_and_transformed_forecasting(
+            window_length=window_length,
+            window_value=window_value,
+            forecast_length=forecast_length,
+            worst_forecast_old=worst_forecast_old,
+            worst_forecast_new=worst_forecast_new,
+            true_value=true_value,
+        )
+        forecast_plot.savefig(
+            os.path.join(
+                "Forecast Grids",
+                f"{errors_summed[i]:.4f}_forecast_retrain_on_{retrain_on}_idx_{i}",
+            )
+        )
 
     (
         train_mse_old,
@@ -302,7 +317,6 @@ def compare_old_and_new_model(
     )
 
     return (
-        forecast_plot,
         mse_plot,
         mse_delta_plot,
         mase_plot,

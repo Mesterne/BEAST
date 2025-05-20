@@ -4,13 +4,14 @@ from typing import Any, Dict
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.models.forecasting.feedforward_forecasting_model import (
-    FeedForwardForecastingModel,
-)
+from src.models.forecasting.feedforward_forecasting_model import \
+    FeedForwardForecastingModel
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.models.forecasting.n_linear_forecasting_model import NLinearForecastingModel
+from src.models.forecasting.n_linear_forecasting_model import \
+    NLinearForecastingModel
 from src.utils.forecasting_utils import compare_old_and_new_model
-from src.utils.generate_dataset import create_training_windows_from_mts  # noqa: E402
+from src.utils.generate_dataset import \
+    create_training_windows_from_mts  # noqa: E402
 from src.utils.logging_config import logger
 
 
@@ -82,7 +83,6 @@ class ForecasterEvaluator:
             validation_timeseries=self.validation_mts_array,
         )
         (
-            forecast_plot,
             mse_plot,
             mse_delta_plot,
             mase_plot,
@@ -98,13 +98,6 @@ class ForecasterEvaluator:
             forecasting_model_wrapper_new=new_forecasting_model,
             ohe=ohe,
             retrain_on=type,
-        )
-        forecast_plot.savefig(
-            os.path.join(
-                OUTPUT_DIR,
-                "Forecasting space evaluations",
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_forecast.png",
-            )
         )
         mse_plot.savefig(
             os.path.join(

@@ -37,6 +37,7 @@ os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"), exist_ok=True
 os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Generated MTS"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids"), exist_ok=True)
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
