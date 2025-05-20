@@ -20,12 +20,13 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import (
-    create_train_val_test_split,
-)  # noqa: E402
-from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import \
+    create_train_val_test_split  # noqa: E402
+from src.data_transformations.preprocessing import \
+    scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import \
+    ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -200,6 +201,16 @@ inferred_mts_test, inferred_intermediate_features_test, ohe_test = model_handler
 
 logger.info("Successfully ran inference on validation and test sets")
 
+if config["is_conditional_gen_model"]:
+    logger.info("Scaling data for conditional generation model (CVAE)...")
+    for i in range(0, inferred_mts_validation.shape[0]):
+        for j in range(0, num_uts_in_mts):
+            inferred_mts_validation[i, j] = uts_scalers[j].inverse_transform(
+                inferred_mts_validation[i, j]
+            )
+            inferred_mts_test[i, j] = uts_scalers[j].inverse_transform(
+                inferred_mts_test[i, j]
+            )
 
 evaluate(
     config=config,
