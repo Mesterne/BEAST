@@ -6,7 +6,7 @@ import numpy as np
 
 class ForecastingModel(ABC):
     @abstractmethod
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, *args) -> None:
         pass
 
     @abstractmethod

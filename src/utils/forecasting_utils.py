@@ -121,6 +121,7 @@ def compare_old_and_new_model(
     forecasting_model_wrapper_new: ForecastingModel,
     ohe: np.ndarray,
     retrain_on: str,
+    model_type: str,
 ):
     inferred_old_train = forecasting_model_wrapper_old.forecast(
         test_timeseries=train_timeseries
@@ -202,6 +203,7 @@ def compare_old_and_new_model(
         forecast_plot.savefig(
             os.path.join(
                 "Forecast Grids",
+                model_type,
                 f"{int(errors_summed[i])}_forecast_retrain_on_{retrain_on}_idx_{i}.png",
             )
         )

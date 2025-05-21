@@ -1,10 +1,10 @@
 import os
-from typing import Any, Dict, List
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
 from darts.dataprocessing.transformers.scaler import Scaler
-from darts.models.forecasting.nlinear import NLinearModel
+from darts.models.forecasting.tcn_model import TCNModel
 
 from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
@@ -13,28 +13,33 @@ from src.utils.darts_utils import array_to_timeseries
 from src.utils.logging_config import logger
 
 
-class NLinearForecastingModel(ForecastingModel):
-    def __init__(self, window_size, horizon_length, num_epochs) -> None:
+class TCNForecastingModel(ForecastingModel):
+    def __init__(self, window_size, horizon_length, num_epochs, dropout) -> None:
         self.window_size = window_size
         self.horizon_length = horizon_length
         self.num_epochs = num_epochs
+        self.dropout = dropout
         self.loss_tracker = LossTracker()
         self.model = self._initialize_forecasting_model()
         self.scaler = Scaler()
         self.covariates_scaler = Scaler()
 
-    def _initialize_forecasting_model(self) -> NLinearModel:
-        return NLinearModel(
+    def _initialize_forecasting_model(self) -> TCNModel:  # <- Changed model class
+        return TCNModel(
             input_chunk_length=self.window_size,
             output_chunk_length=self.horizon_length,
             n_epochs=self.num_epochs,
+            dropout=self.dropout,  # You can tune this
+            kernel_size=3,
+            dilation_base=2,
+            num_filters=3,
             random_state=0,
             pl_trainer_kwargs={
                 "precision": "32-true",
                 "callbacks": [self.loss_tracker],
                 "enable_model_summary": False,
                 "log_every_n_steps": 1,
-            },  # Done to be able to run on laptop
+            },
         )
 
     def train(
@@ -65,9 +70,6 @@ class NLinearForecastingModel(ForecastingModel):
         return np.array(results)
 
     def plot_loss(self, model_name: str) -> None:
-        """
-        Plots the training and validation loss stored in the LossTracker.
-        """
         if not self.loss_tracker.train_loss:
             logger.warning(
                 "No training loss recorded. Did you forget to train the model?"

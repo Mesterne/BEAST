@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from src.models.forecasting import n_linear_forecasting_model
+
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
 argument_parser.add_argument("config_path", type=str)
@@ -38,6 +40,9 @@ os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Generated MTS"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids", "n_linear"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids", "tcn"), exist_ok=True)
+os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids", "lstm"), exist_ok=True)
 
 # Set up logging
 logger.info(f"Running from directory: {project_root}")
@@ -229,23 +234,63 @@ evaluate(
 
 
 ##### FORECASTING EVALUATION
-logger.info("Starting forecasting evaluation...")
-evaluator = ForecasterEvaluator(
+logger.info("Starting forecasting evaluation with NLinaer...")
+nlinear_evaluator = ForecasterEvaluator(
     config=config,
     mts_dataset=mts_dataset_array,
     train_indices=train_transformation_indices[:, 0],
     validation_indices=validation_transformation_indices[:, 1],
     test_indices=test_transformation_indices[:, 1],
+    horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
+    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+    model_type=config["model_args"]["forecasting_model_args"]["model_type"],
+    num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
+        "num_epochs"
+    ],
 )
 
-logger.info("Evaluating foreasting improvement on inferred validation set...")
-evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, ohe=ohe_val, type="validation"
-)
 logger.info("Evaluating foreasting improvement on inferred test set...")
-evaluator.evaluate_on_evaluation_set(
+nlinear_evaluator.evaluate_on_evaluation_set(
     inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
 )
 
+
+tcn_evaluator = ForecasterEvaluator(
+    config=config,
+    mts_dataset=mts_dataset_array,
+    train_indices=train_transformation_indices[:, 0],
+    validation_indices=validation_transformation_indices[:, 1],
+    test_indices=test_transformation_indices[:, 1],
+    horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
+    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+    model_type="tcn",
+    num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
+        "num_epochs"
+    ],
+)
+
+logger.info("Evaluating foreasting improvement on inferred test set...")
+tcn_evaluator.evaluate_on_evaluation_set(
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
+)
+
+lstm_evaluator = ForecasterEvaluator(
+    config=config,
+    mts_dataset=mts_dataset_array,
+    train_indices=train_transformation_indices[:, 0],
+    validation_indices=validation_transformation_indices[:, 1],
+    test_indices=test_transformation_indices[:, 1],
+    horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
+    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+    model_type="lstm",
+    num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
+        "num_epochs"
+    ],
+)
+
+logger.info("Evaluating foreasting improvement on inferred test set...")
+lstm_evaluator.evaluate_on_evaluation_set(
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
+)
 
 logger.info("Finished running")
