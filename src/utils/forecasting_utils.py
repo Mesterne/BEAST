@@ -7,6 +7,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.container import BarContainer
 
+from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
 from src.plots.ohe_plots import \
     create_and_save_plots_of_ohe_activated_performances_forecasting_space
@@ -173,15 +174,15 @@ def compare_old_and_new_model(
     errors_summed = np.sum(errors, axis=1)
     sorted_indices = np.argsort(errors_summed)
 
-    bottom_5 = sorted_indices[:5]
-    top_5 = sorted_indices[-5:]
+    bottom_3 = sorted_indices[:3]
+    top_3 = sorted_indices[-3:]
     midpoint = len(sorted_indices) // 2
-    half_window = 2  # 2 before and 2 after the median
+    half_window = 1
     start = max(midpoint - half_window, 0)
-    end = start + 5
-    median_5 = sorted_indices[start:end]
+    end = start + 3
+    median_3 = sorted_indices[start:end]
 
-    indices = np.concatenate([top_5, bottom_5, median_5])
+    indices = np.concatenate([top_3, bottom_3, median_3])
 
     for i in indices:
         worst_forecast_old = inferred_old_val[i]
@@ -202,6 +203,7 @@ def compare_old_and_new_model(
         )
         forecast_plot.savefig(
             os.path.join(
+                OUTPUT_DIR,
                 "Forecast Grids",
                 model_type,
                 f"{int(errors_summed[i])}_forecast_retrain_on_{retrain_on}_idx_{i}.png",

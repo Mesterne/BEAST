@@ -8,8 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from src.models.forecasting import n_linear_forecasting_model
-
 # Parse the configuration file path
 argument_parser = argparse.ArgumentParser()
 argument_parser.add_argument("config_path", type=str)
