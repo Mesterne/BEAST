@@ -36,6 +36,15 @@ from src.utils.yaml_loader import read_yaml  # noqa: E402
 os.makedirs(os.path.join(OUTPUT_DIR, "Feature space evaluations"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Generation grids"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecasting space evaluations"), exist_ok=True)
+os.makedirs(
+    os.path.join(OUTPUT_DIR, "Forecasting space evaluations", "n_linear"), exist_ok=True
+)
+os.makedirs(
+    os.path.join(OUTPUT_DIR, "Forecasting space evaluations", "tcn"), exist_ok=True
+)
+os.makedirs(
+    os.path.join(OUTPUT_DIR, "Forecasting space evaluations", "lstm"), exist_ok=True
+)
 os.makedirs(os.path.join(OUTPUT_DIR, "Generated MTS"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids"), exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, "Forecast Grids", "n_linear"), exist_ok=True)
