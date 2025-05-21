@@ -3,8 +3,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from darts.dataprocessing.transformers.scaler import Scaler
-from darts.models.forecasting.rnn_model import RNNModel
+from darts.models.forecasting.block_rnn_model import BlockRNNModel
 
 from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
@@ -21,11 +20,9 @@ class LSTMForecastingModel(ForecastingModel):
         self.dropout = dropout
         self.loss_tracker = LossTracker()
         self.model = self._initialize_forecasting_model()
-        self.scaler = Scaler()
-        self.covariates_scaler = Scaler()
 
-    def _initialize_forecasting_model(self) -> RNNModel:
-        return RNNModel(
+    def _initialize_forecasting_model(self) -> BlockRNNModel:
+        return BlockRNNModel(
             model="LSTM",
             input_chunk_length=self.window_size,
             output_chunk_length=self.horizon_length,
@@ -47,30 +44,21 @@ class LSTMForecastingModel(ForecastingModel):
         train_targets, train_covariates = array_to_timeseries(train_timeseries)
         val_targets, val_covariates = array_to_timeseries(validation_timeseries)
 
-        train_targets_scaled = self.scaler.fit_transform(train_targets)
-        val_targets_scaled = self.scaler.transform(val_targets)
-
-        train_covariates_scaled = self.covariates_scaler.fit_transform(train_covariates)
-        val_covariates_scaled = self.covariates_scaler.transform(val_covariates)
-
         self.model.fit(
-            series=train_targets_scaled,
-            past_covariates=train_covariates_scaled,
-            val_series=val_targets_scaled,
-            val_past_covariates=val_covariates_scaled,
+            series=train_targets,
+            past_covariates=train_covariates,
+            val_series=val_targets,
+            val_past_covariates=val_covariates,
         )
 
     def forecast(self, test_timeseries: np.ndarray) -> np.ndarray:
         test_targets, test_covariates = array_to_timeseries(test_timeseries)
-        test_targets_scaled = self.scaler.transform(test_targets)
-        test_covariates_scaled = self.covariates_scaler.transform(test_covariates)
 
         forecast_series = self.model.predict(
             n=self.horizon_length,
-            series=test_targets_scaled,
-            past_covariates=test_covariates_scaled,
+            series=test_targets,
+            past_covariates=test_covariates,
         )
-        forecast_series = self.scaler.inverse_transform(forecast_series)
 
         results: List = []
         for series in forecast_series:

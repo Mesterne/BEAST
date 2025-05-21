@@ -241,6 +241,26 @@ evaluate(
 
 
 ##### FORECASTING EVALUATION
+
+lstm_evaluator = ForecasterEvaluator(
+    config=config,
+    mts_dataset=mts_dataset_array,
+    train_indices=train_transformation_indices[:, 0],
+    validation_indices=validation_transformation_indices[:, 1],
+    test_indices=test_transformation_indices[:, 1],
+    horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
+    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
+    model_type="lstm",
+    num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
+        "num_epochs"
+    ],
+)
+
+logger.info("Evaluating foreasting improvement on inferred test set...")
+lstm_evaluator.evaluate_on_evaluation_set(
+    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
+)
+
 logger.info("Starting forecasting evaluation with NLinaer...")
 nlinear_evaluator = ForecasterEvaluator(
     config=config,
@@ -281,23 +301,5 @@ tcn_evaluator.evaluate_on_evaluation_set(
     inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
 )
 
-lstm_evaluator = ForecasterEvaluator(
-    config=config,
-    mts_dataset=mts_dataset_array,
-    train_indices=train_transformation_indices[:, 0],
-    validation_indices=validation_transformation_indices[:, 1],
-    test_indices=test_transformation_indices[:, 1],
-    horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
-    window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    model_type="lstm",
-    num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
-        "num_epochs"
-    ],
-)
-
-logger.info("Evaluating foreasting improvement on inferred test set...")
-lstm_evaluator.evaluate_on_evaluation_set(
-    inferred_mts_array=inferred_mts_validation, ohe=ohe_test, type="test"
-)
 
 logger.info("Finished running")

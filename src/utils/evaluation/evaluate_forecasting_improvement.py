@@ -87,7 +87,7 @@ class ForecasterEvaluator:
                 dropout=0.1,
             )
         elif self.model_type == "lstm":
-            logger.info("Running TCNForecastingModel for forecasting evaluations")
+            logger.info("Running LSTMForecastingModel for forecasting evaluations")
             return LSTMForecastingModel(
                 num_epochs=self.num_epochs,
                 horizon_length=self.horizon_length,
