@@ -6,15 +6,17 @@ import numpy as np
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
-from src.plots.pca_for_each_uts_with_transformed import \
-    plot_pca_for_each_uts_with_transformed
+from src.plots.pca_for_each_uts_with_transformed import (
+    plot_pca_for_each_uts_with_transformed,
+)
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
-    plot_pca_for_all_generated_mts_for_each_uts)
-from src.plots.plot_only_timeseries_generated import \
-    plot_only_timeseries_generated
-from src.utils.evaluation.feature_space_evaluation import \
-    calculate_total_evaluation_for_each_mts
+    plot_pca_for_all_generated_mts_for_each_uts,
+)
+from src.plots.plot_only_timeseries_generated import plot_only_timeseries_generated
+from src.utils.evaluation.feature_space_evaluation import (
+    calculate_total_evaluation_for_each_mts,
+)
 from src.utils.logging_config import logger
 
 
@@ -41,13 +43,13 @@ def create_grid_plot_of_worst_median_best(
     X_mts = mts_dataset_array[evaluation_transformation_indices[:, 0]]
     y_mts = mts_dataset_array[evaluation_transformation_indices[:, 1]]
 
-    total_mse_for_each_mts = calculate_total_evaluation_for_each_mts(
+    total_rmse_for_each_mts = calculate_total_evaluation_for_each_mts(
         predicted_features=inferred_mts_features,
         target_features=y_features,
         metric="MSE",
     )
 
-    best_generated_mts_index = np.argmin(total_mse_for_each_mts)
+    best_generated_mts_index = np.argmin(total_rmse_for_each_mts)
     logger.info(f"Best genereated mts index: {best_generated_mts_index}")
 
     logger.info("Generating full TS plot...")
@@ -86,7 +88,7 @@ def create_grid_plot_of_worst_median_best(
     )
     plt.close(pca_plot_of_best_generated_mts)
 
-    worst_generated_mts_index = np.argmax(total_mse_for_each_mts)
+    worst_generated_mts_index = np.argmax(total_rmse_for_each_mts)
     logger.info(f"Worst genereated mts index: {worst_generated_mts_index}")
     logger.info("Generating full TS plot...")
     ts_plot_of_worst_generated_mts = plot_time_series_for_all_uts(
@@ -124,9 +126,9 @@ def create_grid_plot_of_worst_median_best(
     )
     plt.close(pca_plot_of_worst_generated_mts)
 
-    median_mse = np.median(total_mse_for_each_mts)
+    median_rmse = np.median(total_rmse_for_each_mts)
     # NOTE: This way of finding the median index always returns one index. This is acceptable in this use case.
-    median_mts_index = np.argmin(np.abs(total_mse_for_each_mts - median_mse))
+    median_mts_index = np.argmin(np.abs(total_rmse_for_each_mts - median_rmse))
 
     logger.info("Generating full TS plot...")
     ts_plot_of_median_generated_mts = plot_time_series_for_all_uts(

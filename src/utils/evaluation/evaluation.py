@@ -5,20 +5,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.plots.generated_vs_target_comparison import \
-    create_grid_plot_of_worst_median_best
-from src.plots.ohe_plots import \
-    create_and_save_plots_of_ohe_activated_performances_feature_space
+from src.plots.generated_vs_target_comparison import (
+    create_grid_plot_of_worst_median_best,
+)
+from src.plots.ohe_plots import (
+    create_and_save_plots_of_ohe_activated_performances_feature_space,
+)
 from src.plots.overlapping_mts_plot import plot_overlapping_mts
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
-    plot_pca_for_all_generated_mts_for_each_uts)
-from src.plots.plot_feature_evaluation_bar_plot import \
-    plot_metric_for_each_feature_bar_plot
-from src.plots.plot_feature_evaluation_distribution import \
-    plot_feature_evaluation
-from src.utils.evaluation.feature_space_evaluation import \
-    calculate_evaluation_for_each_feature
+    plot_pca_for_all_generated_mts_for_each_uts,
+)
+from src.plots.plot_feature_evaluation_bar_plot import (
+    plot_metric_for_each_feature_bar_plot,
+)
+from src.plots.plot_feature_evaluation_distribution import plot_feature_evaluation
+from src.utils.evaluation.feature_space_evaluation import (
+    calculate_evaluation_for_each_feature,
+)
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
@@ -50,7 +54,6 @@ def plot_evaluation_summaries_over_feature_space(
     ohe_test: np.ndarray,
     metric: str,
 ):
-
     final_evaluation_values_for_each_feature_validation = (
         calculate_evaluation_for_each_feature(
             predicted_features=final_features_validation,

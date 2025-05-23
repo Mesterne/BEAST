@@ -49,12 +49,8 @@ model_args:
       learning_rate: 0.001
       early_stopping_patience: 25
   forecasting_model_args:
-    model_type: 'feedforward_forecaster'
+    model_type: n_linear
     window_size: 168
     horizon_length: 24
-    model_params_storage_dir: models/feedforward
     training_args:
       num_epochs: 1
-      batch_size: 128
-      learning_rate: 0.001
-      early_stopping_patience: 25
