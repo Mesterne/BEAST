@@ -87,7 +87,7 @@ def compare_original_and_transformed_forecasting(
     return fig
 
 
-def compute_metrics(y, old_pred, new_pred, insample):
+def compute_metrics(y, old_pred, new_pred):
     rmse_old = rmse_for_each_forecast(y, old_pred)
     rmse_new = rmse_for_each_forecast(y, new_pred)
     rmse_total_old = rmse_for_all_predictions(y, old_pred)
@@ -224,7 +224,7 @@ def compare_old_and_new_model(
         train_mae_new,
         train_mae_total_old,
         train_mae_total_new,
-    ) = compute_metrics(y_train, inferred_old_train, inferred_new_train, X_train)
+    ) = compute_metrics(y_train, inferred_old_train, inferred_new_train)
     (
         val_rmse_old,
         val_rmse_new,
@@ -234,7 +234,7 @@ def compare_old_and_new_model(
         val_mae_new,
         val_mae_total_old,
         val_mae_total_new,
-    ) = compute_metrics(y_val, inferred_old_val, inferred_new_val, X_val)
+    ) = compute_metrics(y_val, inferred_old_val, inferred_new_val)
     (
         test_rmse_old,
         test_rmse_new,
@@ -244,7 +244,7 @@ def compare_old_and_new_model(
         test_mae_new,
         test_mae_total_old,
         test_mae_total_new,
-    ) = compute_metrics(y_test, inferred_old_test, inferred_new_test, X_test)
+    ) = compute_metrics(y_test, inferred_old_test, inferred_new_test)
 
     delta_train_rmse, delta_val_rmse, delta_test_rmse = compute_deltas(
         train_old=train_rmse_old,
@@ -292,7 +292,7 @@ def compare_old_and_new_model(
         metric_name="MAE",
     )
 
-    # MSE barplot
+    # RMSE barplot
     rmse_plot = plot_metric_comparison_train_validation_test(
         train_metrics=[train_rmse_total_old, train_rmse_total_new],
         val_metrics=[val_rmse_total_old, val_rmse_total_new],
@@ -300,13 +300,16 @@ def compare_old_and_new_model(
         metric_name="RMSE",
     )
 
-    # MASE barplot
+    # MAE barplot
     mae_plot = plot_metric_comparison_train_validation_test(
         train_metrics=[train_mae_total_old, train_mae_total_new],
         val_metrics=[val_mae_total_old, val_mae_total_new],
         test_metrics=[test_mae_total_old, test_mae_total_new],
         metric_name="MAE",
     )
+
+    print(f"Test mae old: {test_mae_total_old}")
+    print(f"Test mae new: {test_mae_total_new}")
 
     # create_and_save_plots_of_ohe_activated_performances_forecasting_space(
     #     ohe=ohe,
