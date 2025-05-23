@@ -4,16 +4,15 @@ from typing import Any, Dict
 import numpy as np
 
 from src.data.constants import OUTPUT_DIR
-from src.models.forecasting.feedforward_forecasting_model import \
-    FeedForwardForecastingModel
+from src.models.forecasting.feedforward_forecasting_model import (
+    FeedForwardForecastingModel,
+)
 from src.models.forecasting.forcasting_model import ForecastingModel
 from src.models.forecasting.lstm_forecasting_model import LSTMForecastingModel
-from src.models.forecasting.n_linear_forecasting_model import \
-    NLinearForecastingModel
+from src.models.forecasting.n_linear_forecasting_model import NLinearForecastingModel
 from src.models.forecasting.tcn_forecasting_model import TCNForecastingModel
 from src.utils.forecasting_utils import compare_old_and_new_model
-from src.utils.generate_dataset import \
-    create_training_windows_from_mts  # noqa: E402
+from src.utils.generate_dataset import create_training_windows_from_mts  # noqa: E402
 from src.utils.logging_config import logger
 
 
@@ -112,12 +111,12 @@ class ForecasterEvaluator:
         )
         new_forecasting_model.plot_loss(model_name=f"{self.model_type}New")
         (
-            mse_plot,
-            mse_delta_plot,
-            mase_plot,
-            mase_delta_plot,
-            mse_delta_comparison,
-            mase_delta_comparison,
+            rmse_plot,
+            rmse_delta_plot,
+            mae_plot,
+            mae_delta_plot,
+            rmse_delta_comparison,
+            mae_delta_comparison,
         ) = compare_old_and_new_model(
             config=self.config,
             train_timeseries=self.train_mts_array,
@@ -129,53 +128,53 @@ class ForecasterEvaluator:
             retrain_on=type,
             model_type=self.model_type,
         )
-        mse_plot.savefig(
+        rmse_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mse.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_rmse.png",
             )
         )
 
-        mse_delta_plot.savefig(
+        rmse_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mse.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_rmse.png",
             )
         )
-        mase_plot.savefig(
+        mae_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mase.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_comparison_mae.png",
             )
         )
-        mase_delta_plot.savefig(
+        mae_delta_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mase.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_model_improvement_delta_mae.png",
             )
         )
 
-        mse_delta_comparison.savefig(
+        rmse_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mse.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_rmse.png",
             )
         )
-        mase_delta_comparison.savefig(
+        mae_delta_comparison.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecasting space evaluations",
                 self.model_type,
-                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mase.png",
+                f"FORECASTING_SPACE_retrain_on_{type}_forecasting_delta_mae.png",
             )
         )

@@ -9,11 +9,15 @@ from matplotlib.container import BarContainer
 
 from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.plots.ohe_plots import \
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space
+from src.plots.ohe_plots import (
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space,
+)
 from src.utils.evaluation.forecaster_evaluation import (
-    mase_for_all_predictions, mase_for_each_forecast, mse_for_all_predictions,
-    mse_for_each_forecast)
+    mae_for_all_predictions,
+    mae_for_each_forecast,
+    rmse_for_all_predictions,
+    rmse_for_each_forecast,
+)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
@@ -24,6 +28,7 @@ def compare_original_and_transformed_forecasting(
     worst_forecast_old,
     worst_forecast_new,
     true_value,
+    mae,
 ):
     custom_palette = {
         "Original Timeseries": "gray",
@@ -74,7 +79,7 @@ def compare_original_and_transformed_forecasting(
     ax.set_xticks([])  # Remove x-axis ticks
     ax.xaxis.set_visible(False)  # Hide the x-axis line
 
-    ax.set_title("Comparison of Worst Forecast: Old vs New Model with Window Value")
+    ax.set_title(f"Comparison of forecasting models (MAE Old forecast: {mae})")
     ax.set_xlabel("Forecast Stage")
     ax.set_ylabel("Value")
     ax.legend()
@@ -83,24 +88,24 @@ def compare_original_and_transformed_forecasting(
 
 
 def compute_metrics(y, old_pred, new_pred, insample):
-    mse_old = mse_for_each_forecast(y, old_pred)
-    mse_new = mse_for_each_forecast(y, new_pred)
-    mse_total_old = mse_for_all_predictions(y, old_pred)
-    mse_total_new = mse_for_all_predictions(y, new_pred)
-    mase_old = mase_for_each_forecast(y, old_pred, insample)
-    mase_new = mase_for_each_forecast(y, new_pred, insample)
-    mase_total_old = mase_for_all_predictions(y, old_pred, insample)
-    mase_total_new = mase_for_all_predictions(y, new_pred, insample)
+    rmse_old = rmse_for_each_forecast(y, old_pred)
+    rmse_new = rmse_for_each_forecast(y, new_pred)
+    rmse_total_old = rmse_for_all_predictions(y, old_pred)
+    rmse_total_new = rmse_for_all_predictions(y, new_pred)
+    mae_old = mae_for_each_forecast(y, old_pred)
+    mae_new = mae_for_each_forecast(y, new_pred)
+    mae_total_old = mae_for_all_predictions(y, old_pred)
+    mae_total_new = mae_for_all_predictions(y, new_pred)
 
     return (
-        mse_old,
-        mse_new,
-        mse_total_old,
-        mse_total_new,
-        mase_old,
-        mase_new,
-        mase_total_old,
-        mase_total_new,
+        rmse_old,
+        rmse_new,
+        rmse_total_old,
+        rmse_total_new,
+        mae_old,
+        mae_new,
+        mae_total_old,
+        mae_total_new,
     )
 
 
@@ -170,9 +175,8 @@ def compare_old_and_new_model(
         ],
     )
     # Plot worst forecast before and after
-    errors = np.abs(y_val - inferred_old_val)
-    errors_summed = np.sum(errors, axis=1)
-    sorted_indices = np.argsort(errors_summed)
+    errors = mae_for_each_forecast(y_true=y_test, y_pred=inferred_old_test)
+    sorted_indices = np.argsort(errors)
 
     bottom_3 = sorted_indices[:3]
     top_3 = sorted_indices[-3:]
@@ -185,10 +189,10 @@ def compare_old_and_new_model(
     indices = np.concatenate([top_3, bottom_3, median_3])
 
     for i in indices:
-        worst_forecast_old = inferred_old_val[i]
-        worst_forecast_new = inferred_new_val[i]
-        window_value = X_val[i][168:336]
-        true_value = y_val[i]
+        worst_forecast_old = inferred_old_test[i]
+        worst_forecast_new = inferred_new_test[i]
+        window_value = X_test[i][168:336]
+        true_value = y_test[i]
 
         window_length = len(window_value)
         forecast_length = len(worst_forecast_old)
@@ -200,133 +204,134 @@ def compare_old_and_new_model(
             worst_forecast_old=worst_forecast_old,
             worst_forecast_new=worst_forecast_new,
             true_value=true_value,
+            mae=errors[i],
         )
         forecast_plot.savefig(
             os.path.join(
                 OUTPUT_DIR,
                 "Forecast Grids",
                 model_type,
-                f"{int(errors_summed[i])}_forecast_retrain_on_{retrain_on}_idx_{i}.png",
+                f"{int(errors[i])}_forecast_retrain_on_{retrain_on}_idx_{i}.png",
             )
         )
 
     (
-        train_mse_old,
-        train_mse_new,
-        train_mse_total_old,
-        train_mse_total_new,
-        train_mase_old,
-        train_mase_new,
-        train_mase_total_old,
-        train_mase_total_new,
+        train_rmse_old,
+        train_rmse_new,
+        train_rmse_total_old,
+        train_rmse_total_new,
+        train_mae_old,
+        train_mae_new,
+        train_mae_total_old,
+        train_mae_total_new,
     ) = compute_metrics(y_train, inferred_old_train, inferred_new_train, X_train)
     (
-        val_mse_old,
-        val_mse_new,
-        val_mse_total_old,
-        val_mse_total_new,
-        val_mase_old,
-        val_mase_new,
-        val_mase_total_old,
-        val_mase_total_new,
+        val_rmse_old,
+        val_rmse_new,
+        val_rmse_total_old,
+        val_rmse_total_new,
+        val_mae_old,
+        val_mae_new,
+        val_mae_total_old,
+        val_mae_total_new,
     ) = compute_metrics(y_val, inferred_old_val, inferred_new_val, X_val)
     (
-        test_mse_old,
-        test_mse_new,
-        test_mse_total_old,
-        test_mse_total_new,
-        test_mase_old,
-        test_mase_new,
-        test_mase_total_old,
-        test_mase_total_new,
+        test_rmse_old,
+        test_rmse_new,
+        test_rmse_total_old,
+        test_rmse_total_new,
+        test_mae_old,
+        test_mae_new,
+        test_mae_total_old,
+        test_mae_total_new,
     ) = compute_metrics(y_test, inferred_old_test, inferred_new_test, X_test)
 
-    delta_train_mse, delta_val_mse, delta_test_mse = compute_deltas(
-        train_old=train_mse_old,
-        train_new=train_mse_new,
-        val_old=val_mse_old,
-        val_new=val_mse_new,
-        test_old=test_mse_old,
-        test_new=test_mse_new,
+    delta_train_rmse, delta_val_rmse, delta_test_rmse = compute_deltas(
+        train_old=train_rmse_old,
+        train_new=train_rmse_new,
+        val_old=val_rmse_old,
+        val_new=val_rmse_new,
+        test_old=test_rmse_old,
+        test_new=test_rmse_new,
     )
 
-    mse_delta_plot = plot_delta_distributions(
-        delta_train=delta_train_mse,
-        delta_val=delta_val_mse,
-        delta_test=delta_test_mse,
-        metric_name="MSE",
+    rmse_delta_plot = plot_delta_distributions(
+        delta_train=delta_train_rmse,
+        delta_val=delta_val_rmse,
+        delta_test=delta_test_rmse,
+        metric_name="RMSE",
     )
 
-    delta_train_mase, delta_val_mase, delta_test_mase = compute_deltas(
-        train_old=train_mase_old,
-        train_new=train_mase_new,
-        val_old=val_mase_old,
-        val_new=val_mase_new,
-        test_old=test_mase_old,
-        test_new=test_mase_new,
+    delta_train_mae, delta_val_mae, delta_test_mae = compute_deltas(
+        train_old=train_mae_old,
+        train_new=train_mae_new,
+        val_old=val_mae_old,
+        val_new=val_mae_new,
+        test_old=test_mae_old,
+        test_new=test_mae_new,
     )
 
-    mase_delta_plot = plot_delta_distributions(
-        delta_train=delta_train_mase,
-        delta_val=delta_val_mase,
-        delta_test=delta_test_mase,
-        metric_name="MASE",
+    mae_delta_plot = plot_delta_distributions(
+        delta_train=delta_train_mae,
+        delta_val=delta_val_mae,
+        delta_test=delta_test_mae,
+        metric_name="MAE",
     )
 
-    mse_delta_comparison_plot = plot_delta_comparison_plot(
-        train_metrics=[train_mse_total_old, train_mse_total_new],
-        val_metrics=[val_mse_total_old, val_mse_total_new],
-        test_metrics=[test_mse_total_old, test_mse_total_new],
-        metric_name="MSE",
+    rmse_delta_comparison_plot = plot_delta_comparison_plot(
+        train_metrics=[train_rmse_total_old, train_rmse_total_new],
+        val_metrics=[val_rmse_total_old, val_rmse_total_new],
+        test_metrics=[test_rmse_total_old, test_rmse_total_new],
+        metric_name="RMSE",
     )
 
-    mase_delta_comparison_plot = plot_delta_comparison_plot(
-        train_metrics=[train_mase_total_old, train_mase_total_new],
-        val_metrics=[val_mase_total_old, val_mase_total_new],
-        test_metrics=[test_mase_total_old, test_mase_total_new],
-        metric_name="MASE",
+    mae_delta_comparison_plot = plot_delta_comparison_plot(
+        train_metrics=[train_mae_total_old, train_mae_total_new],
+        val_metrics=[val_mae_total_old, val_mae_total_new],
+        test_metrics=[test_mae_total_old, test_mae_total_new],
+        metric_name="MAE",
     )
 
     # MSE barplot
-    mse_plot = plot_metric_comparison_train_validation_test(
-        train_metrics=[train_mse_total_old, train_mse_total_new],
-        val_metrics=[val_mse_total_old, val_mse_total_new],
-        test_metrics=[test_mse_total_old, test_mse_total_new],
-        metric_name="MSE",
+    rmse_plot = plot_metric_comparison_train_validation_test(
+        train_metrics=[train_rmse_total_old, train_rmse_total_new],
+        val_metrics=[val_rmse_total_old, val_rmse_total_new],
+        test_metrics=[test_rmse_total_old, test_rmse_total_new],
+        metric_name="RMSE",
     )
 
     # MASE barplot
-    mase_plot = plot_metric_comparison_train_validation_test(
-        train_metrics=[train_mase_total_old, train_mase_total_new],
-        val_metrics=[val_mase_total_old, val_mase_total_new],
-        test_metrics=[test_mase_total_old, test_mase_total_new],
-        metric_name="MASE",
+    mae_plot = plot_metric_comparison_train_validation_test(
+        train_metrics=[train_mae_total_old, train_mae_total_new],
+        val_metrics=[val_mae_total_old, val_mae_total_new],
+        test_metrics=[test_mae_total_old, test_mae_total_new],
+        metric_name="MAE",
     )
 
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space(
-        ohe=ohe,
-        train_metrics=[train_mse_old, train_mse_new],
-        val_metrics=[val_mse_old, val_mse_new],
-        test_metrics=[test_mse_old, test_mse_new],
-        metric_name="MSE",
-        retrain_on=retrain_on,
-    )
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space(
-        ohe=ohe,
-        train_metrics=[train_mase_old, train_mase_new],
-        val_metrics=[val_mase_old, val_mase_new],
-        test_metrics=[test_mase_old, test_mase_new],
-        metric_name="MASE",
-        retrain_on=retrain_on,
-    )
+    # create_and_save_plots_of_ohe_activated_performances_forecasting_space(
+    #     ohe=ohe,
+    #     train_metrics=[train_mse_old, train_mse_new],
+    #     val_metrics=[val_mse_old, val_mse_new],
+    #     test_metrics=[test_mse_old, test_mse_new],
+    #     metric_name="MSE",
+    #     retrain_on=retrain_on,
+    # )
+    # create_and_save_plots_of_ohe_activated_performances_forecasting_space(
+    #     ohe=ohe,
+    #     train_metrics=[train_mase_old, train_mase_new],
+    #     val_metrics=[val_mase_old, val_mase_new],
+    #     test_metrics=[test_mase_old, test_mase_new],
+    #     metric_name="MASE",
+    #     retrain_on=retrain_on,
+    # )
 
     return (
-        mse_plot,
-        mse_delta_plot,
-        mase_plot,
-        mase_delta_plot,
-        mse_delta_comparison_plot,
-        mase_delta_comparison_plot,
+        rmse_plot,
+        rmse_delta_plot,
+        mae_plot,
+        mae_delta_plot,
+        rmse_delta_comparison_plot,
+        mae_delta_comparison_plot,
     )
 
 
