@@ -20,13 +20,12 @@ if project_root not in sys.path:
 
 
 from src.data.constants import OUTPUT_DIR
-from src.data_transformations.generation_of_supervised_pairs import \
-    create_train_val_test_split  # noqa: E402
-from src.data_transformations.preprocessing import \
-    scale_mts_dataset  # noqa: E402
+from src.data_transformations.generation_of_supervised_pairs import (
+    create_train_val_test_split,
+)  # noqa: E402
+from src.data_transformations.preprocessing import scale_mts_dataset  # noqa: E402
 from src.models.model_handler import ModelHandler
-from src.utils.evaluation.evaluate_forecasting_improvement import \
-    ForecasterEvaluator
+from src.utils.evaluation.evaluate_forecasting_improvement import ForecasterEvaluator
 from src.utils.evaluation.evaluation import evaluate
 from src.utils.experiment_helper import get_mts_dataset  # noqa: E402
 from src.utils.generate_dataset import generate_feature_dataframe  # noqa: E402
@@ -82,7 +81,7 @@ except Exception:
 try:
     # NOTE: directory_name and name of slurm job should be the same for easy identification
     logger.info(
-        f"Saving/loading model from directory {config['model_args']["feature_model_args"]["directory_name"]}."
+        f"Saving/loading model from directory {config['model_args']['feature_model_args']['directory_name']}."
     )
 except KeyError:
     config["model_args"]["feature_model_args"]["directory_name"] = None
@@ -241,13 +240,16 @@ evaluate(
 
 
 ##### FORECASTING EVALUATION
+forecasting_train_indices = np.unique(train_transformation_indices[:, 0])
+forecasting_valdation_indices = np.unique(validation_transformation_indices[:, 0])
+forecasting_test_indices = np.unique(test_transformation_indices[:, 0])
 
 lstm_evaluator = ForecasterEvaluator(
     config=config,
     mts_dataset=mts_dataset_array,
-    train_indices=train_transformation_indices[:, 0],
-    validation_indices=validation_transformation_indices[:, 1],
-    test_indices=test_transformation_indices[:, 1],
+    train_indices=forecasting_train_indices,
+    validation_indices=forecasting_valdation_indices,
+    test_indices=forecasting_test_indices,
     horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
     window_size=config["model_args"]["forecasting_model_args"]["window_size"],
     model_type="lstm",
@@ -265,9 +267,9 @@ logger.info("Starting forecasting evaluation with NLinaer...")
 nlinear_evaluator = ForecasterEvaluator(
     config=config,
     mts_dataset=mts_dataset_array,
-    train_indices=train_transformation_indices[:, 0],
-    validation_indices=validation_transformation_indices[:, 1],
-    test_indices=test_transformation_indices[:, 1],
+    train_indices=forecasting_train_indices,
+    validation_indices=forecasting_valdation_indices,
+    test_indices=forecasting_test_indices,
     horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
     window_size=config["model_args"]["forecasting_model_args"]["window_size"],
     model_type=config["model_args"]["forecasting_model_args"]["model_type"],
@@ -285,9 +287,9 @@ nlinear_evaluator.evaluate_on_evaluation_set(
 tcn_evaluator = ForecasterEvaluator(
     config=config,
     mts_dataset=mts_dataset_array,
-    train_indices=train_transformation_indices[:, 0],
-    validation_indices=validation_transformation_indices[:, 1],
-    test_indices=test_transformation_indices[:, 1],
+    train_indices=forecasting_train_indices,
+    validation_indices=forecasting_valdation_indices,
+    test_indices=forecasting_test_indices,
     horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
     window_size=config["model_args"]["forecasting_model_args"]["window_size"],
     model_type="tcn",
