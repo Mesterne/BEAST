@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
 #SBATCH --job-name=jitter
-#SBATCH --time=0-12:00:00
+#SBATCH --time=0-09:00:00
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:v100:1
