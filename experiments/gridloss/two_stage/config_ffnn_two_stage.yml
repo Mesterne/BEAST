@@ -56,8 +56,8 @@ model_args:
       early_stopping_patience: 25
     conditional_gen_model_args:
   forecasting_model_args:
-    model_type: n_linear
     window_size: 168
     horizon_length: 24
     training_args:
-      num_epochs: 50
+      num_epochs: 400
+      early_stopping_patience: 25
