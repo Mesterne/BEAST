@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
 #SBATCH --job-name=perfect_two_stage
-#SBATCH --time=0-09:00:00
+#SBATCH --time=0-06:00:00
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:v100:1

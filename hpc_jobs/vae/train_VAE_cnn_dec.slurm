@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --account=share-ie-idi
 #SBATCH --job-name=ffnn_enc_cnn_dec_VAE
-#SBATCH --time=0-09:00:00
+#SBATCH --time=0-01:00:00
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:v100:1
