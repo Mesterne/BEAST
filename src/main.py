@@ -256,6 +256,9 @@ lstm_evaluator = ForecasterEvaluator(
     num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
         "num_epochs"
     ],
+    early_stopping_patience=config["model_args"]["forecasting_model_args"][
+        "training_args"
+    ]["num_epochs"],
 )
 
 logger.info("Evaluating foreasting improvement on inferred test set...")
@@ -272,10 +275,13 @@ nlinear_evaluator = ForecasterEvaluator(
     test_indices=forecasting_test_indices,
     horizon_length=config["model_args"]["forecasting_model_args"]["horizon_length"],
     window_size=config["model_args"]["forecasting_model_args"]["window_size"],
-    model_type=config["model_args"]["forecasting_model_args"]["model_type"],
+    model_type="n_linear",
     num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
         "num_epochs"
     ],
+    early_stopping_patience=config["model_args"]["forecasting_model_args"][
+        "training_args"
+    ]["num_epochs"],
 )
 
 logger.info("Evaluating foreasting improvement on inferred test set...")
@@ -296,6 +302,9 @@ tcn_evaluator = ForecasterEvaluator(
     num_epochs=config["model_args"]["forecasting_model_args"]["training_args"][
         "num_epochs"
     ],
+    early_stopping_patience=config["model_args"]["forecasting_model_args"][
+        "training_args"
+    ]["num_epochs"],
 )
 
 logger.info("Evaluating foreasting improvement on inferred test set...")

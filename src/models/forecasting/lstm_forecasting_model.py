@@ -1,9 +1,11 @@
 import os
 from typing import List
 
+import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from darts.models.forecasting.block_rnn_model import BlockRNNModel
+from pytorch_lightning.callbacks import EarlyStopping
 
 from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
@@ -13,15 +15,25 @@ from src.utils.logging_config import logger
 
 
 class LSTMForecastingModel(ForecastingModel):
-    def __init__(self, window_size, horizon_length, num_epochs, dropout) -> None:
+    def __init__(
+        self, window_size, horizon_length, num_epochs, dropout, early_stopping_patience
+    ) -> None:
         self.window_size = window_size
         self.horizon_length = horizon_length
         self.num_epochs = num_epochs
         self.dropout = dropout
+        self.early_stopping_patience = early_stopping_patience
         self.loss_tracker = LossTracker()
         self.model = self._initialize_forecasting_model()
 
     def _initialize_forecasting_model(self) -> BlockRNNModel:
+        early_stopping = EarlyStopping(
+            monitor="val_loss",
+            patience=self.early_stopping_patience,
+            min_delta=0.0001,
+            mode="min",
+        )
+
         return BlockRNNModel(
             model="LSTM",
             input_chunk_length=self.window_size,
@@ -30,9 +42,10 @@ class LSTMForecastingModel(ForecastingModel):
             dropout=self.dropout,
             hidden_dim=25,
             random_state=0,
+            loss_fn=torch.nn.L1Loss(),
             pl_trainer_kwargs={
                 "precision": "32-true",
-                "callbacks": [self.loss_tracker],
+                "callbacks": [self.loss_tracker, early_stopping],
                 "enable_model_summary": False,
                 "log_every_n_steps": 1,
             },

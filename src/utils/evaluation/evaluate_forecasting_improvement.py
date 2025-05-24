@@ -27,6 +27,7 @@ class ForecasterEvaluator:
         window_size,
         horizon_length,
         num_epochs,
+        early_stopping_patience,
         model_type,
     ) -> None:
         self.mts_dataset = mts_dataset
@@ -37,6 +38,7 @@ class ForecasterEvaluator:
         self.horizon_length = horizon_length
         self.model_type = model_type
         self.num_epochs = num_epochs
+        self.early_stopping_patience = early_stopping_patience
         self.config = config
 
         self.train_mts_array, self.validation_mts_array, self.test_mts_array = (
@@ -76,6 +78,7 @@ class ForecasterEvaluator:
                 num_epochs=self.num_epochs,
                 horizon_length=self.horizon_length,
                 window_size=self.window_size,
+                early_stopping_patience=self.early_stopping_patience,
             )
         elif self.model_type == "tcn":
             logger.info("Running TCNForecastingModel for forecasting evaluations")
@@ -84,6 +87,7 @@ class ForecasterEvaluator:
                 horizon_length=self.horizon_length,
                 window_size=self.window_size,
                 dropout=0.1,
+                early_stopping_patience=self.early_stopping_patience,
             )
         elif self.model_type == "lstm":
             logger.info("Running LSTMForecastingModel for forecasting evaluations")
@@ -92,6 +96,7 @@ class ForecasterEvaluator:
                 horizon_length=self.horizon_length,
                 window_size=self.window_size,
                 dropout=0.1,
+                early_stopping_patience=self.early_stopping_patience,
             )
         else:
             logger.info("Running NLinearForecastingModel for forecasting evaluations")
@@ -99,6 +104,7 @@ class ForecasterEvaluator:
                 num_epochs=self.num_epochs,
                 horizon_length=self.horizon_length,
                 window_size=self.window_size,
+                early_stopping_patience=self.early_stopping_patience,
             )
 
     def evaluate_on_evaluation_set(self, inferred_mts_array, ohe, type=""):
