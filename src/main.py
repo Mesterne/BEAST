@@ -154,9 +154,9 @@ config["model_args"]["feature_model_args"]["input_size"] += (
     else config["dataset_args"]["num_features_per_uts"] * num_uts_in_mts
 )
 
-# FIXME: Need to add inverse transform when data is plotted? Or maybe not? We never really care about the original scale of the data.
 if config["is_conditional_gen_model"]:
     logger.info("Scaling data for conditional generation model (CVAE)...")
+    old_mts_dataset = mts_dataset_array
     scaled_mts_dataset_array, uts_scalers = scale_mts_dataset(
         mts_dataset_array,
         train_transformation_indices,
@@ -223,6 +223,7 @@ if config["is_conditional_gen_model"]:
             inferred_mts_test[i, j] = uts_scalers[j].inverse_transform(
                 inferred_mts_test[i, j].reshape(1, -1)
             )
+    mts_dataset_array = old_mts_dataset
 
 evaluate(
     config=config,
