@@ -4,12 +4,14 @@ from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import to_rgba_array
 from tqdm import tqdm
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.feature_distribution import plot_feature_distribution
 from src.plots.plot_train_val_split import plot_train_val_test_split
-from src.plots.plot_transformation_directions import plot_transformation_directions
+from src.plots.plot_transformation_directions import \
+    plot_transformation_directions
 from src.utils.generate_dataset import generate_feature_dataframe
 from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
@@ -61,11 +63,6 @@ def create_train_val_test_split(
 
     logger.info("Splitting PCA space into train, validation and test indices...")
 
-    plot_train_val_test_split(
-        mts_dataset_pca=mts_pca_array,
-        validation_indices=validation_indices,
-        test_indices=test_indices,
-    )
     train_transformation_indices: List[Tuple[int, int]] = []
     validation_transformation_indices: List[Tuple[int, int]] = []
     test_transformation_indices: List[Tuple[int, int]] = []
@@ -139,6 +136,19 @@ def create_train_val_test_split(
             test_transformation_indices, number_of_transformations_in_test_set
         )
 
+    train_transformation_indices = np.array(train_transformation_indices)
+    validation_transformation_indices = np.array(validation_transformation_indices)
+    test_transformation_indices = np.array(test_transformation_indices)
+    print(
+        f"SE HER Plot time size of test indices: {test_transformation_indices[:, 1].shape}"
+    )
+    plot_train_val_test_split(
+        mts_dataset_pca=mts_pca_array,
+        train_indices=train_transformation_indices[:, 0],
+        validation_indices=validation_transformation_indices[:, 1],
+        test_indices=test_transformation_indices[:, 1],
+    )
+
     arrow_plot_train = plot_transformation_directions(
         mts_dataset_pca=mts_pca_array,
         transformation_indices=train_transformation_indices,
@@ -155,9 +165,9 @@ def create_train_val_test_split(
     )
     arrow_plot_test.savefig(os.path.join(OUTPUT_DIR, "test_arrows.png"))
     return (
-        np.array(train_transformation_indices),
-        np.array(validation_transformation_indices),
-        np.array(test_transformation_indices),
+        train_transformation_indices,
+        validation_transformation_indices,
+        test_transformation_indices,
     )
 
 

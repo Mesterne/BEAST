@@ -9,17 +9,19 @@ from src.data.constants import OUTPUT_DIR
 
 def plot_train_val_test_split(
     mts_dataset_pca: np.ndarray,
+    train_indices: np.ndarray,
     validation_indices: np.ndarray,
     test_indices: np.ndarray,
 ):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(12, 8))
 
+    train_pca = mts_dataset_pca[train_indices, :]
     validation_pca = mts_dataset_pca[validation_indices, :]
     test_pca = mts_dataset_pca[test_indices, :]
 
     sns.scatterplot(
-        x=mts_dataset_pca[:, 0],
-        y=mts_dataset_pca[:, 1],
+        x=train_pca[:, 0],
+        y=train_pca[:, 1],
         label="Training set targets",
         color="grey",
         s=50,
