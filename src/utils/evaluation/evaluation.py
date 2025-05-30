@@ -300,6 +300,20 @@ def evaluate(
         )
     )
     plt.close(pca_plot_intermediate_test_features)
+    pca_plot_final_test_features = plot_pca_for_all_generated_mts(
+        mts_dataset_features=mts_dataset_features,
+        mts_generated_features=inferred_features_test,
+        train_transformations=train_transformation_indices,
+        evaluation_transformations=test_transformation_indices,
+    )
+    pca_plot_final_test_features.savefig(
+        os.path.join(
+            OUTPUT_DIR,
+            "Feature space evaluations",
+            "FEATURE_SPACE_total_generation_pca_final_test.png",
+        )
+    )
+    plt.close(pca_plot_final_test_features)
     pca_plot_for_all_uts_intermediate_test_features = (
         plot_pca_for_all_generated_mts_for_each_uts(
             mts_dataset_features=mts_dataset_features,
