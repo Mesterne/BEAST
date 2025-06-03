@@ -6,6 +6,7 @@ import seaborn as sns
 from matplotlib.figure import Figure
 
 from src.data.constants import COLUMN_NAMES, UTS_NAMES
+from src.utils.logging_config import logger
 from src.utils.pca import PCAWrapper
 
 
@@ -29,7 +30,7 @@ def plot_pca_for_all_generated_mts(
     predicted_pca: np.ndarray = pca_transformer.transform(mts_generated_features)
     evaluation_set_pca: np.ndarray = pca_transformer.transform(evaluation_features)
 
-    print(
+    logger.info(
         f"Indices of generated MTS with PCA1 > 20: {np.where(predicted_pca[:, 0] > 20)[0]}"
     )
 
