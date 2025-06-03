@@ -289,9 +289,6 @@ def evaluate(
         train_transformations=train_transformation_indices,
         evaluation_transformations=test_transformation_indices,
     )
-    print(
-        f"SE HER Number of test_transformation_indices in evaluation: {test_transformation_indices.shape}"
-    )
     pca_plot_intermediate_test_features.savefig(
         os.path.join(
             OUTPUT_DIR,
@@ -300,6 +297,7 @@ def evaluate(
         )
     )
     plt.close(pca_plot_intermediate_test_features)
+    logger.info("Plotting PCA of features of all MTS")
     pca_plot_final_test_features = plot_pca_for_all_generated_mts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=inferred_features_test,

@@ -29,7 +29,10 @@ def plot_pca_for_all_generated_mts(
     predicted_pca: np.ndarray = pca_transformer.transform(mts_generated_features)
     evaluation_set_pca: np.ndarray = pca_transformer.transform(evaluation_features)
 
-    # Plot scatter points
+    print(
+        f"Indices of generated MTS with PCA1 > 20: {np.where(predicted_pca[:, 0] > 20)[0]}"
+    )
+
     ax = sns.scatterplot(
         x=dataset_pca[:, 0],
         y=dataset_pca[:, 1],
