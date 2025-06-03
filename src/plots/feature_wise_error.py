@@ -9,22 +9,10 @@ from tqdm import tqdm
 from src.data.constants import COLUMN_NAMES
 
 
+# Plot code is partially from ChatGPT
 def plot_distribution_of_feature_wise_error(mse_per_feature: np.array) -> Figure:
-    """
-    A plot to show the distribution of error over each distinct time series feature
-    in an MTS.
-
-    Parameters:
-    mse_per_feature (np.array): A numpy array of shape (num_timeseries, 12),
-                                where each column represents the MSE of a specific feature.
-    column_names (list[str]): A list of feature names corresponding to each column.
-
-    Returns:
-    fig (matplotlib.figure.Figure): Matplotlib figure containing the plot.
-    """
     num_features = mse_per_feature.shape[1]
 
-    # Determine grid size for the subplots
     grid_size = math.ceil(math.sqrt(num_features))
     fig, axes = plt.subplots(
         grid_size, grid_size, figsize=(5 * grid_size, 4 * grid_size)

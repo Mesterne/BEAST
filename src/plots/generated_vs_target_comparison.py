@@ -6,17 +6,15 @@ import numpy as np
 
 from src.data.constants import OUTPUT_DIR
 from src.plots.full_time_series import plot_time_series_for_all_uts
-from src.plots.pca_for_each_uts_with_transformed import (
-    plot_pca_for_each_uts_with_transformed,
-)
+from src.plots.pca_for_each_uts_with_transformed import \
+    plot_pca_for_each_uts_with_transformed
 from src.plots.pca_total_generation import (
     plot_pca_for_all_generated_mts,
-    plot_pca_for_all_generated_mts_for_each_uts,
-)
-from src.plots.plot_only_timeseries_generated import plot_only_timeseries_generated
-from src.utils.evaluation.feature_space_evaluation import (
-    calculate_total_evaluation_for_each_mts,
-)
+    plot_pca_for_all_generated_mts_for_each_uts)
+from src.plots.plot_only_timeseries_generated import \
+    plot_only_timeseries_generated
+from src.utils.evaluation.feature_space_evaluation import \
+    calculate_total_evaluation_for_each_mts
 from src.utils.logging_config import logger
 
 
@@ -30,6 +28,7 @@ def create_grid_plot_of_worst_median_best(
     inferred_mts_features_before_ga: Optional[
         np.ndarray
     ] = None,  # Shape: (number of time series generated, number of features)
+    optional_indices: Optional[np.ndarray] = None,
 ):
     # For instance when using CVAE we dont have features before generation.
     # In this case, we set them to be the same as the features of inferred mts.
@@ -164,16 +163,26 @@ def create_grid_plot_of_worst_median_best(
     )
     plt.close(pca_plot_of_median_generated_mts)
 
-    logger.info("Generating PCA plot of all predictions...")
-    pca_total_plot = plot_pca_for_all_generated_mts(
-        mts_dataset_features=mts_dataset_features,
-        train_transformations=train_transformation_indices,
-        evaluation_transformations=evaluation_transformation_indices,
-        mts_generated_features=inferred_mts_features,
-    )
-    pca_total_plot.savefig(os.path.join(OUTPUT_DIR, "total_generation_pca.png"))
-    plt.close(pca_total_plot)
+    if optional_indices is not None:
+        for i in optional_indices:
+            logger.info(f"Generating grid for MTS {i}")
+            pca_plot_of_optional_index = plot_pca_for_each_uts_with_transformed(
+                mts_dataset_features=mts_dataset_features,
+                mts_features_evaluation_set=y_features,
+                train_transformations=train_transformation_indices,
+                original_mts_features=X_features[optional_indices],
+                target_mts_features=y_features[optional_indices],
+                predicted_mts_features=inferred_mts_features[optional_indices],
+            )
+            pca_plot_of_optional_index.savefig(
+                os.path.join(
+                    OUTPUT_DIR, "Generation grids", f"optional_indices_{i}.png"
+                ),
+                dpi=600,
+            )
+            plt.close(pca_plot_of_optional_index)
 
+    logger.info("Generating PCA plot of all predictions...")
     pca_for_each_uts = plot_pca_for_all_generated_mts_for_each_uts(
         mts_dataset_features=mts_dataset_features,
         mts_generated_features=inferred_mts_features,

@@ -7,12 +7,12 @@ import seaborn as sns
 from src.data.constants import COLUMN_NAMES
 
 
+# Code is partially from ChatGPT
 def plot_feature_distribution(
     mts_feature_array: np.array,  # Shape (number_of_samples, number of features)
 ):
     num_features = len(COLUMN_NAMES)
 
-    # Validate input shape
     if mts_feature_array.shape[1] != num_features:
         raise ValueError("mts_feature_array shape does not match COLUMN_NAMES length.")
 
@@ -22,7 +22,6 @@ def plot_feature_distribution(
     )
     axes = axes.flatten()
 
-    # Feature distribution is just the input array
     feature_distribution = mts_feature_array
 
     for i in range(num_features):
@@ -30,7 +29,7 @@ def plot_feature_distribution(
             data=feature_distribution[:, i],
             kde=True,
             ax=axes[i],
-            alpha=0.7,  # Transparency for a softer look
+            alpha=0.7,
             edgecolor="black",
         )
         axes[i].set_title(f"{COLUMN_NAMES[i]}", fontsize=14, fontweight="bold")

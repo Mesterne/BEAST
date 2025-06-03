@@ -338,4 +338,5 @@ def evaluate(
         inferred_mts_array=inferred_mts_validation,
         inferred_mts_features_before_ga=intermediate_features_validation,
         inferred_mts_features=inferred_features_validation,
+        optional_indices=np.array([0, 2]),
     )
