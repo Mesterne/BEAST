@@ -1,19 +1,10 @@
-# 🐉 BEASTS: Benchmarking Enhanced Analysis of Shifting Time Series
+# Master Thesis: Hans Jakob Håland, Vegard Sjåvik
 
-Welcome to **BEAST**! This powerful tool leverages a database of existing multivariate time series to generate new, realistic time series. By simulating distribution shifts, BEAST helps assess model robustness and ensures forecasting models improve after retraining.
+Welcome to the code used for the master thesis of Hans Jakob Håland and Vegard Sjåvik! This code leverages a database of existing multivariate time series to generate new, realistic time series.
 
 ---
 
-## 🌟 Features
-
-- **Realistic Distribution Shifts:** Generate time series data that mimic real-world changes.
-- **Multivariate Support:** Handle complex datasets with multiple variables.
-- **Scenario Simulation:** Test forecasting models against hypothetical shifts.
----
-
-## 📦 Installation
-
-Get started by cloning the repository and setting up the Conda environment:
+## Installation
 
 ```bash
 git clone https://github.com/Mesterne/BEAST.git
@@ -22,46 +13,22 @@ conda env create -f environment.yml
 conda activate BEAST_ENV
 ```
 
----
+## Running experiments
 
-## 🚀 Usage
+### Locally
 
-### 🔧 Setting Up Pre-Commit Hook
-To maintain code quality, set up a pre-commit hook that automatically formats and checks your code before committing:
-
-1. Copy the pre-commit hook script:
-
-   ```bash
-   cp precommit_hook.sh .git/hooks/pre-commit
-   chmod +x .git/hooks/pre-commit
-   ```
-
-2. Now, every time you commit, Black and Flake8 will run automatically to enforce coding standards.
-
-### 🛠 Code Quality Checks
-Manually check formatting and linting by running:
+This is how to run the covariance model locally. To run another model simply change config_covariance_ga.yml with another .yml file in the experiments folder.
 
 ```bash
-black .
+python src/main.py 'experiments/gridloss/two_stage/config_covariance_ga.yml'
 ```
 
----
+### On IDUN
 
-## 🛠️ Development
-
-To contribute to BEAST, install the necessary development dependencies:
+Most of the models from the thesis has been trained and evaluated using IDUN - A HPC cluster on NTNU. To run the an model here run:
 
 ```bash
-conda install black
+sbatch hpc_jobs/two_stage/train_covariance_model_with_one_hot_encoding.slurm
 ```
 
-Ensure code consistency by running:
-
-```bash
-black .
-```
-
----
-
-
-
+To change which model to run. Just change the .slurm file with another one found in hpc_jobs.
