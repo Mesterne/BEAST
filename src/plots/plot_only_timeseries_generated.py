@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 from src.data.constants import BEATUIFUL_UTS_NAMES
 
 
+# Code partially from ChatGPT
 def plot_only_timeseries_generated(
     original_mts: np.ndarray,
     target_mts: np.ndarray,
@@ -24,7 +25,6 @@ def plot_only_timeseries_generated(
     labels = []
 
     for i, uts_name in enumerate(BEATUIFUL_UTS_NAMES):
-        # Use matplotlib directly to get proper handles
         (line_original,) = axes[i].plot(
             time_index, original_mts[i, :], color="grey", linestyle="--", linewidth=1
         )

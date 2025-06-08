@@ -1,3 +1,8 @@
+####
+# Most of the calculates done in this file is from: https://github.com/lluism/CounterfacTS
+# which is a codebase provided by our supervisors, which also was used in the specialization project
+
+
 from typing import List, Tuple
 
 import numpy as np

@@ -26,9 +26,6 @@ def generate_new_time_series(
     Returns:
         tuple: (original_mts, target_mts, transformed_mts, transformed_features)
     """
-    # Get the target row from the validation dataset
-
-    # Run genetic algorithm transformation
     (
         transformed_mts,
         transformed_features,

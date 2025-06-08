@@ -4,6 +4,7 @@ import seaborn as sns
 from matplotlib.figure import Figure
 
 
+# Code partially from ChatGPT
 def plot_transformation_directions(
     mts_dataset_pca: np.ndarray, transformation_indices: np.ndarray
 ) -> Figure:

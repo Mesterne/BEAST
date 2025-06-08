@@ -21,12 +21,10 @@ class CovarianceModel(FeatureTransformationModel):
         plot_loss=False,
         model_name="unnamed",
     ) -> Tuple[List[float], List[float]]:
-        # The actual features (Omitting the delta values)
         features = X_train[
             :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
 
-        # We then calcualte the correlation matrix based on features
         self.covariance_matrix = np.cov(features, rowvar=False)
         self.mean_vector = np.mean(features, axis=0)  # Compute feature means
         return [], []
@@ -35,7 +33,6 @@ class CovarianceModel(FeatureTransformationModel):
         """
         Uses the covariance_matrix, mean vector and input X to infer new featues using gaussian updates.
         """
-        # Extract feature, delta, and one-hot encoding parts
         features = X[
             :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
@@ -64,7 +61,6 @@ class CovarianceModel(FeatureTransformationModel):
 
             # 1 = Unknown
             # 2 = Known
-            # Extract mean values for known and unknown features.
             mu_2 = self.mean_vector[start_idx:end_idx]
             mu_1 = np.concatenate(
                 [self.mean_vector[:start_idx], self.mean_vector[end_idx:]]
@@ -99,7 +95,6 @@ class CovarianceModel(FeatureTransformationModel):
                 ]
             )
 
-            # Compute conditional mean and covariance
             sigma_22_inv = np.linalg.pinv(sigma_22)  # Inverse of known covariance
             mean_1_given_2 = mu_1 + sigma_12 @ sigma_22_inv @ (known_features - mu_2)
             sigma_1_given_2 = sigma_11 - sigma_12 @ sigma_22_inv @ sigma_21

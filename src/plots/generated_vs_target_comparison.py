@@ -166,13 +166,14 @@ def create_grid_plot_of_worst_median_best(
     if optional_indices is not None:
         for i in optional_indices:
             logger.info(f"Generating grid for MTS {i}")
-            pca_plot_of_optional_index = plot_pca_for_each_uts_with_transformed(
-                mts_dataset_features=mts_dataset_features,
-                mts_features_evaluation_set=y_features,
-                train_transformations=train_transformation_indices,
-                original_mts_features=X_features[optional_indices],
-                target_mts_features=y_features[optional_indices],
-                predicted_mts_features=inferred_mts_features[optional_indices],
+            pca_plot_of_optional_index = plot_time_series_for_all_uts(
+                original_mts=X_mts[i],
+                target_mts=y_mts[i],
+                transformed_mts=inferred_mts_array[i],
+                original_mts_features=X_features[i],
+                predicted_mts_features=inferred_mts_features_before_ga[i],
+                transformed_mts_features=inferred_mts_features[i],
+                target_mts_features=y_features[i],
             )
             pca_plot_of_optional_index.savefig(
                 os.path.join(

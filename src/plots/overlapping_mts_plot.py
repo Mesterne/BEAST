@@ -4,6 +4,7 @@ import numpy as np
 from src.data.constants import BEATUIFUL_UTS_NAMES
 
 
+# Code partially from ChatGPT
 def plot_overlapping_mts(set_of_mts: np.ndarray):
     num_mts = set_of_mts.shape[0]
     num_uts = set_of_mts.shape[1]

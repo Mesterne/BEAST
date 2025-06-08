@@ -9,6 +9,7 @@ log_file = "project.log"
 log_file = os.path.join(output_dir, "BEAST.log")
 
 
+# This is partially from ChatGPT
 def setup_logger():
     logger = logging.getLogger("BEAST-logger")
     logger.propagate = False  # Prevent messages from being passed to the root logger

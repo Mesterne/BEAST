@@ -329,14 +329,14 @@ def evaluate(
     )
     plt.close(pca_plot_for_all_uts_intermediate_test_features)
 
-    logger.info("Creating plots for validation...")
+    logger.info("Creating plots for test...")
     create_grid_plot_of_worst_median_best(
         mts_dataset_array=mts_array,
         mts_dataset_features=mts_dataset_features,
         train_transformation_indices=train_transformation_indices,
-        evaluation_transformation_indices=validation_transformation_indices,
-        inferred_mts_array=inferred_mts_validation,
-        inferred_mts_features_before_ga=intermediate_features_validation,
-        inferred_mts_features=inferred_features_validation,
-        optional_indices=np.array([0, 2]),
+        evaluation_transformation_indices=test_transformation_indices,
+        inferred_mts_array=inferred_mts_test,
+        inferred_mts_features_before_ga=intermediate_features_test,
+        inferred_mts_features=inferred_features_test,
+        optional_indices=np.array([231]),
     )

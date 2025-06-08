@@ -9,6 +9,7 @@ from src.data.constants import OUTPUT_DIR
 from src.utils.logging_config import logger
 
 
+# Code partially from ChatGPT
 def plot_training_and_validation_loss(
     training_loss: np.ndarray, validation_loss: np.ndarray, model_name: str
 ) -> None:
@@ -37,7 +38,6 @@ def plot_training_and_validation_loss(
     plt.legend(title="Loss Type")
     plt.tight_layout()
 
-    # Save the plot as PNG
     plt.savefig(os.path.join(OUTPUT_DIR, f"{model_name}_loss_plot.png"), dpi=600)
     plt.close()
 
@@ -73,7 +73,6 @@ def plot_detailed_training_loss(
     plt.legend(title="Loss Type")
     plt.tight_layout()
 
-    # Save the plot as PNG
     plt.savefig(
         os.path.join(OUTPUT_DIR, f"{model_name}_detailed_training_loss_plot.png"),
         dpi=600,

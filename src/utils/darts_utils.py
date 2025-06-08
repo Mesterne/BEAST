@@ -4,6 +4,7 @@ import numpy as np
 from darts import TimeSeries
 
 
+# Code partially from ChatGPT
 def array_to_timeseries(
     timeseries_array: np.ndarray,
 ) -> Tuple[List[TimeSeries], List[TimeSeries]]:
@@ -11,12 +12,10 @@ def array_to_timeseries(
     covariate_series = []
 
     for i in range(timeseries_array.shape[0]):
-        # Target: grid loss
         target = TimeSeries.from_values(
             values=timeseries_array[i, 1, :].reshape(-1, 1), columns=["grid_loss"]
         ).astype(np.float32)
 
-        # Covariates: grid load and grid temp
         covariates = TimeSeries.from_values(
             values=np.stack(
                 [timeseries_array[i, 0, :], timeseries_array[i, 2, :]], axis=1

@@ -1,8 +1,10 @@
 from typing import List, Tuple
+
+import numpy as np
 import pandas as pd
 from statsmodels.tsa.seasonal import DecomposeResult
 from tqdm import tqdm
-import numpy as np
+
 from src.utils.features import decomp_and_features
 from src.utils.logging_config import logger
 
@@ -55,11 +57,8 @@ def create_training_windows(
     X, y = [], []
 
     for i in range(num_samples):
-        # Get the window slice as before
         input_window_df = df.loc[i : i + window_size - 1, input_cols]
 
-        # Instead of flattening row by row, reshape to organize by column first
-        # This stacks all values from first column, then all from second column, etc.
         input_window = input_window_df.values.T.flatten()
 
         target_window = df.loc[
@@ -101,29 +100,21 @@ def create_training_windows_from_mts(
     """
     X, Y = [], []
 
-    # Iterate through each time series
     for ts in mts:
-        # Get the length of this time series (assuming all features have same length)
         ts_length = len(ts[0])
         num_features = len(ts)
 
-        # Check if we have enough data to create at least one window
         if ts_length < window_size + forecast_horizon:
             logger.warning("Time series too short to create windows, skipping.")
             continue
 
-        # Calculate how many windows we can create from this time series
         num_windows = ts_length - window_size - forecast_horizon + 1
 
-        # Create windows
         for i in range(num_windows):
-            # Create input window with all features
             x_window = []
             for feature_idx in range(num_features):
-                # Add all values for this feature in the window
                 x_window.extend(ts[feature_idx][i : i + window_size])
 
-            # Create target window (only from the target feature)
             y_window = ts[target_col_index][
                 i + window_size : i + window_size + forecast_horizon
             ]

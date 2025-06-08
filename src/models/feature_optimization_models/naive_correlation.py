@@ -20,17 +20,13 @@ class CorrelationModel(FeatureTransformationModel):
         plot_loss=False,
         model_name="",
     ) -> Tuple[List[float], List[float]]:
-        # The actual features (Omitting the delta values)
         features = X_train[
             :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
-
-        # We then calcualte the correlation matrix based on features
         self.correlation_matrix = np.corrcoef(features, rowvar=False)
         return [], []
 
     def infer(self, X: np.ndarray) -> np.ndarray:
-        # Extract feature, delta, and one-hot encoding parts
         features = X[
             :, : -(self.number_of_uts_in_mts + self.number_of_features_in_each_uts)
         ]
@@ -45,17 +41,13 @@ class CorrelationModel(FeatureTransformationModel):
         num_features = self.number_of_features_in_each_uts
         num_uts = self.number_of_uts_in_mts
 
-        predicted_features = np.zeros(
-            (num_samples, num_features * num_uts)
-        )  # Preallocate array
+        predicted_features = np.zeros((num_samples, num_features * num_uts))
 
         for row_index in tqdm(range(num_samples), total=num_samples):
             delta_vector = delta_values[row_index]
             one_hot_vector = one_hot_encodings[row_index]
             feature_vector = features[row_index]
             activated_uts_index = np.argmax(one_hot_vector)
-
-            # Extract relevant rows from correlation matrix
             relevant_rows = self.correlation_matrix[
                 activated_uts_index
                 * num_features : (activated_uts_index * num_features)
@@ -64,14 +56,11 @@ class CorrelationModel(FeatureTransformationModel):
                 :,
             ]
 
-            # Compute predictions using vectorized operations
             tmp_delta_values = np.tile(delta_vector, num_uts)
             tmp_corr_values = [
                 relevant_rows[i % num_features, j]
                 for j, i in enumerate(range(num_features * num_uts))
             ]
-
-            # Perform vectorized computation
             predicted_features[row_index] = (
                 tmp_corr_values * tmp_delta_values
             ) + feature_vector

@@ -25,10 +25,8 @@ def calculate_evaluation_for_each_feature(
         "MAE",
     ], "Metric must be either MSE or MAE for feature space evaluations"
     if metric == "MSE":
-        # Calculate the squared difference between predicted and target values
         squared_diff = (predicted_features - target_features) ** 2
 
-        # The MSE for each feature for each timeseries is the squared difference itself
         return squared_diff
 
     if metric == "MAE":
@@ -57,8 +55,6 @@ def calculate_total_evaluation_for_each_mts(
         metric=metric,
     )
 
-    # TODO: Diskuter dette.
-    # Sum the MSE across the feature axis (axis 1)
     total_mse = np.sum(eval_for_each_feature, axis=1)
 
     return total_mse

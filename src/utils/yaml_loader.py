@@ -4,7 +4,6 @@ import yaml
 
 
 def get_project_root():
-    # Return the absolute path to the project root (one above 'models')
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 

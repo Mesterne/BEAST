@@ -7,6 +7,7 @@ import seaborn as sns
 from src.data.constants import OUTPUT_DIR
 
 
+# Code partially from ChatGPT
 def plot_train_val_test_split(
     mts_dataset_pca: np.ndarray,
     train_indices: np.ndarray,

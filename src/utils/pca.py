@@ -4,6 +4,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 
+# This code is partially from ChatGPT
 class PCAWrapper:
     """
     A wrapper class for Principal Component Analysis (PCA).

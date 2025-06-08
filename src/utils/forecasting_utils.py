@@ -1,3 +1,7 @@
+###
+# Some of the code in this file is partially from ChatGPT.
+
+
 import os
 from typing import Any, Dict
 
@@ -9,15 +13,11 @@ from matplotlib.container import BarContainer
 
 from src.data.constants import OUTPUT_DIR
 from src.models.forecasting.forcasting_model import ForecastingModel
-from src.plots.ohe_plots import (
-    create_and_save_plots_of_ohe_activated_performances_forecasting_space,
-)
+from src.plots.ohe_plots import \
+    create_and_save_plots_of_ohe_activated_performances_forecasting_space
 from src.utils.evaluation.forecaster_evaluation import (
-    mae_for_all_predictions,
-    mae_for_each_forecast,
-    rmse_for_all_predictions,
-    rmse_for_each_forecast,
-)
+    mae_for_all_predictions, mae_for_each_forecast, rmse_for_all_predictions,
+    rmse_for_each_forecast)
 from src.utils.generate_dataset import create_training_windows_from_mts
 
 
@@ -37,9 +37,9 @@ def compare_original_and_transformed_forecasting(
     }
 
     custom_zorder = {
-        "Original Timeseries": 1,  # Bottom
+        "Original Timeseries": 1,
         "Old Forecast": 2,
-        "New Forecast": 3,  # Top
+        "New Forecast": 3,
     }
 
     custom_linewidth = {
@@ -63,9 +63,8 @@ def compare_original_and_transformed_forecasting(
         }
     )
 
-    fig, ax = plt.subplots(figsize=(8, 5))  # Create figure and axes
+    fig, ax = plt.subplots(figsize=(8, 5))
 
-    # Plot each group on the same axes
     for label, group_data in data.groupby("Label"):
         ax.plot(
             group_data["Index"],
@@ -76,8 +75,8 @@ def compare_original_and_transformed_forecasting(
             linewidth=custom_linewidth[label],
         )
 
-    ax.set_xticks([])  # Remove x-axis ticks
-    ax.xaxis.set_visible(False)  # Hide the x-axis line
+    ax.set_xticks([])
+    ax.xaxis.set_visible(False)
 
     ax.set_title(f"Comparison of forecasting models (MAE Old forecast: {mae})")
     ax.set_xlabel("Forecast Stage")
@@ -174,7 +173,6 @@ def compare_old_and_new_model(
             "horizon_length"
         ],
     )
-    # Plot worst forecast before and after
     errors = mae_for_each_forecast(y_true=y_test, y_pred=inferred_old_test)
     sorted_indices = np.argsort(errors)
 
@@ -308,26 +306,6 @@ def compare_old_and_new_model(
         metric_name="MAE",
     )
 
-    print(f"Test mae old: {test_mae_total_old}")
-    print(f"Test mae new: {test_mae_total_new}")
-
-    # create_and_save_plots_of_ohe_activated_performances_forecasting_space(
-    #     ohe=ohe,
-    #     train_metrics=[train_mse_old, train_mse_new],
-    #     val_metrics=[val_mse_old, val_mse_new],
-    #     test_metrics=[test_mse_old, test_mse_new],
-    #     metric_name="MSE",
-    #     retrain_on=retrain_on,
-    # )
-    # create_and_save_plots_of_ohe_activated_performances_forecasting_space(
-    #     ohe=ohe,
-    #     train_metrics=[train_mase_old, train_mase_new],
-    #     val_metrics=[val_mase_old, val_mase_new],
-    #     test_metrics=[test_mase_old, test_mase_new],
-    #     metric_name="MASE",
-    #     retrain_on=retrain_on,
-    # )
-
     return (
         rmse_plot,
         rmse_delta_plot,
@@ -369,7 +347,6 @@ def plot_metric_comparison_train_validation_test(
     plt.ylabel(f"{metric_name}")
     plt.xlabel("Dataset")
 
-    # Automatically adjust y-axis to fit the values better
     y_min = min(
         train_metrics[0],
         train_metrics[1],
@@ -387,7 +364,6 @@ def plot_metric_comparison_train_validation_test(
         test_metrics[1],
     )
 
-    # Set the y-axis limits to fit the range of the data
     margin = (y_max - y_min) * 0.1  # 10% margin
     plt.ylim(y_min - margin, y_max + margin)
 
@@ -421,7 +397,6 @@ def plot_delta_comparison_plot(
     plt.ylabel(f"{metric_name} Delta")
     plt.xlabel("Dataset")
 
-    # Automatically adjust y-axis to fit the values better
     y_min = min(
         train_metrics[0] - train_metrics[1],
         val_metrics[0] - val_metrics[1],
@@ -433,7 +408,6 @@ def plot_delta_comparison_plot(
         test_metrics[0] - test_metrics[1],
     )
 
-    # Set the y-axis limits to fit the range of the data
     margin = (y_max - y_min) * 0.1  # 10% margin
     plt.ylim(y_min - margin, y_max + margin)
 

@@ -1,23 +1,14 @@
-# TODO: Fullføre model handler. En del som må gjøres der fremdeles
-
 import logging
 
 import numpy as np
 import pandas as pd
 
-from src.utils.features import (
-    seasonal_strength,
-    trend_linearity,
-    trend_slope,
-    trend_strength,
-)
+from src.utils.features import (seasonal_strength, trend_linearity,
+                                trend_slope, trend_strength)
 from src.utils.generate_dataset import generate_windows_dataset
-from src.utils.transformations import (
-    manipulate_seasonal_component,
-    manipulate_trend_component,
-)
+from src.utils.transformations import (manipulate_seasonal_component,
+                                       manipulate_trend_component)
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 
 
@@ -45,7 +36,7 @@ def get_transformed_uts_with_features_and_decomps(
     trend_slope_factor,
     trend_lin_factor,
     seasonal_det_factor,
-    m=0,  # FIXME: Not yet included in config. Other values than 0 have been problematic.
+    m=0,
 ):
     transformed_uts_trend = manipulate_trend_component(
         trend_comp=uts_decomp.trend,
